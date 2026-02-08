@@ -8,7 +8,7 @@ and user commands. The repo currently contains only a design document
 (`docs/claude-code-comparison.md`). This plan implements Phase 1: setup API,
 terminal providers, and the `:Codex` / `:CodexFocus` commands.
 
-**Decisions:** default command is `codex`, minimum Neovim 0.10.0, tests included.
+**Decisions:** default command is `codex`, minimum Neovim 0.11.0, tests included.
 
 ---
 
@@ -39,7 +39,7 @@ tests/contract/provider_contract_spec.lua -- shared contract for all providers
 
 ### 1. `plugin/codex.lua` — Entry point
 
-- Guard on `vim.fn.has("nvim-0.10.0")`.
+- Guard on `vim.fn.has("nvim-0.11.0")`.
 - Guard on `vim.g.loaded_codex`.
 - No auto-setup; require explicit `require("codex").setup()`.
 

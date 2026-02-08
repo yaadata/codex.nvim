@@ -9,7 +9,7 @@ terminal layer, and two user commands (`:Codex`, `:CodexFocus`).
 **Decisions made before implementation:**
 
 - Default terminal command: `codex`
-- Minimum Neovim version: 0.10.0
+- Minimum Neovim version: 0.11.0
 - Test framework: plenary.nvim via `nvim --headless`
 
 ---
