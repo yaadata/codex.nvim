@@ -66,6 +66,19 @@ local function get_provider()
   return get_deps().providers.resolve(state.config.terminal.provider)
 end
 
+local function mark_session_dead_by_handle(deps, dead_handle)
+  if not dead_handle then
+    return
+  end
+
+  for _, session in ipairs(deps.session_store.list()) do
+    if session.handle == dead_handle then
+      deps.session_store.mark_dead(session.id)
+      return
+    end
+  end
+end
+
 function M.open(focus)
   ensure_setup()
   local deps = get_deps()
@@ -89,8 +102,16 @@ function M.open(focus)
     deps.session_store.remove(session.id)
   end
 
-  local handle =
-    provider.open(state.config.cmd, state.config.args, state.config.env, state.config, focus)
+  local handle = provider.open(
+    state.config.cmd,
+    state.config.args,
+    state.config.env,
+    state.config,
+    focus,
+    function(exited_handle)
+      mark_session_dead_by_handle(deps, exited_handle)
+    end
+  )
 
   deps.session_store.create({
     handle = handle,

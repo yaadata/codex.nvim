@@ -78,24 +78,33 @@ local function make_provider()
     send_ok = true,
     send_err = nil,
     toggle_return_new = nil,
+    on_exit_callbacks = {},
   }
 
   function provider.is_available()
     return true
   end
 
-  function provider.open(cmd, args, env, config, focus)
+  function provider.open(cmd, args, env, config, focus, on_exit)
     table.insert(provider.open_calls, {
       cmd = cmd,
       args = args,
       env = env,
       config = config,
       focus = focus,
+      on_exit = on_exit,
     })
-    return {
+    local handle = {
       id = "handle_" .. #provider.open_calls,
       alive = true,
     }
+    table.insert(provider.on_exit_callbacks, function()
+      handle.alive = false
+      if on_exit then
+        on_exit(handle)
+      end
+    end)
+    return handle
   end
 
   function provider.close(handle)
@@ -356,5 +365,20 @@ describe("codex.init public api", function()
 
     assert.equals(1, #env.provider.open_calls)
     assert.is_false(env.provider.open_calls[1].focus)
+  end)
+
+  it("marks active session dead when provider exit callback fires", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    local session = env.store.get_active()
+
+    assert.is_true(env.codex.is_running())
+    assert.equals(1, #env.provider.on_exit_callbacks)
+
+    env.provider.on_exit_callbacks[1]()
+
+    assert.is_nil(env.store.get_active())
+    assert.is_false(env.codex.is_running())
+    assert.is_false(session.alive)
   end)
 end)

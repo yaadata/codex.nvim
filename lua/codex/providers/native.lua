@@ -23,7 +23,7 @@ local function find_win_for_buf(bufnr)
   return nil
 end
 
-function M.open(cmd, args, env, config, focus)
+function M.open(cmd, args, env, config, focus, on_exit)
   local full_cmd = build_cmd(cmd, args)
   local cwd = config.cwd or vim.fn.getcwd()
   local term_config = config.terminal
@@ -42,13 +42,19 @@ function M.open(cmd, args, env, config, focus)
   local bufnr = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_win_set_buf(winid, bufnr)
 
+  local handle = { bufnr = bufnr, winid = winid, jobid = nil }
   local jobid = vim.fn.termopen(full_cmd, {
     cwd = cwd,
     env = env,
     on_exit = function(_, exit_code)
+      handle.jobid = nil
       log.debug("terminal exited with code %d", exit_code)
+      if on_exit then
+        on_exit(handle)
+      end
     end,
   })
+  handle.jobid = jobid
 
   vim.bo[bufnr].buflisted = false
 
@@ -58,7 +64,6 @@ function M.open(cmd, args, env, config, focus)
     vim.cmd("wincmd p")
   end
 
-  local handle = { bufnr = bufnr, winid = winid, jobid = jobid }
   log.debug("native: opened terminal (buf=%d, win=%d, job=%d)", bufnr, winid, jobid)
   return handle
 end
