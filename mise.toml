@@ -1,0 +1,2 @@
+[env]
+CODEX_PLENARY_PATH = "{{config_root}}/.deps/plenary.nvim"
