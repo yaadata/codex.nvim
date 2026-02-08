@@ -186,13 +186,14 @@ to runtimepath so `require("codex")` works.
 - Parameterized test that verifies `native` and `none` providers expose all
   required methods with correct signatures.
 
-Test runner: `busted` via `nlua` or `nvim --headless -u tests/minimal_init.lua`.
+Test runner: headless Neovim with plenary (`PlenaryBustedFile`) via
+`nvim --headless -u tests/minimal_init.lua`.
 
 ---
 
 ## Verification
 
-1. **Unit tests:** `nvim --headless -u tests/minimal_init.lua -c "PlenaryBustedDirectory tests/unit"` (or busted equivalent).
+1. **Unit tests:** `nvim --headless -u tests/minimal_init.lua -c "PlenaryBustedDirectory tests/unit"`.
 2. **Manual smoke test:**
    - Open Neovim, run `:lua require("codex").setup({})`.
    - Run `:Codex` — should open a vertical split running `codex`.

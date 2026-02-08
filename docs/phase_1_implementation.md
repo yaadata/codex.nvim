@@ -187,18 +187,15 @@ nvim --headless -u tests/minimal_init.lua \
 
 ## Pitfalls and Resolutions
 
-### 1. Test runner selection
+### 1. Test runner standardization
 
-**Problem:** `busted` (the standalone Lua test runner) was not installed. After
-installing it via `luarocks install busted` along with `nlua`, running
-`busted --lua nlua` failed because the plugin's `lua/` directory was not on
-`package.path`, and Neovim's `vim.*` APIs were not fully available in the way
-the modules expected.
+**Problem:** Test commands were inconsistent and depended on local editor
+setup details, which made reproducibility weaker across machines.
 
-**Resolution:** Switched to plenary.nvim's built-in busted-compatible runner
-(`PlenaryBustedFile`), which runs inside a real Neovim headless process.
-Plenary was already installed in the user's Neovim environment. This is the
-standard approach for Neovim plugin testing and avoids path/runtime mismatches.
+**Resolution:** Standardized on headless Neovim with plenary's
+busted-compatible runner (`PlenaryBustedFile`) through the `just` targets.
+This keeps tests inside a real Neovim runtime and avoids alternate Lua test
+runner paths.
 
 ### 2. Plenary not found under `-u` flag
 
@@ -273,11 +270,6 @@ A dedicated test (`"does not mutate defaults"`) guards against regression.
   `session_store.mark_dead()`. When the CLI process exits, the session store
   still thinks the session is alive until the next `is_alive()` check. Wiring
   `on_exit` into the session store would make state tracking more accurate.
-
-- [ ] **Avoid installing `busted` and `nlua` globally.** Time was spent
-  installing luarocks packages that were ultimately unused. Should have checked
-  for plenary availability first, since that is the standard Neovim plugin test
-  runner and was already installed.
 
 - [ ] **Add a `README.md`.** The plugin has no user-facing documentation yet.
   Even a minimal README with install instructions, a `setup({})` example, and
