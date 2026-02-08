@@ -1,2 +1,5 @@
 [env]
 CODEX_PLENARY_PATH = "{{config_root}}/.deps/plenary.nvim"
+
+[tools]
+stylua = "v2.3.1"

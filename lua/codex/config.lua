@@ -38,10 +38,12 @@ function M.validate(config)
   })
 
   if not valid_providers[config.terminal.provider] then
-    error(string.format(
-      "codex: invalid terminal.provider %q, expected one of: auto, snacks, native, external, none",
-      config.terminal.provider
-    ))
+    error(
+      string.format(
+        "codex: invalid terminal.provider %q, expected one of: auto, snacks, native, external, none",
+        config.terminal.provider
+      )
+    )
   end
 
   if config.terminal.split_width_pct < 10 or config.terminal.split_width_pct > 90 then

@@ -48,9 +48,12 @@ describe("codex.config", function()
     end)
 
     it("rejects invalid provider name", function()
-      assert.has_error(function()
-        config.apply({ terminal = { provider = "invalid" } })
-      end, 'codex: invalid terminal.provider "invalid", expected one of: auto, snacks, native, external, none')
+      assert.has_error(
+        function()
+          config.apply({ terminal = { provider = "invalid" } })
+        end,
+        'codex: invalid terminal.provider "invalid", expected one of: auto, snacks, native, external, none'
+      )
     end)
 
     it("rejects split_width_pct below 10", function()

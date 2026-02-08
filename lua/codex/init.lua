@@ -65,13 +65,8 @@ function M.open(focus)
     session_store.remove(session.id)
   end
 
-  local handle = provider.open(
-    state.config.cmd,
-    state.config.args,
-    state.config.env,
-    state.config,
-    focus
-  )
+  local handle =
+    provider.open(state.config.cmd, state.config.args, state.config.env, state.config, focus)
 
   session_store.create({
     handle = handle,
@@ -113,13 +108,8 @@ function M.toggle()
   end
 
   -- No active session — open one
-  local handle = provider.open(
-    state.config.cmd,
-    state.config.args,
-    state.config.env,
-    state.config,
-    true
-  )
+  local handle =
+    provider.open(state.config.cmd, state.config.args, state.config.env, state.config, true)
 
   session_store.create({
     handle = handle,

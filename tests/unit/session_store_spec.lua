@@ -7,13 +7,15 @@ describe("codex.state.session_store", function()
 
   describe("create", function()
     it("returns an id", function()
-      local id = store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
+      local id =
+        store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
       assert.is_string(id)
       assert.truthy(id:match("^session_"))
     end)
 
     it("sets the new session as active", function()
-      local id = store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
+      local id =
+        store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
       local active = store.get_active()
       assert.is_not_nil(active)
       assert.equals(id, active.id)
@@ -21,7 +23,8 @@ describe("codex.state.session_store", function()
 
     it("stores session fields", function()
       local handle = { bufnr = 1 }
-      local id = store.create({ handle = handle, cmd = "codex", cwd = "/home", provider_name = "snacks" })
+      local id =
+        store.create({ handle = handle, cmd = "codex", cwd = "/home", provider_name = "snacks" })
       local session = store.get(id)
       assert.equals(handle, session.handle)
       assert.equals("codex", session.cmd)
@@ -39,14 +42,16 @@ describe("codex.state.session_store", function()
 
   describe("mark_dead", function()
     it("sets alive to false", function()
-      local id = store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
+      local id =
+        store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
       store.mark_dead(id)
       local session = store.get(id)
       assert.is_false(session.alive)
     end)
 
     it("clears active if it was the active session", function()
-      local id = store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
+      local id =
+        store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
       store.mark_dead(id)
       assert.is_nil(store.get_active())
     end)
@@ -54,7 +59,8 @@ describe("codex.state.session_store", function()
 
   describe("remove", function()
     it("deletes the session", function()
-      local id = store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
+      local id =
+        store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
       store.remove(id)
       assert.is_nil(store.get(id))
       assert.is_nil(store.get_active())
@@ -63,8 +69,10 @@ describe("codex.state.session_store", function()
 
   describe("set_active", function()
     it("changes the active session", function()
-      local id1 = store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
-      local id2 = store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
+      local id1 =
+        store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
+      local id2 =
+        store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
       store.set_active(id1)
       assert.equals(id1, store.get_active().id)
     end)
