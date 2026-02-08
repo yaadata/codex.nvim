@@ -258,9 +258,38 @@ Tooling scenarios:
 2. `just fmt-check` validates formatting.
 3. `just lint` validates static analysis.
 
+## Post-Review Corrections
+
+### Commit 11: Fix `toggle()` missing `on_exit` callback
+
+Goal:
+- Ensure the `on_exit` session-liveness fix applies to all code paths that
+  create sessions, not only `M.open()`.
+
+Background:
+- Code review of commits 1–10 identified that `M.toggle()` in `init.lua`
+  called `provider.open()` with five arguments, omitting the sixth `on_exit`
+  callback added in commit 8 (`ec31161`).
+- Since `:Codex` (the primary user command) routes through `M.toggle()`, most
+  sessions opened in practice would never have their exit callback wired,
+  leaving stale `alive=true` entries in the session store.
+
+Changes:
+1. Pass the same `mark_session_dead_by_handle` closure as the sixth argument to
+   `provider.open()` inside `M.toggle()`, matching the pattern in `M.open()`.
+2. Add regression test `"marks session dead when opened via toggle and exit
+   callback fires"` in `tests/unit/init_spec.lua`.
+
+Validation:
+- `just test` passes all 85 tests, including the new toggle on_exit test.
+
+Message:
+- `fix(core): pass on_exit callback when toggle opens a new session`
+
 ## Assumptions and Defaults
 
-1. This phase produces 10 commits, one per retrospective gap correction.
+1. This phase produces 10 commits, one per retrospective gap correction, plus
+   post-review corrections as needed.
 2. Existing intentional working-tree changes remain unless directly modified by a matching gap correction.
 3. No GitHub Actions workflow is added in this phase.
 4. `_deps` remains internal and undocumented for end users.
