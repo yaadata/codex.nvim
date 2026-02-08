@@ -1,33 +1,56 @@
-local config_mod = require("codex.config")
-local log = require("codex.logger")
-local providers = require("codex.providers")
-local session_store = require("codex.state.session_store")
-
 local M = {}
+
+local default_deps = {
+  config = require("codex.config"),
+  logger = require("codex.logger"),
+  providers = require("codex.providers"),
+  session_store = require("codex.state.session_store"),
+  commands = require("codex.nvim.commands"),
+  vim = vim,
+}
 
 local state = {
   config = nil,
   initialized = false,
+  deps = nil,
 }
 
+local function get_deps()
+  return state.deps or default_deps
+end
+
 function M.setup(opts)
-  state.config = config_mod.apply(opts)
-  log.set_level(state.config.log_level)
+  opts = opts or {}
 
-  require("codex.nvim.commands").register()
+  local deps = {}
+  for key, value in pairs(default_deps) do
+    deps[key] = value
+  end
+  for key, value in pairs(opts._deps or {}) do
+    deps[key] = value
+  end
+  state.deps = deps
 
-  vim.api.nvim_create_autocmd("VimLeavePre", {
-    group = vim.api.nvim_create_augroup("codex_cleanup", { clear = true }),
+  local config_opts = deps.vim.deepcopy(opts)
+  config_opts._deps = nil
+
+  state.config = deps.config.apply(config_opts)
+  deps.logger.set_level(state.config.log_level)
+
+  deps.commands.register()
+
+  deps.vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = deps.vim.api.nvim_create_augroup("codex_cleanup", { clear = true }),
     callback = function()
       M.close()
     end,
   })
 
   state.initialized = true
-  log.debug("codex.nvim initialized")
+  deps.logger.debug("codex.nvim initialized")
 
   if state.config.auto_start then
-    vim.schedule(function()
+    deps.vim.schedule(function()
       M.open(false)
     end)
   end
@@ -40,16 +63,17 @@ local function ensure_setup()
 end
 
 local function get_provider()
-  return providers.resolve(state.config.terminal.provider)
+  return get_deps().providers.resolve(state.config.terminal.provider)
 end
 
 function M.open(focus)
   ensure_setup()
+  local deps = get_deps()
   if focus == nil then
     focus = true
   end
 
-  local session = session_store.get_active()
+  local session = deps.session_store.get_active()
   local provider, provider_name = get_provider()
 
   if session and session.alive and provider.is_alive(session.handle) then
@@ -62,35 +86,37 @@ function M.open(focus)
   -- Close stale session if any
   if session then
     provider.close(session.handle)
-    session_store.remove(session.id)
+    deps.session_store.remove(session.id)
   end
 
   local handle =
     provider.open(state.config.cmd, state.config.args, state.config.env, state.config, focus)
 
-  session_store.create({
+  deps.session_store.create({
     handle = handle,
     cmd = state.config.cmd,
-    cwd = state.config.cwd or vim.fn.getcwd(),
+    cwd = state.config.cwd or deps.vim.fn.getcwd(),
     provider_name = provider_name,
   })
 end
 
 function M.close()
-  local session = session_store.get_active()
+  local deps = get_deps()
+  local session = deps.session_store.get_active()
   if not session then
     return
   end
 
   local provider = get_provider()
   provider.close(session.handle)
-  session_store.remove(session.id)
+  deps.session_store.remove(session.id)
 end
 
 function M.toggle()
   ensure_setup()
+  local deps = get_deps()
 
-  local session = session_store.get_active()
+  local session = deps.session_store.get_active()
   local provider, provider_name = get_provider()
 
   if session and session.alive then
@@ -111,18 +137,19 @@ function M.toggle()
   local handle =
     provider.open(state.config.cmd, state.config.args, state.config.env, state.config, true)
 
-  session_store.create({
+  deps.session_store.create({
     handle = handle,
     cmd = state.config.cmd,
-    cwd = state.config.cwd or vim.fn.getcwd(),
+    cwd = state.config.cwd or deps.vim.fn.getcwd(),
     provider_name = provider_name,
   })
 end
 
 function M.focus()
   ensure_setup()
+  local deps = get_deps()
 
-  local session = session_store.get_active()
+  local session = deps.session_store.get_active()
   local provider = get_provider()
 
   if session and session.alive and provider.is_alive(session.handle) then
@@ -135,22 +162,24 @@ end
 
 function M.send(text)
   ensure_setup()
+  local deps = get_deps()
 
-  local session = session_store.get_active()
+  local session = deps.session_store.get_active()
   if not session or not session.alive then
     M.open(false)
-    session = session_store.get_active()
+    session = deps.session_store.get_active()
   end
 
   local provider = get_provider()
   local ok, err = provider.send(session.handle, text)
   if not ok then
-    log.error("failed to send text: %s", err or "unknown error")
+    deps.logger.error("failed to send text: %s", err or "unknown error")
   end
 end
 
 function M.is_running()
-  local session = session_store.get_active()
+  local deps = get_deps()
+  local session = deps.session_store.get_active()
   if not session or not session.alive then
     return false
   end
@@ -160,7 +189,8 @@ function M.is_running()
 end
 
 function M.get_config()
-  return state.config and vim.deepcopy(state.config) or nil
+  local deps = get_deps()
+  return state.config and deps.vim.deepcopy(state.config) or nil
 end
 
 return M
