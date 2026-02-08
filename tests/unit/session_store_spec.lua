@@ -73,6 +73,7 @@ describe("codex.state.session_store", function()
         store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
       local id2 =
         store.create({ handle = {}, cmd = "codex", cwd = "/tmp", provider_name = "native" })
+      assert.equals(id2, store.get_active().id)
       store.set_active(id1)
       assert.equals(id1, store.get_active().id)
     end)

@@ -1,0 +1,2 @@
+std = "codex"
+exclude = [".deps/**"]

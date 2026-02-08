@@ -2,4 +2,5 @@
 CODEX_PLENARY_PATH = "{{config_root}}/.deps/plenary.nvim"
 
 [tools]
+"aqua:Kampfkarren/selene" = "0.30.0"
 stylua = "v2.3.1"
