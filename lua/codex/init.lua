@@ -155,8 +155,16 @@ function M.toggle()
   end
 
   -- No active session — open one
-  local handle =
-    provider.open(state.config.cmd, state.config.args, state.config.env, state.config, true)
+  local handle = provider.open(
+    state.config.cmd,
+    state.config.args,
+    state.config.env,
+    state.config,
+    true,
+    function(exited_handle)
+      mark_session_dead_by_handle(deps, exited_handle)
+    end
+  )
 
   deps.session_store.create({
     handle = handle,

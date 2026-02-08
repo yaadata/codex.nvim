@@ -381,4 +381,18 @@ describe("codex.init public api", function()
     assert.is_false(env.codex.is_running())
     assert.is_false(session.alive)
   end)
+
+  it("marks session dead when opened via toggle and exit callback fires", function()
+    local env = setup_with_deps()
+    env.codex.toggle()
+    local session = env.store.get_active()
+
+    assert.is_not_nil(session)
+    assert.equals(1, #env.provider.on_exit_callbacks)
+
+    env.provider.on_exit_callbacks[1]()
+
+    assert.is_nil(env.store.get_active())
+    assert.is_false(session.alive)
+  end)
 end)
