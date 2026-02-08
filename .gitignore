@@ -1,0 +1,16 @@
+.deps/
+.luarocks/
+
+# Editor and temp artifacts
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local Neovim/runtime artifacts
+.nvimlog
+
+# Local build/cache artifacts
+coverage/
+.coverage
+*.out
