@@ -5,9 +5,18 @@ local M = {}
 ---@field line2? integer
 ---@field bufnr? integer
 
+local function is_positive_integer(value)
+  return type(value) == "number" and value >= 1 and math.floor(value) == value
+end
+
+---Resolves selection range with explicit precedence:
+---1) command-provided range (`opts.line1` + `opts.line2`)
+---2) visual marks (`'<` and `'>`)
 local function resolve_range(vim_api, bufnr, opts)
-  if opts and opts.line1 and opts.line2 then
-    return opts.line1, opts.line2
+  local line1 = opts and opts.line1
+  local line2 = opts and opts.line2
+  if is_positive_integer(line1) and is_positive_integer(line2) then
+    return line1, line2
   end
 
   local start_mark = vim_api.api.nvim_buf_get_mark(bufnr, "<")
@@ -45,6 +54,7 @@ function M.get_visual_selection(vim_api, opts)
     start_line, end_line = end_line, start_line
   end
 
+  -- Selection is linewise only: mark columns are intentionally ignored.
   local lines = vim_api.api.nvim_buf_get_lines(bufnr, start_line - 1, end_line, false)
   local filetype = vim_api.bo[bufnr].filetype or ""
 

@@ -44,7 +44,7 @@ Acceptance criteria:
 ## Gap 2: Mention Payload Path Safety
 
 Status:
-- Completed in current branch (pending commit).
+- Completed in `ebd6f35`.
 
 Goal:
 - Define and enforce path formatting behavior for `/mention` payloads.
@@ -64,6 +64,9 @@ Acceptance criteria:
 
 ## Gap 3: Selection Source Rules and Mode Semantics
 
+Status:
+- Completed in current branch (pending commit).
+
 Goal:
 - Clarify and test selection behavior across command ranges and visual marks.
 
@@ -82,6 +85,9 @@ Acceptance criteria:
 3. Unsupported selection modes (if any) are documented clearly.
 
 ## Gap 4: User-Facing Error Message Consistency
+
+Status:
+- Pending.
 
 Goal:
 - Standardize error strings/log lines for Phase 2 flows.

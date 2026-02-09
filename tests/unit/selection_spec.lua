@@ -99,13 +99,55 @@ describe("codex.context.selection", function()
   end)
 
   it("uses explicit range when provided", function()
-    local spec = selection.get_visual_selection(make_fake_vim_api(), {
-      line1 = 1,
-      line2 = 2,
-    })
+    local spec = selection.get_visual_selection(
+      make_fake_vim_api({
+        marks = { ["<"] = { 4, 0 }, [">"] = { 5, 0 } },
+      }),
+      {
+        line1 = 1,
+        line2 = 2,
+      }
+    )
 
     assert.equals(1, spec.start_line)
     assert.equals(2, spec.end_line)
     assert.same({ "line 1", "line 2" }, spec.lines)
+  end)
+
+  it("normalizes reversed explicit ranges", function()
+    local spec = selection.get_visual_selection(make_fake_vim_api(), {
+      line1 = 4,
+      line2 = 2,
+    })
+
+    assert.equals(2, spec.start_line)
+    assert.equals(4, spec.end_line)
+    assert.same({ "line 2", "line 3", "line 4" }, spec.lines)
+  end)
+
+  it("normalizes reversed visual marks", function()
+    local spec = selection.get_visual_selection(make_fake_vim_api({
+      marks = { ["<"] = { 5, 0 }, [">"] = { 3, 0 } },
+    }))
+
+    assert.equals(3, spec.start_line)
+    assert.equals(5, spec.end_line)
+    assert.same({ "line 3", "line 4", "line 5" }, spec.lines)
+  end)
+
+  it("falls back to visual marks when explicit range is invalid", function()
+    local spec = selection.get_visual_selection(
+      make_fake_vim_api({
+        marks = { ["<"] = { 2, 0 }, [">"] = { 3, 0 } },
+      }),
+      {
+        line1 = 0,
+        line2 = 3,
+      }
+    )
+
+    assert.equals(2, spec.start_line)
+    assert.equals(3, spec.end_line)
+    assert.same({ "line 2", "line 3" }, spec.lines)
   end)
 end)
