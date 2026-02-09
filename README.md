@@ -47,6 +47,21 @@ require("codex").setup({
       title_pos = "center", -- left | center | right
     },
   },
+  keymaps = {
+    toggle = "<leader>ot",
+    open = "<leader>oo",
+    focus = "<leader>of",
+    send = "<leader>os",
+    add = "<leader>oa",
+    resume = "<leader>or",
+    model = "<leader>om",
+    status = "<leader>oi",
+    permissions = "<leader>op",
+    compact = "<leader>oc",
+    review = "<leader>oR",
+    diff = "<leader>od",
+  },
+  keymaps_force = false, -- do not override existing mappings unless true
 })
 ```
 

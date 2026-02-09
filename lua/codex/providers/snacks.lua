@@ -32,12 +32,16 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local cwd = config.cwd or vim.fn.getcwd()
   local snacks_opts = config.terminal.provider_opts.snacks or {}
 
-  local opts = vim.tbl_deep_extend("force", {
+  local base_opts = {
     cmd = full_cmd,
-    env = env,
     cwd = cwd,
     interactive = true,
-  }, snacks_opts)
+  }
+  if next(env) ~= nil then
+    base_opts.env = env
+  end
+
+  local opts = vim.tbl_deep_extend("force", base_opts, snacks_opts)
 
   local terminal = snacks.terminal(opts)
 

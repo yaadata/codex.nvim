@@ -81,6 +81,15 @@ function M.validate(config)
     keymaps_force = { config.keymaps_force, "boolean" },
   })
 
+  for key, value in pairs(config.env) do
+    if type(key) ~= "string" then
+      error("codex: env keys must be strings")
+    end
+    if type(value) ~= "string" then
+      error(string.format("codex: env.%s must be a string", key))
+    end
+  end
+
   if config.keymaps ~= false then
     vim.validate({
       keymaps = { config.keymaps, "table" },

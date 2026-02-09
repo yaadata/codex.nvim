@@ -269,6 +269,29 @@ describe("codex.providers.native", function()
     end)
   end)
 
+  it("omits termopen env when config env is empty", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+
+      provider.open("codex", {}, {}, cfg, false)
+
+      assert.is_nil(state.termopen_calls[1].opts.env)
+    end)
+  end)
+
+  it("passes termopen env when config env has values", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      local env = { CODEX_TEST = "1" }
+
+      provider.open("codex", {}, env, cfg, false)
+
+      assert.same(env, state.termopen_calls[1].opts.env)
+    end)
+  end)
+
   it("opens hsplit windows and focuses insert mode when focus=true", function()
     with_stubbed_native_env(function(state)
       local provider = require("codex.providers.native")

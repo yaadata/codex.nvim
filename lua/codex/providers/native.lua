@@ -135,9 +135,8 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local bufnr, winid = create_window(term_config)
 
   local handle = { bufnr = bufnr, winid = winid, jobid = nil }
-  local jobid = vim.fn.termopen(full_cmd, {
+  local termopen_opts = {
     cwd = cwd,
-    env = env,
     on_exit = function(_, exit_code)
       handle.jobid = nil
       log.debug("terminal exited with code %d", exit_code)
@@ -145,7 +144,12 @@ function M.open(cmd, args, env, config, focus, on_exit)
         on_exit(handle)
       end
     end,
-  })
+  }
+  if next(env) ~= nil then
+    termopen_opts.env = env
+  end
+
+  local jobid = vim.fn.termopen(full_cmd, termopen_opts)
   handle.jobid = jobid
 
   vim.bo[bufnr].buflisted = false

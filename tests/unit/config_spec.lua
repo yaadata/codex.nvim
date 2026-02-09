@@ -223,5 +223,21 @@ describe("codex.config", function()
         config.validate(cfg)
       end, "keymaps_force: expected boolean")
     end)
+
+    it("rejects env maps with non-string keys", function()
+      local cfg = make_valid_config()
+      cfg.env = { [1] = "value" }
+      assert.has_error(function()
+        config.validate(cfg)
+      end, "codex: env keys must be strings")
+    end)
+
+    it("rejects env maps with non-string values", function()
+      local cfg = make_valid_config()
+      cfg.env = { CODEX_TEST = true }
+      assert.has_error(function()
+        config.validate(cfg)
+      end, "codex: env.CODEX_TEST must be a string")
+    end)
   end)
 end)
