@@ -18,6 +18,7 @@ local function make_config(overrides)
         title = " Codex ",
         title_pos = "center",
       },
+      auto_close = false,
       keymaps = {
         toggle = "<C-c>",
         close = false,
@@ -464,6 +465,50 @@ describe("codex.providers.native", function()
       local open_call = state.open_win_calls[1]
       assert.equals(1, open_call.opts.width)
       assert.equals(1, open_call.opts.height)
+    end)
+  end)
+
+  it("does not auto-close native terminal window on exit when auto_close=false", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          auto_close = false,
+        },
+      })
+
+      local handle = provider.open("codex", {}, {}, cfg, true)
+      local bufnr = handle.bufnr
+
+      state.termopen_calls[1].opts.on_exit(nil, 0)
+
+      assert.equals(0, #state.win_close_calls)
+      assert.is_true(state.buf_valid[bufnr])
+      assert.is_nil(handle.jobid)
+    end)
+  end)
+
+  it("auto-closes native terminal window on exit when auto_close=true", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          auto_close = true,
+        },
+      })
+
+      local handle = provider.open("codex", {}, {}, cfg, true)
+      local winid = handle.winid
+      local bufnr = handle.bufnr
+
+      state.termopen_calls[1].opts.on_exit(nil, 0)
+
+      assert.equals(1, #state.win_close_calls)
+      assert.equals(winid, state.win_close_calls[1].winid)
+      assert.is_false(state.buf_valid[bufnr])
+      assert.is_nil(handle.jobid)
+      assert.is_nil(handle.winid)
+      assert.is_nil(handle.bufnr)
     end)
   end)
 

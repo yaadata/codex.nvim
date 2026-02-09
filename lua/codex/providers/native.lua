@@ -120,6 +120,20 @@ local function reshow_window(term_config, bufnr)
   return open_window_for_buf(term_config, bufnr)
 end
 
+---@param handle codex.ProviderHandle
+---@return nil
+local function cleanup_window_and_buffer(handle)
+  if handle.winid and vim.api.nvim_win_is_valid(handle.winid) then
+    pcall(vim.api.nvim_win_close, handle.winid, true)
+  end
+  handle.winid = nil
+
+  if handle.bufnr and vim.api.nvim_buf_is_valid(handle.bufnr) then
+    pcall(vim.api.nvim_buf_delete, handle.bufnr, { force = true })
+  end
+  handle.bufnr = nil
+end
+
 ---@param bufnr integer
 ---@param keymaps codex.TerminalKeymapConfig|nil
 ---@return nil
@@ -170,6 +184,9 @@ function M.open(cmd, args, env, config, focus, on_exit)
     cwd = cwd,
     on_exit = function(_, exit_code)
       handle.jobid = nil
+      if term_config.auto_close == true then
+        cleanup_window_and_buffer(handle)
+      end
       log.debug("terminal exited with code %d", exit_code)
       if on_exit then
         on_exit(handle)
@@ -204,17 +221,12 @@ function M.close(handle)
     return true
   end
 
-  if handle.winid and vim.api.nvim_win_is_valid(handle.winid) then
-    vim.api.nvim_win_close(handle.winid, true)
-  end
-
   if handle.jobid then
     pcall(vim.fn.jobstop, handle.jobid)
+    handle.jobid = nil
   end
 
-  if handle.bufnr and vim.api.nvim_buf_is_valid(handle.bufnr) then
-    pcall(vim.api.nvim_buf_delete, handle.bufnr, { force = true })
-  end
+  cleanup_window_and_buffer(handle)
 
   return true
 end
