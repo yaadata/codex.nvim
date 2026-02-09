@@ -477,6 +477,70 @@ describe("codex.init public api", function()
     assert.equals("/compact\n", env.provider.send_calls[1].text)
   end)
 
+  it("resume sends /resume when an active session exists", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    local active_handle = env.store.get_active().handle
+
+    local ok = env.codex.resume()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.equals(1, #env.provider.focus_calls)
+    assert.same(active_handle, env.provider.focus_calls[1])
+    assert.equals("/resume\n", env.provider.send_calls[1].text)
+  end)
+
+  it("resume opens `codex resume` when no active session exists", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.resume()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.same({ "resume" }, env.provider.open_calls[1].args)
+    assert.is_true(env.provider.open_calls[1].focus)
+    assert.equals(0, #env.provider.send_calls)
+  end)
+
+  it("resume opens `codex resume --last` when last=true and no active session exists", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.resume({ last = true })
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.same({ "resume", "--last" }, env.provider.open_calls[1].args)
+    assert.equals(0, #env.provider.send_calls)
+  end)
+
+  it("resume ignores last flag when dispatching to active session slash command", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+
+    local ok = env.codex.resume({ last = true })
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.equals("/resume\n", env.provider.send_calls[1].text)
+  end)
+
+  it("resume closes stale session before opening resume process", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    local stale_handle = env.store.get_active().handle
+    stale_handle.alive = false
+
+    local ok = env.codex.resume()
+
+    assert.is_true(ok)
+    assert.equals(2, #env.provider.open_calls)
+    assert.equals(1, #env.provider.close_calls)
+    assert.same(stale_handle, env.provider.close_calls[1])
+    assert.same({ "resume" }, env.provider.open_calls[2].args)
+    assert.equals(0, #env.provider.send_calls)
+  end)
+
   it("send_selection formats and sends the visual payload", function()
     local env = setup_with_deps()
 

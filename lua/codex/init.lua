@@ -267,6 +267,33 @@ function M.compact()
   return M.send_command("compact")
 end
 
+---@class codex.ResumeOpts
+---@field last? boolean Use `codex resume --last` only when launching a new process.
+
+---@param opts? codex.ResumeOpts
+---@return codex.SendResult ok True when `/resume` is sent or resume process is opened.
+---@return string|nil err
+function M.resume(opts)
+  ensure_setup()
+  opts = opts or {}
+
+  local deps = get_deps()
+  local session = deps.session_store.get_active()
+  local provider = get_provider()
+
+  if session and session.alive and provider.is_alive(session.handle) then
+    return M.send_command("resume")
+  end
+
+  local args = { "resume" }
+  if opts.last then
+    table.insert(args, "--last")
+  end
+
+  open_session(args, true)
+  return true
+end
+
 ---@param opts? codex.SelectionOpts Selection range override; falls back to visual marks when omitted.
 ---@return codex.SendResult ok True when selection payload is sent.
 ---@return string|nil err
