@@ -1,12 +1,31 @@
 local config = require("codex.config")
 
 describe("codex.config", function()
+  local function assert_error_contains(fn, expected)
+    local ok, err = pcall(fn)
+    assert.is_false(ok)
+    assert.is_not_nil(err)
+    assert.is_true(string.find(err, expected, 1, true) ~= nil)
+  end
+
+  local function make_valid_config()
+    return vim.deepcopy(config.defaults)
+  end
+
   describe("defaults", function()
     it("has expected default values", function()
       assert.equals("codex", config.defaults.cmd)
       assert.equals("auto", config.defaults.terminal.provider)
-      assert.equals("right", config.defaults.terminal.split_side)
-      assert.equals(40, config.defaults.terminal.split_width_pct)
+      assert.equals("vsplit", config.defaults.terminal.window)
+      assert.equals("right", config.defaults.terminal.vsplit.side)
+      assert.equals(40, config.defaults.terminal.vsplit.size_pct)
+      assert.equals("bottom", config.defaults.terminal.hsplit.side)
+      assert.equals(30, config.defaults.terminal.hsplit.size_pct)
+      assert.equals(80, config.defaults.terminal.float.width_pct)
+      assert.equals(80, config.defaults.terminal.float.height_pct)
+      assert.equals("rounded", config.defaults.terminal.float.border)
+      assert.equals(" Codex ", config.defaults.terminal.float.title)
+      assert.equals("center", config.defaults.terminal.float.title_pos)
       assert.is_false(config.defaults.auto_start)
       assert.equals("warn", config.defaults.log_level)
     end)
@@ -27,11 +46,18 @@ describe("codex.config", function()
     it("merges user overrides", function()
       local cfg = config.apply({
         cmd = "/usr/local/bin/codex",
-        terminal = { split_side = "left", split_width_pct = 50 },
+        terminal = {
+          window = "hsplit",
+          vsplit = { side = "left" },
+          hsplit = { size_pct = 50 },
+        },
       })
       assert.equals("/usr/local/bin/codex", cfg.cmd)
-      assert.equals("left", cfg.terminal.split_side)
-      assert.equals(50, cfg.terminal.split_width_pct)
+      assert.equals("hsplit", cfg.terminal.window)
+      assert.equals("left", cfg.terminal.vsplit.side)
+      assert.equals(40, cfg.terminal.vsplit.size_pct)
+      assert.equals("bottom", cfg.terminal.hsplit.side)
+      assert.equals(50, cfg.terminal.hsplit.size_pct)
       -- non-overridden values preserved
       assert.equals("auto", cfg.terminal.provider)
     end)
@@ -56,22 +82,84 @@ describe("codex.config", function()
       )
     end)
 
-    it("rejects split_width_pct below 10", function()
+    it("rejects invalid window type", function()
       assert.has_error(function()
-        config.apply({ terminal = { split_width_pct = 5 } })
-      end, "codex: terminal.split_width_pct must be between 10 and 90")
+        config.apply({ terminal = { window = "tabs" } })
+      end, 'codex: invalid terminal.window "tabs", expected one of: vsplit, hsplit, float')
     end)
 
-    it("rejects split_width_pct above 90", function()
+    it("rejects invalid vsplit.side", function()
       assert.has_error(function()
-        config.apply({ terminal = { split_width_pct = 95 } })
-      end, "codex: terminal.split_width_pct must be between 10 and 90")
+        config.apply({ terminal = { vsplit = { side = "top" } } })
+      end, "codex: terminal.vsplit.side must be 'left' or 'right'")
     end)
 
-    it("rejects invalid split_side", function()
+    it("rejects vsplit.size_pct below 10", function()
       assert.has_error(function()
-        config.apply({ terminal = { split_side = "top" } })
-      end, "codex: terminal.split_side must be 'left' or 'right'")
+        config.apply({ terminal = { vsplit = { size_pct = 5 } } })
+      end, "codex: terminal.vsplit.size_pct must be between 10 and 90")
+    end)
+
+    it("rejects hsplit.side", function()
+      assert.has_error(function()
+        config.apply({ terminal = { hsplit = { side = "left" } } })
+      end, "codex: terminal.hsplit.side must be 'top' or 'bottom'")
+    end)
+
+    it("rejects hsplit.size_pct above 90", function()
+      assert.has_error(function()
+        config.apply({ terminal = { hsplit = { size_pct = 95 } } })
+      end, "codex: terminal.hsplit.size_pct must be between 10 and 90")
+    end)
+
+    it("rejects float.width_pct below 10", function()
+      assert.has_error(function()
+        config.apply({ terminal = { float = { width_pct = 5 } } })
+      end, "codex: terminal.float.width_pct must be between 10 and 100")
+    end)
+
+    it("rejects float.height_pct above 100", function()
+      assert.has_error(function()
+        config.apply({ terminal = { float = { height_pct = 150 } } })
+      end, "codex: terminal.float.height_pct must be between 10 and 100")
+    end)
+
+    it("rejects invalid float.title_pos", function()
+      assert.has_error(function()
+        config.apply({ terminal = { float = { title_pos = "middle" } } })
+      end, "codex: terminal.float.title_pos must be 'left', 'center', or 'right'")
+    end)
+
+    it("rejects non-table terminal.vsplit", function()
+      local cfg = make_valid_config()
+      cfg.terminal.vsplit = "bad"
+      assert_error_contains(function()
+        config.validate(cfg)
+      end, "vsplit: expected table")
+    end)
+
+    it("rejects non-table terminal.hsplit", function()
+      local cfg = make_valid_config()
+      cfg.terminal.hsplit = "bad"
+      assert_error_contains(function()
+        config.validate(cfg)
+      end, "hsplit: expected table")
+    end)
+
+    it("rejects non-table terminal.float", function()
+      local cfg = make_valid_config()
+      cfg.terminal.float = "bad"
+      assert_error_contains(function()
+        config.validate(cfg)
+      end, "float: expected table")
+    end)
+
+    it("rejects bad nested field types", function()
+      local cfg = make_valid_config()
+      cfg.terminal.float.title = 123
+      assert_error_contains(function()
+        config.validate(cfg)
+      end, "terminal.float.title")
     end)
   end)
 end)

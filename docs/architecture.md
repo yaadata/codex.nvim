@@ -54,7 +54,8 @@ codex.nvim/
 │   │   ├── init.lua                 # Provider registry. Maps names to module paths,
 │   │   │                            # lazy-loads on first resolve, implements auto-resolution
 │   │   │                            # (prefers snacks, falls back to native).
-│   │   ├── native.lua               # Built-in provider using vim.fn.termopen in a split.
+│   │   ├── native.lua               # Built-in provider using vim.fn.termopen in
+│   │   │                            # vsplit, hsplit, or float windows.
 │   │   ├── snacks.lua               # Provider backed by snacks.nvim terminal integration.
 │   │   ├── external.lua             # Reserved stub for future external terminal support.
 │   │   └── none.lua                 # No-op provider for tests and headless environments.
@@ -251,6 +252,10 @@ Key types:
 | ----------------------- | ----- | ------------------------------------------------------------- |
 | `codex.Config`          | class | Merged configuration after `setup()`                          |
 | `codex.TerminalConfig`  | class | Nested terminal-specific options                              |
+| `codex.WindowType`      | alias | Window mode union: `vsplit`, `hsplit`, `float`                |
+| `codex.VsplitConfig`    | class | Vertical split options (`side`, `size_pct`)                   |
+| `codex.HsplitConfig`    | class | Horizontal split options (`side`, `size_pct`)                 |
+| `codex.FloatConfig`     | class | Floating window options (size, border, title, title_pos)      |
 | `codex.ProviderName`    | alias | Union of valid provider name strings                          |
 | `codex.LogLevel`        | alias | Union of log level strings                                    |
 | `codex.Provider`        | class | 8-method structural interface for providers                   |

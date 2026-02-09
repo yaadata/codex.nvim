@@ -13,10 +13,32 @@
 ---| "warn"
 ---| "error"
 
+---@alias codex.WindowType
+---| "vsplit"
+---| "hsplit"
+---| "float"
+
+---@class codex.VsplitConfig
+---@field side "left"|"right"
+---@field size_pct number
+
+---@class codex.HsplitConfig
+---@field side "top"|"bottom"
+---@field size_pct number
+
+---@class codex.FloatConfig
+---@field width_pct number
+---@field height_pct number
+---@field border string
+---@field title string
+---@field title_pos "left"|"center"|"right"
+
 ---@class codex.TerminalConfig
 ---@field provider codex.ProviderName
----@field split_side "left"|"right"
----@field split_width_pct number
+---@field window codex.WindowType
+---@field vsplit codex.VsplitConfig
+---@field hsplit codex.HsplitConfig
+---@field float codex.FloatConfig
 ---@field auto_close boolean
 ---@field provider_opts table<string, table>
 

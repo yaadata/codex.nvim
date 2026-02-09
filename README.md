@@ -28,8 +28,22 @@ require("codex").setup({
   auto_start = false,
   terminal = {
     provider = "auto", -- auto | snacks | native | external | none
-    split_side = "right",
-    split_width_pct = 40,
+    window = "vsplit", -- vsplit | hsplit | float
+    vsplit = {
+      side = "right", -- left | right
+      size_pct = 40, -- 10-90
+    },
+    hsplit = {
+      side = "bottom", -- top | bottom
+      size_pct = 30, -- 10-90
+    },
+    float = {
+      width_pct = 80, -- 10-100
+      height_pct = 80, -- 10-100
+      border = "rounded",
+      title = " Codex ",
+      title_pos = "center", -- left | center | right
+    },
   },
 })
 ```

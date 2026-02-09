@@ -1,0 +1,427 @@
+local function make_config(overrides)
+  local base = {
+    cwd = nil,
+    terminal = {
+      window = "vsplit",
+      vsplit = {
+        side = "right",
+        size_pct = 40,
+      },
+      hsplit = {
+        side = "bottom",
+        size_pct = 30,
+      },
+      float = {
+        width_pct = 80,
+        height_pct = 80,
+        border = "rounded",
+        title = " Codex ",
+        title_pos = "center",
+      },
+    },
+  }
+
+  return vim.tbl_deep_extend("force", base, overrides or {})
+end
+
+local function with_stubbed_native_env(run)
+  local api_methods = {
+    "nvim_list_wins",
+    "nvim_win_get_buf",
+    "nvim_get_current_win",
+    "nvim_create_buf",
+    "nvim_win_set_buf",
+    "nvim_win_set_width",
+    "nvim_win_set_height",
+    "nvim_open_win",
+    "nvim_win_is_valid",
+    "nvim_set_current_win",
+    "nvim_win_close",
+    "nvim_buf_is_valid",
+    "nvim_buf_delete",
+  }
+  local fn_methods = { "getcwd", "termopen", "chansend", "jobstop" }
+
+  local original_api = {}
+  local original_fn = {}
+  local original_cmd = vim.cmd
+  local original_bo = vim.bo
+  local original_columns = vim.o.columns
+  local original_lines = vim.o.lines
+
+  for _, method in ipairs(api_methods) do
+    original_api[method] = vim.api[method]
+  end
+  for _, method in ipairs(fn_methods) do
+    original_fn[method] = vim.fn[method]
+  end
+
+  local state = {
+    next_buf = 2,
+    next_win = 2,
+    next_jobid = 100,
+    current_win = 1,
+    wins = { [1] = { bufnr = 1, valid = true } },
+    buf_valid = { [1] = true },
+    cmd_calls = {},
+    win_width_calls = {},
+    win_height_calls = {},
+    open_win_calls = {},
+    win_close_calls = {},
+    set_current_win_calls = {},
+    termopen_calls = {},
+    chansend_calls = {},
+    jobstop_calls = {},
+    startinsert_calls = 0,
+  }
+
+  local function create_split_window()
+    local winid = state.next_win
+    state.next_win = state.next_win + 1
+    local current = state.wins[state.current_win]
+    state.wins[winid] = {
+      bufnr = current and current.bufnr or 1,
+      valid = true,
+    }
+    state.current_win = winid
+    return winid
+  end
+
+  local function nvim_list_wins()
+    local wins = {}
+    for winid, win in pairs(state.wins) do
+      if win.valid then
+        table.insert(wins, winid)
+      end
+    end
+    table.sort(wins)
+    return wins
+  end
+
+  local function nvim_win_get_buf(winid)
+    return state.wins[winid].bufnr
+  end
+
+  local function nvim_get_current_win()
+    return state.current_win
+  end
+
+  local function nvim_create_buf()
+    local bufnr = state.next_buf
+    state.next_buf = state.next_buf + 1
+    state.buf_valid[bufnr] = true
+    return bufnr
+  end
+
+  local function nvim_win_set_buf(winid, bufnr)
+    state.wins[winid].bufnr = bufnr
+  end
+
+  local function nvim_win_set_width(winid, width)
+    table.insert(state.win_width_calls, { winid = winid, width = width })
+  end
+
+  local function nvim_win_set_height(winid, height)
+    table.insert(state.win_height_calls, { winid = winid, height = height })
+  end
+
+  local function nvim_open_win(bufnr, enter, opts)
+    local winid = state.next_win
+    state.next_win = state.next_win + 1
+    state.wins[winid] = { bufnr = bufnr, valid = true }
+    table.insert(state.open_win_calls, { bufnr = bufnr, enter = enter, opts = opts, winid = winid })
+    if enter then
+      state.current_win = winid
+    end
+    return winid
+  end
+
+  local function nvim_win_is_valid(winid)
+    return state.wins[winid] and state.wins[winid].valid or false
+  end
+
+  local function nvim_set_current_win(winid)
+    state.current_win = winid
+    table.insert(state.set_current_win_calls, winid)
+  end
+
+  local function nvim_win_close(winid, force)
+    table.insert(state.win_close_calls, { winid = winid, force = force })
+    if state.wins[winid] then
+      state.wins[winid].valid = false
+    end
+  end
+
+  local function nvim_buf_is_valid(bufnr)
+    return state.buf_valid[bufnr] == true
+  end
+
+  local function nvim_buf_delete(bufnr)
+    state.buf_valid[bufnr] = false
+  end
+
+  local function getcwd()
+    return "/test/cwd"
+  end
+
+  local function termopen(cmd, opts)
+    table.insert(state.termopen_calls, { cmd = cmd, opts = opts })
+    local jobid = state.next_jobid
+    state.next_jobid = state.next_jobid + 1
+    return jobid
+  end
+
+  local function chansend(jobid, text)
+    table.insert(state.chansend_calls, { jobid = jobid, text = text })
+  end
+
+  local function jobstop(jobid)
+    table.insert(state.jobstop_calls, jobid)
+  end
+
+  local fake_bo = setmetatable({}, {
+    __index = function(tbl, bufnr)
+      local value = {}
+      rawset(tbl, bufnr, value)
+      return value
+    end,
+  })
+
+  local function fake_cmd(cmd)
+    table.insert(state.cmd_calls, cmd)
+    if cmd == "startinsert" then
+      state.startinsert_calls = state.startinsert_calls + 1
+      return
+    end
+
+    if
+      cmd == "topleft vsplit"
+      or cmd == "botright vsplit"
+      or cmd == "topleft split"
+      or cmd == "botright split"
+    then
+      create_split_window()
+    end
+  end
+
+  vim.api.nvim_list_wins = nvim_list_wins
+  vim.api.nvim_win_get_buf = nvim_win_get_buf
+  vim.api.nvim_get_current_win = nvim_get_current_win
+  vim.api.nvim_create_buf = nvim_create_buf
+  vim.api.nvim_win_set_buf = nvim_win_set_buf
+  vim.api.nvim_win_set_width = nvim_win_set_width
+  vim.api.nvim_win_set_height = nvim_win_set_height
+  vim.api.nvim_open_win = nvim_open_win
+  vim.api.nvim_win_is_valid = nvim_win_is_valid
+  vim.api.nvim_set_current_win = nvim_set_current_win
+  vim.api.nvim_win_close = nvim_win_close
+  vim.api.nvim_buf_is_valid = nvim_buf_is_valid
+  vim.api.nvim_buf_delete = nvim_buf_delete
+  vim.fn.getcwd = getcwd
+  vim.fn.termopen = termopen
+  vim.fn.chansend = chansend
+  vim.fn.jobstop = jobstop
+  vim.cmd = fake_cmd
+  vim.bo = fake_bo
+  vim.o.columns = 120
+  vim.o.lines = 50
+
+  local ok, err = pcall(run, state)
+
+  for _, method in ipairs(api_methods) do
+    vim.api[method] = original_api[method]
+  end
+  for _, method in ipairs(fn_methods) do
+    vim.fn[method] = original_fn[method]
+  end
+  vim.cmd = original_cmd
+  vim.bo = original_bo
+  vim.o.columns = original_columns
+  vim.o.lines = original_lines
+
+  if not ok then
+    error(err)
+  end
+end
+
+describe("codex.providers.native", function()
+  before_each(function()
+    package.loaded["codex.providers.native"] = nil
+  end)
+
+  it("opens vsplit windows and restores previous window when focus=false", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          window = "vsplit",
+          vsplit = { side = "right", size_pct = 40 },
+        },
+      })
+
+      local handle = provider.open("codex", {}, {}, cfg, false)
+      assert.equals(2, handle.bufnr)
+      assert.equals(2, handle.winid)
+      assert.equals(1, state.current_win)
+      assert.equals(48, state.win_width_calls[1].width)
+      assert.equals(1, state.set_current_win_calls[1])
+      assert.equals(0, state.startinsert_calls)
+    end)
+  end)
+
+  it("opens hsplit windows and focuses insert mode when focus=true", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          window = "hsplit",
+          hsplit = { side = "bottom", size_pct = 30 },
+        },
+      })
+
+      local handle = provider.open("codex", {}, {}, cfg, true)
+      assert.equals(2, handle.winid)
+      assert.equals(15, state.win_height_calls[1].height)
+      assert.equals(2, state.current_win)
+      assert.equals(1, state.startinsert_calls)
+    end)
+  end)
+
+  it("opens float windows with configured options", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          window = "float",
+          float = {
+            width_pct = 80,
+            height_pct = 60,
+            border = "single",
+            title = " Codex Test ",
+            title_pos = "left",
+          },
+        },
+      })
+
+      local handle = provider.open("codex", {}, {}, cfg, true)
+      assert.equals(2, handle.winid)
+      assert.equals(1, #state.open_win_calls)
+
+      local open_call = state.open_win_calls[1]
+      assert.equals(2, open_call.bufnr)
+      assert.equals(96, open_call.opts.width)
+      assert.equals(30, open_call.opts.height)
+      assert.equals(10, open_call.opts.row)
+      assert.equals(12, open_call.opts.col)
+      assert.equals("single", open_call.opts.border)
+      assert.equals(" Codex Test ", open_call.opts.title)
+      assert.equals("left", open_call.opts.title_pos)
+      assert.equals("minimal", open_call.opts.style)
+    end)
+  end)
+
+  it("clamps split and float dimensions to at least one", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+
+      local split_cfg = make_config({
+        terminal = {
+          window = "vsplit",
+          vsplit = { side = "left", size_pct = 0 },
+        },
+      })
+      provider.open("codex", {}, {}, split_cfg, true)
+      assert.equals(1, state.win_width_calls[1].width)
+
+      local float_cfg = make_config({
+        terminal = {
+          window = "float",
+          float = {
+            width_pct = 0,
+            height_pct = 0,
+            border = "rounded",
+            title = " Codex ",
+            title_pos = "center",
+          },
+        },
+      })
+      provider.open("codex", {}, {}, float_cfg, true)
+      local open_call = state.open_win_calls[1]
+      assert.equals(1, open_call.opts.width)
+      assert.equals(1, open_call.opts.height)
+    end)
+  end)
+
+  it("toggle closes the window when already focused", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      local handle = provider.open("codex", {}, {}, cfg, true)
+
+      state.startinsert_calls = 0
+      provider.toggle(handle, "codex", {}, {}, cfg)
+
+      assert.equals(1, #state.win_close_calls)
+      assert.equals(2, state.win_close_calls[1].winid)
+      assert.is_false(state.win_close_calls[1].force)
+      assert.is_nil(handle.winid)
+      assert.equals(0, state.startinsert_calls)
+    end)
+  end)
+
+  it("toggle focuses existing terminal window from another window", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      local handle = provider.open("codex", {}, {}, cfg, true)
+
+      state.current_win = 1
+      state.startinsert_calls = 0
+      provider.toggle(handle, "codex", {}, {}, cfg)
+
+      assert.equals(2, state.current_win)
+      assert.equals(1, state.startinsert_calls)
+    end)
+  end)
+
+  it("toggle re-shows buffer using current configured window type", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local initial_cfg = make_config({
+        terminal = {
+          window = "vsplit",
+          vsplit = { side = "right", size_pct = 40 },
+        },
+      })
+      local handle = provider.open("codex", {}, {}, initial_cfg, true)
+      state.wins[handle.winid].valid = false
+      handle.winid = nil
+      state.current_win = 1
+      state.startinsert_calls = 0
+
+      local float_cfg = make_config({
+        terminal = {
+          window = "float",
+          float = {
+            width_pct = 80,
+            height_pct = 80,
+            border = "double",
+            title = " Reopen ",
+            title_pos = "right",
+          },
+        },
+      })
+
+      provider.toggle(handle, "codex", {}, {}, float_cfg)
+
+      assert.equals(1, #state.open_win_calls)
+      assert.equals(handle.bufnr, state.open_win_calls[1].bufnr)
+      assert.equals("double", state.open_win_calls[1].opts.border)
+      assert.equals(" Reopen ", state.open_win_calls[1].opts.title)
+      assert.equals("right", state.open_win_calls[1].opts.title_pos)
+      assert.equals(state.open_win_calls[1].winid, handle.winid)
+      assert.equals(handle.winid, state.current_win)
+      assert.equals(1, state.startinsert_calls)
+    end)
+  end)
+end)
