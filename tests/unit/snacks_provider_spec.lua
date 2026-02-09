@@ -366,7 +366,30 @@ describe("codex.providers.snacks", function()
       assert.equals("/tmp/work", captured_opts.cwd)
       assert.equals("1", captured_opts.env.CODEX_TEST)
       assert.is_true(captured_opts.interactive)
+      assert.is_false(captured_opts.auto_close)
       assert.equals("float", captured_opts.win.position)
+    end)
+  end)
+
+  it("passes auto_close=true when configured", function()
+    with_stubbed_vim_api(function()
+      local captured_opts = nil
+      package.loaded["snacks"] = {
+        terminal = function(_, opts)
+          captured_opts = opts
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          auto_close = true,
+          provider_opts = {},
+        },
+      }, false, nil)
+
+      assert.is_true(captured_opts.auto_close)
     end)
   end)
 

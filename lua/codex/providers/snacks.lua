@@ -96,6 +96,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
     cmd = full_cmd,
     cwd = cwd,
     interactive = true,
+    auto_close = config.terminal.auto_close == true,
   }
   if config.terminal.window == "float" then
     base_opts.win = {
