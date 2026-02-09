@@ -134,6 +134,18 @@ local function open_session(args, focus)
   })
 end
 
+---@return nil
+local function ensure_send_target_open()
+  local deps = get_deps()
+  local session = deps.session_store.get_active()
+  local provider = get_provider()
+  if session and session.alive and provider.is_alive(session.handle) then
+    return
+  end
+
+  open_session(state.config.args, true)
+end
+
 ---@param focus? boolean
 ---@return nil
 function M.open(focus)
@@ -343,6 +355,7 @@ function M.send_selection(opts)
   end
 
   local payload = deps.formatter.format_selection(spec)
+  ensure_send_target_open()
   M.send(payload)
   return true
 end
@@ -365,6 +378,7 @@ function M.add_file(path)
   end
 
   local payload = deps.formatter.format_mention(resolved_path)
+  ensure_send_target_open()
   M.send(payload)
   return true
 end
