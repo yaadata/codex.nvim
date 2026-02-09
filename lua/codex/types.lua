@@ -33,6 +33,10 @@
 ---@field title string
 ---@field title_pos "left"|"center"|"right"
 
+---@class codex.TerminalKeymapConfig
+---@field toggle string|false
+---@field close string|false
+
 ---@class codex.KeymapConfig
 ---@field toggle string|false
 ---@field open string|false
@@ -55,6 +59,7 @@
 ---@field hsplit codex.HsplitConfig
 ---@field float codex.FloatConfig
 ---@field auto_close boolean
+---@field keymaps codex.TerminalKeymapConfig
 ---@field provider_opts table<string, table>
 
 ---@class codex.Config

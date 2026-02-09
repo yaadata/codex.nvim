@@ -58,7 +58,8 @@ codex.nvim/
 │   │   │                            # lazy-loads on first resolve, implements auto-resolution
 │   │   │                            # (prefers snacks, falls back to native).
 │   │   ├── native.lua               # Built-in provider using vim.fn.termopen in
-│   │   │                            # vsplit, hsplit, or float windows.
+│   │   │                            # vsplit, hsplit, or float windows, plus
+│   │   │                            # terminal-local keymaps from terminal.keymaps.
 │   │   ├── snacks.lua               # Provider backed by snacks.nvim terminal integration.
 │   │   ├── external.lua             # Reserved stub for future external terminal support.
 │   │   └── none.lua                 # No-op provider for tests and headless environments.
@@ -272,26 +273,27 @@ and `---@alias` annotations. This file contains no runtime code (`return {}`).
 
 Key types:
 
-| Type                    | Kind  | Purpose                                                       |
-| ----------------------- | ----- | ------------------------------------------------------------- |
-| `codex.Config`          | class | Merged configuration after `setup()`                          |
-| `codex.TerminalConfig`  | class | Nested terminal-specific options                              |
-| `codex.WindowType`      | alias | Window mode union: `vsplit`, `hsplit`, `float`                |
-| `codex.VsplitConfig`    | class | Vertical split options (`side`, `size_pct`)                   |
-| `codex.HsplitConfig`    | class | Horizontal split options (`side`, `size_pct`)                 |
-| `codex.FloatConfig`     | class | Floating window options (size, border, title, title_pos)      |
-| `codex.KeymapConfig`    | class | Keymap action table (`string` or `false` per action)          |
-| `codex.ProviderName`    | alias | Union of valid provider name strings                          |
-| `codex.LogLevel`        | alias | Union of log level strings                                    |
-| `codex.Provider`        | class | 8-method structural interface for providers                   |
-| `codex.ProviderHandle`  | alias | Opaque handle (`table`) returned by `provider.open()`         |
-| `codex.Session`         | class | Session record extending `codex.SessionSpec`                  |
-| `codex.SessionSpec`     | class | Spec for creating a new session                               |
-| `codex.SelectionSpec`   | class | Visual selection data (defined in `formatter.lua`)            |
-| `codex.SelectionOpts`   | class | Options for selection extraction (defined in `selection.lua`) |
-| `codex.UserCommandOpts` | class | Neovim user command callback argument shape                   |
-| `codex.ResumeOpts`      | class | Options for the resume API (defined in `init.lua`)            |
-| `codex.SendResult`      | alias | Boolean result alias (defined in `init.lua`)                  |
+| Type                         | Kind  | Purpose                                                       |
+| ---------------------------- | ----- | ------------------------------------------------------------- |
+| `codex.Config`               | class | Merged configuration after `setup()`                          |
+| `codex.TerminalConfig`       | class | Nested terminal-specific options                              |
+| `codex.WindowType`           | alias | Window mode union: `vsplit`, `hsplit`, `float`                |
+| `codex.VsplitConfig`         | class | Vertical split options (`side`, `size_pct`)                   |
+| `codex.HsplitConfig`         | class | Horizontal split options (`side`, `size_pct`)                 |
+| `codex.FloatConfig`          | class | Floating window options (size, border, title, title_pos)      |
+| `codex.TerminalKeymapConfig` | class | Terminal-local keymaps (`toggle`, `close`)                    |
+| `codex.KeymapConfig`         | class | Keymap action table (`string` or `false` per action)          |
+| `codex.ProviderName`         | alias | Union of valid provider name strings                          |
+| `codex.LogLevel`             | alias | Union of log level strings                                    |
+| `codex.Provider`             | class | 8-method structural interface for providers                   |
+| `codex.ProviderHandle`       | alias | Opaque handle (`table`) returned by `provider.open()`         |
+| `codex.Session`              | class | Session record extending `codex.SessionSpec`                  |
+| `codex.SessionSpec`          | class | Spec for creating a new session                               |
+| `codex.SelectionSpec`        | class | Visual selection data (defined in `formatter.lua`)            |
+| `codex.SelectionOpts`        | class | Options for selection extraction (defined in `selection.lua`) |
+| `codex.UserCommandOpts`      | class | Neovim user command callback argument shape                   |
+| `codex.ResumeOpts`           | class | Options for the resume API (defined in `init.lua`)            |
+| `codex.SendResult`           | alias | Boolean result alias (defined in `init.lua`)                  |
 
 `codex.ProviderHandle` is intentionally opaque (`table`). Providers define their
 own internal handle structure; the core never inspects handle contents.
@@ -309,4 +311,5 @@ own internal handle structure; the core never inspects handle contents.
 6. Add an entry to `provider_modules` in
    `tests/contract/provider_contract_spec.lua` so the contract tests cover it.
 7. If the provider accepts options, add a default entry under
-   `terminal.provider_opts` in `config.lua`.
+   `terminal.provider_opts` in `config.lua` and honor shared
+   `terminal.keymaps` semantics for terminal-local toggle/close mappings.

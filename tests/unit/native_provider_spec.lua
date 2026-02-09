@@ -18,6 +18,10 @@ local function make_config(overrides)
         title = " Codex ",
         title_pos = "center",
       },
+      keymaps = {
+        toggle = "<C-c>",
+        close = false,
+      },
     },
   }
 
@@ -321,6 +325,32 @@ describe("codex.providers.native", function()
       assert.is_true(map.opts.silent)
       assert.is_true(map.opts.nowait)
       assert.equals("Codex: Toggle terminal", map.opts.desc)
+    end)
+  end)
+
+  it("maps configured terminal toggle and close keymaps", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          keymaps = {
+            toggle = "<C-t>",
+            close = "<C-x>",
+          },
+        },
+      })
+
+      provider.open("codex", {}, {}, cfg, false)
+
+      assert.equals(2, #state.keymap_set_calls)
+      local toggle_map = state.keymap_set_calls[1]
+      local close_map = state.keymap_set_calls[2]
+      assert.equals("t", toggle_map.mode)
+      assert.equals("<C-t>", toggle_map.lhs)
+      assert.equals("Codex: Toggle terminal", toggle_map.opts.desc)
+      assert.equals("t", close_map.mode)
+      assert.equals("<C-x>", close_map.lhs)
+      assert.equals("Codex: Close terminal", close_map.opts.desc)
     end)
   end)
 

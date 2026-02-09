@@ -49,16 +49,32 @@ local function build_cmd(cmd, args)
 end
 
 ---@param bufnr integer
+---@param keymaps codex.TerminalKeymapConfig|nil
 ---@return nil
-local function set_terminal_keymaps(bufnr)
-  vim.keymap.set("t", "<C-c>", function()
-    require("codex").toggle()
-  end, {
-    buffer = bufnr,
-    silent = true,
-    nowait = true,
-    desc = "Codex: Toggle terminal",
-  })
+local function set_terminal_keymaps(bufnr, keymaps)
+  local maps = keymaps or { toggle = "<C-c>", close = false }
+
+  if maps.toggle then
+    vim.keymap.set("t", maps.toggle, function()
+      require("codex").toggle()
+    end, {
+      buffer = bufnr,
+      silent = true,
+      nowait = true,
+      desc = "Codex: Toggle terminal",
+    })
+  end
+
+  if maps.close then
+    vim.keymap.set("t", maps.close, function()
+      require("codex").close()
+    end, {
+      buffer = bufnr,
+      silent = true,
+      nowait = true,
+      desc = "Codex: Close terminal",
+    })
+  end
 end
 
 ---@param cmd string
@@ -100,7 +116,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local handle = { terminal = terminal, provider = "snacks" }
 
   if type(terminal.buf) == "number" then
-    set_terminal_keymaps(terminal.buf)
+    set_terminal_keymaps(terminal.buf, config.terminal.keymaps)
   end
 
   if on_exit and terminal.buf then

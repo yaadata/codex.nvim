@@ -25,6 +25,10 @@ M.defaults = {
       title_pos = "center",
     },
     auto_close = false,
+    keymaps = {
+      toggle = "<C-c>",
+      close = false,
+    },
     provider_opts = {
       snacks = {},
       external = { cmd = nil },
@@ -52,6 +56,8 @@ M.defaults = {
 
 local valid_providers = { auto = true, snacks = true, native = true, external = true, none = true }
 local valid_windows = { vsplit = true, hsplit = true, float = true }
+local valid_terminal_keymap_actions = { toggle = true, close = true }
+local valid_terminal_keymap_action_list = "toggle, close"
 local valid_keymap_actions = {
   toggle = true,
   open = true,
@@ -118,7 +124,23 @@ function M.validate(config)
     vsplit = { config.terminal.vsplit, "table" },
     hsplit = { config.terminal.hsplit, "table" },
     float = { config.terminal.float, "table" },
+    ["terminal.keymaps"] = { config.terminal.keymaps, "table" },
   })
+
+  for action, lhs in pairs(config.terminal.keymaps) do
+    if not valid_terminal_keymap_actions[action] then
+      error(
+        string.format(
+          "codex: invalid terminal.keymaps action %q, expected one of: %s",
+          action,
+          valid_terminal_keymap_action_list
+        )
+      )
+    end
+    if lhs ~= false and type(lhs) ~= "string" then
+      error(string.format("codex: terminal.keymaps.%s must be a string or false", action))
+    end
+  end
 
   if not valid_providers[config.terminal.provider] then
     error(

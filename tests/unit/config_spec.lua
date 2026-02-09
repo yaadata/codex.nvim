@@ -26,6 +26,8 @@ describe("codex.config", function()
       assert.equals("rounded", config.defaults.terminal.float.border)
       assert.equals(" Codex ", config.defaults.terminal.float.title)
       assert.equals("center", config.defaults.terminal.float.title_pos)
+      assert.equals("<C-c>", config.defaults.terminal.keymaps.toggle)
+      assert.is_false(config.defaults.terminal.keymaps.close)
       assert.is_false(config.defaults.auto_start)
       assert.equals("warn", config.defaults.log_level)
       assert.equals("<leader>ot", config.defaults.keymaps.toggle)
@@ -55,6 +57,7 @@ describe("codex.config", function()
           window = "hsplit",
           vsplit = { side = "left" },
           hsplit = { size_pct = 50 },
+          keymaps = { close = "<C-d>" },
         },
         keymaps = {
           toggle = "<leader>xx",
@@ -67,6 +70,8 @@ describe("codex.config", function()
       assert.equals(40, cfg.terminal.vsplit.size_pct)
       assert.equals("bottom", cfg.terminal.hsplit.side)
       assert.equals(50, cfg.terminal.hsplit.size_pct)
+      assert.equals("<C-c>", cfg.terminal.keymaps.toggle)
+      assert.equals("<C-d>", cfg.terminal.keymaps.close)
       assert.equals("<leader>xx", cfg.keymaps.toggle)
       assert.is_false(cfg.keymaps.status)
       assert.equals("<leader>ox", cfg.keymaps.close)
@@ -173,6 +178,14 @@ describe("codex.config", function()
       end, "float: expected table")
     end)
 
+    it("rejects non-table terminal.keymaps", function()
+      local cfg = make_valid_config()
+      cfg.terminal.keymaps = true
+      assert_error_contains(function()
+        config.validate(cfg)
+      end, "terminal.keymaps: expected table")
+    end)
+
     it("rejects bad nested field types", function()
       local cfg = make_valid_config()
       cfg.terminal.float.title = 123
@@ -185,6 +198,30 @@ describe("codex.config", function()
       local cfg = make_valid_config()
       cfg.keymaps = false
       assert.is_true(config.validate(cfg))
+    end)
+
+    it("rejects unknown terminal keymap actions", function()
+      assert.has_error(function()
+        config.apply({
+          terminal = {
+            keymaps = {
+              hide = "<C-x>",
+            },
+          },
+        })
+      end, 'codex: invalid terminal.keymaps action "hide", expected one of: toggle, close')
+    end)
+
+    it("rejects terminal keymap values that are not string|false", function()
+      assert.has_error(function()
+        config.apply({
+          terminal = {
+            keymaps = {
+              toggle = 42,
+            },
+          },
+        })
+      end, "codex: terminal.keymaps.toggle must be a string or false")
     end)
 
     it("rejects unknown keymap actions", function()

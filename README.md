@@ -46,6 +46,10 @@ require("codex").setup({
       title = " Codex ",
       title_pos = "center", -- left | center | right
     },
+    keymaps = {
+      toggle = "<C-c>", -- terminal-mode toggle for Codex window
+      close = false, -- set a string (e.g. "<C-x>") to close Codex session
+    },
   },
   keymaps = {
     toggle = "<leader>ot",
@@ -143,6 +147,20 @@ require("codex").setup({
 
 Set `vim.g.mapleader` before calling `require("codex").setup()` so `<leader>`
 expands to the expected key.
+
+Terminal-local keymaps inside the Codex terminal buffer are configured
+separately via `terminal.keymaps`:
+
+```lua
+require("codex").setup({
+  terminal = {
+    keymaps = {
+      toggle = "<C-c>",
+      close = "<C-x>",
+    },
+  },
+})
+```
 
 ## Lua API
 
