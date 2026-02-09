@@ -9,10 +9,11 @@ repos:
           - --strict
           - --verbose
           - --scopes
-          - core,config,commands,context,providers,snacks,state,just,readme,plan,dev
+          - core,config,commands,context,providers,state,project
           - feat
           - fix
           - docs
+          - enhance
           - chore
           - test
           - refactor
