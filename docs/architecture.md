@@ -18,6 +18,7 @@ lua/codex/init.lua        (public API, session lifecycle, DI container)
         ├──► config.lua           (defaults, validation, deep merge)
         ├──► logger.lua           (level-gated vim.notify wrapper)
         ├──► nvim/commands.lua    (user command registration)
+        ├──► nvim/keymaps.lua     (default keymap registration)
         ├──► providers/init.lua   (provider registry + auto-resolution)
         │        ├── native.lua
         │        ├── snacks.lua
@@ -48,8 +49,10 @@ codex.nvim/
 │   ├── logger.lua                   # Thin wrapper around vim.notify with level gating
 │   │                                # (debug/info/warn/error) and string.format support.
 │   ├── nvim/
-│   │   └── commands.lua             # Registers all :Codex* user commands. Each command
+│   │   ├── commands.lua             # Registers all :Codex* user commands. Each command
 │   │                                # delegates to the corresponding init.lua API function.
+│   │   └── keymaps.lua              # Registers default keymaps, skips collisions by default,
+│   │                                # supports keymaps_force overrides, and handles re-register.
 │   ├── providers/
 │   │   ├── init.lua                 # Provider registry. Maps names to module paths,
 │   │   │                            # lazy-loads on first resolve, implements auto-resolution
@@ -158,6 +161,7 @@ local default_deps = {
   providers = require("codex.providers"),
   session_store = require("codex.state.session_store"),
   commands = require("codex.nvim.commands"),
+  keymaps = require("codex.nvim.keymaps"),
   formatter = require("codex.context.formatter"),
   selection = require("codex.context.selection"),
   vim = vim,
@@ -194,6 +198,24 @@ need to explicitly call `:Codex` before sending text -- the terminal
 materialises on demand.
 
 ## Component Interaction
+
+### `setup()` Registration Flow
+
+```
+User calls require("codex").setup(opts)
+    │
+    ▼
+init.lua setup()
+    ├── build deps (default_deps + opts._deps)
+    ├── apply config defaults + validation
+    ├── commands.register()
+    ├── keymaps.register(config)
+    │     ├── unregister stale Codex keymaps from previous setup
+    │     ├── skip keymaps when keymaps=false
+    │     ├── skip mapping collisions unless keymaps_force=true
+    │     └── register n/x mappings for Codex actions
+    └── register VimLeavePre cleanup autocmd
+```
 
 ### `:Codex` Toggle Flow
 
@@ -256,6 +278,7 @@ Key types:
 | `codex.VsplitConfig`    | class | Vertical split options (`side`, `size_pct`)                   |
 | `codex.HsplitConfig`    | class | Horizontal split options (`side`, `size_pct`)                 |
 | `codex.FloatConfig`     | class | Floating window options (size, border, title, title_pos)      |
+| `codex.KeymapConfig`    | class | Keymap action table (`string` or `false` per action)          |
 | `codex.ProviderName`    | alias | Union of valid provider name strings                          |
 | `codex.LogLevel`        | alias | Union of log level strings                                    |
 | `codex.Provider`        | class | 8-method structural interface for providers                   |

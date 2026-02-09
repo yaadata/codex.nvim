@@ -75,6 +75,55 @@ require("codex").setup({
   when provided)
 - `:CodexDiff` sends `/diff`
 
+## Keymaps
+
+Default keymaps are registered under `<leader>o`:
+
+```lua
+require("codex").setup({
+  keymaps = {
+    toggle = "<leader>ot",
+    open = "<leader>oo",
+    focus = "<leader>of",
+    send = "<leader>os",
+    add = "<leader>oa",
+    resume = "<leader>or",
+    model = "<leader>om",
+    status = "<leader>oi",
+    permissions = "<leader>op",
+    compact = "<leader>oc",
+    review = "<leader>oR",
+    diff = "<leader>od",
+  },
+  keymaps_force = false, -- keep existing user mappings by default
+})
+```
+
+Override examples:
+
+```lua
+-- Disable all default mappings
+require("codex").setup({
+  keymaps = false,
+})
+
+-- Override one mapping and disable another
+require("codex").setup({
+  keymaps = {
+    toggle = "<leader>xx",
+    status = false,
+  },
+})
+
+-- Intentionally overwrite existing mappings
+require("codex").setup({
+  keymaps_force = true,
+})
+```
+
+Set `vim.g.mapleader` before calling `require("codex").setup()` so `<leader>`
+expands to the expected key.
+
 ## Lua API
 
 - `require("codex").send_selection()`
