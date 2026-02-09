@@ -92,15 +92,11 @@ local function mark_session_dead_by_handle(deps, dead_handle)
   end
 end
 
----@param focus? boolean
+---@param args string[]
+---@param focus boolean
 ---@return nil
-function M.open(focus)
-  ensure_setup()
+local function open_session(args, focus)
   local deps = get_deps()
-  if focus == nil then
-    focus = true
-  end
-
   local session = deps.session_store.get_active()
   local provider, provider_name = get_provider()
 
@@ -119,7 +115,7 @@ function M.open(focus)
 
   local handle = provider.open(
     state.config.cmd,
-    state.config.args,
+    args,
     state.config.env,
     state.config,
     focus,
@@ -134,6 +130,16 @@ function M.open(focus)
     cwd = state.config.cwd or deps.vim.fn.getcwd(),
     provider_name = provider_name,
   })
+end
+
+---@param focus? boolean
+---@return nil
+function M.open(focus)
+  ensure_setup()
+  if focus == nil then
+    focus = true
+  end
+  open_session(state.config.args, focus)
 end
 
 ---@return nil
@@ -155,7 +161,7 @@ function M.toggle()
   local deps = get_deps()
 
   local session = deps.session_store.get_active()
-  local provider, provider_name = get_provider()
+  local provider = get_provider()
 
   if session and session.alive then
     local new_handle = provider.toggle(
@@ -172,23 +178,7 @@ function M.toggle()
   end
 
   -- No active session — open one
-  local handle = provider.open(
-    state.config.cmd,
-    state.config.args,
-    state.config.env,
-    state.config,
-    true,
-    function(exited_handle)
-      mark_session_dead_by_handle(deps, exited_handle)
-    end
-  )
-
-  deps.session_store.create({
-    handle = handle,
-    cmd = state.config.cmd,
-    cwd = state.config.cwd or deps.vim.fn.getcwd(),
-    provider_name = provider_name,
-  })
+  open_session(state.config.args, true)
 end
 
 ---@return nil
@@ -224,6 +214,57 @@ function M.send(text)
   if not ok then
     deps.logger.error("failed to send text: %s", err or "unknown error")
   end
+end
+
+---@param slash_cmd string Slash command name with or without a leading `/`.
+---@return codex.SendResult ok True when command payload is sent.
+---@return string|nil err
+function M.send_command(slash_cmd)
+  ensure_setup()
+  local deps = get_deps()
+
+  local normalized = slash_cmd:gsub("^/+", "")
+  local command_path = "/" .. normalized
+  local command_text = command_path .. "\n"
+
+  local session = deps.session_store.get_active()
+  local provider = get_provider()
+  if session and session.alive and provider.is_alive(session.handle) then
+    provider.focus(session.handle)
+  else
+    open_session(state.config.args, true)
+    session = deps.session_store.get_active()
+  end
+
+  local ok, err = provider.send(session.handle, command_text)
+  if not ok then
+    deps.logger.error("failed to send command %s: %s", command_path, err or "unknown error")
+  end
+  return ok, err
+end
+
+---@return codex.SendResult ok True when `/model` is sent.
+---@return string|nil err
+function M.set_model()
+  return M.send_command("model")
+end
+
+---@return codex.SendResult ok True when `/status` is sent.
+---@return string|nil err
+function M.show_status()
+  return M.send_command("status")
+end
+
+---@return codex.SendResult ok True when `/permissions` is sent.
+---@return string|nil err
+function M.show_permissions()
+  return M.send_command("permissions")
+end
+
+---@return codex.SendResult ok True when `/compact` is sent.
+---@return string|nil err
+function M.compact()
+  return M.send_command("compact")
 end
 
 ---@param opts? codex.SelectionOpts Selection range override; falls back to visual marks when omitted.

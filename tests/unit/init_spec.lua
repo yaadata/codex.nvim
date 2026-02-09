@@ -402,6 +402,81 @@ describe("codex.init public api", function()
     assert.matches("failed to send text: boom", env.logger.errors[1])
   end)
 
+  it("send_command opens with focus when no active session", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.send_command("status")
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.is_true(env.provider.open_calls[1].focus)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("/status\n", env.provider.send_calls[1].text)
+  end)
+
+  it("send_command focuses existing session and sends slash command", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    local active_handle = env.store.get_active().handle
+
+    local ok = env.codex.send_command("model")
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.equals(1, #env.provider.focus_calls)
+    assert.same(active_handle, env.provider.focus_calls[1])
+    assert.equals("/model\n", env.provider.send_calls[1].text)
+  end)
+
+  it("send_command normalizes slash prefix and logs send failures", function()
+    local env = setup_with_deps()
+    env.provider.send_ok = false
+    env.provider.send_err = "boom"
+
+    local ok, err = env.codex.send_command("/compact")
+
+    assert.is_false(ok)
+    assert.equals("boom", err)
+    assert.equals("/compact\n", env.provider.send_calls[1].text)
+    assert.matches("failed to send command /compact: boom", env.logger.errors[1])
+  end)
+
+  it("set_model dispatches /model", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.set_model()
+
+    assert.is_true(ok)
+    assert.equals("/model\n", env.provider.send_calls[1].text)
+  end)
+
+  it("show_status dispatches /status", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.show_status()
+
+    assert.is_true(ok)
+    assert.equals("/status\n", env.provider.send_calls[1].text)
+  end)
+
+  it("show_permissions dispatches /permissions", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.show_permissions()
+
+    assert.is_true(ok)
+    assert.equals("/permissions\n", env.provider.send_calls[1].text)
+  end)
+
+  it("compact dispatches /compact", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.compact()
+
+    assert.is_true(ok)
+    assert.equals("/compact\n", env.provider.send_calls[1].text)
+  end)
+
   it("send_selection formats and sends the visual payload", function()
     local env = setup_with_deps()
 
