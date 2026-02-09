@@ -12,6 +12,7 @@ mise pins the following tools (see `mise.toml`):
 | ---------- | ------- |
 | stylua     | v2.3.1  |
 | selene     | 0.30.0  |
+| mdformat   | 1.0.0   |
 | pre-commit | 4.2.0   |
 
 ## Getting Started
@@ -21,7 +22,7 @@ mise pins the following tools (see `mise.toml`):
 git clone https://github.com/yaadata/codex.nvim.git
 cd codex.nvim
 
-# Install mise-managed tools (stylua, selene, pre-commit)
+# Install mise-managed tools (stylua, selene, mdformat, pre-commit)
 mise install
 
 # Clone plenary.nvim into .deps/ (required for running tests)
@@ -34,7 +35,7 @@ just pre-commit-install
 What each step does:
 
 - `mise install` reads `mise.toml` and installs the pinned versions of stylua,
-  selene, and pre-commit.
+  selene, mdformat, and pre-commit.
 - `just bootstrap-test-deps` clones (or pulls) `plenary.nvim` into
   `.deps/plenary.nvim`. This is the only test dependency.
 - `just pre-commit-install` installs pre-commit hooks into `.git/hooks/` so that
@@ -101,6 +102,20 @@ Stylua configuration (`.stylua.toml`):
 | `quote_style`      | AutoPreferDouble |
 | `call_parentheses` | Always           |
 
+### Markdown Formatting (mdformat)
+
+```sh
+just fmt         # format in place (includes Lua and Markdown)
+just fmt-check   # check only (used in CI and pre-commit)
+```
+
+mdformat is installed via the `pipx` backend with the
+[mdformat-gfm](https://github.com/hukkin/mdformat-gfm) plugin for GitHub
+Flavored Markdown support (tables, task lists, etc.). The `--number` flag is
+used to apply consecutive numbering to ordered lists.
+
+Targets: `docs/` and `README.md`.
+
 ### Linting (selene)
 
 ```sh
@@ -117,11 +132,12 @@ Selene configuration (`selene.toml` + `codex.yml`):
 
 ## Pre-Commit Hooks
 
-Three hooks run before every commit (`.pre-commit-config.yaml`):
+Four hooks run before every commit (`.pre-commit-config.yaml`):
 
 1. **codex-fmt-check** -- `mise exec -- just fmt-check`
 2. **codex-lint** -- `mise exec -- just lint`
-3. **codex-test-unit** -- `mise exec -- just test-unit`
+3. **codex-md-fmt-check** -- `mise exec -- mdformat --number --check docs/ README.md`
+4. **codex-test-unit** -- `mise exec -- just test-unit`
 
 Run all hooks manually against the full repo:
 
