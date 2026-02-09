@@ -1,6 +1,8 @@
 local M = {}
 
+---@return nil
 function M.register()
+  ---@param opts codex.UserCommandOpts
   vim.api.nvim_create_user_command("Codex", function(opts)
     local codex = require("codex")
     if opts.bang then
@@ -22,6 +24,7 @@ function M.register()
     nargs = 0,
   })
 
+  ---@param opts codex.UserCommandOpts
   vim.api.nvim_create_user_command("CodexSend", function(opts)
     local codex = require("codex")
     codex.send_selection({
@@ -34,6 +37,7 @@ function M.register()
     range = true,
   })
 
+  ---@param opts codex.UserCommandOpts
   vim.api.nvim_create_user_command("CodexAdd", function(opts)
     local codex = require("codex")
     local path = opts.args
