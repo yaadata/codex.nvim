@@ -156,6 +156,41 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
+  it("close keymap defers via vim.schedule", function()
+    with_stubbed_vim_api(function(_, keymap_set_calls)
+      package.loaded["snacks"] = {
+        terminal = function()
+          return { buf = 42 }
+        end,
+      }
+
+      local scheduled = {}
+      local original_schedule = vim.schedule
+      vim.schedule = function(cb)
+        table.insert(scheduled, cb)
+      end
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          keymaps = {
+            toggle = "<C-t>",
+            close = "<C-x>",
+          },
+          provider_opts = {},
+        },
+      }, true, nil)
+
+      local close_map = keymap_set_calls[2]
+      close_map.rhs()
+
+      assert.equals(1, #scheduled)
+      assert.is_function(scheduled[1])
+
+      vim.schedule = original_schedule
+    end)
+  end)
+
   it("does not register TermClose autocmd when on_exit callback is missing", function()
     with_stubbed_vim_api(function(autocmds, keymap_set_calls)
       package.loaded["snacks"] = {

@@ -139,7 +139,9 @@ local function set_terminal_keymaps(bufnr, keymaps)
 
   if maps.close then
     vim.keymap.set("t", maps.close, function()
-      require("codex").close()
+      vim.schedule(function()
+        require("codex").close()
+      end)
     end, {
       buffer = bufnr,
       silent = true,

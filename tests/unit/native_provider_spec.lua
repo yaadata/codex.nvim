@@ -354,6 +354,36 @@ describe("codex.providers.native", function()
     end)
   end)
 
+  it("close keymap defers via vim.schedule", function()
+    with_stubbed_native_env(function(state)
+      local scheduled = {}
+      local original_schedule = vim.schedule
+      vim.schedule = function(cb)
+        table.insert(scheduled, cb)
+      end
+
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          keymaps = {
+            toggle = "<C-t>",
+            close = "<C-x>",
+          },
+        },
+      })
+
+      provider.open("codex", {}, {}, cfg, false)
+
+      local close_map = state.keymap_set_calls[2]
+      close_map.rhs()
+
+      assert.equals(1, #scheduled)
+      assert.is_function(scheduled[1])
+
+      vim.schedule = original_schedule
+    end)
+  end)
+
   it("opens hsplit windows and focuses insert mode when focus=true", function()
     with_stubbed_native_env(function(state)
       local provider = require("codex.providers.native")
