@@ -16,6 +16,7 @@ test-unit:
 	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/init_spec.lua' -c 'qa'
 	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/session_store_spec.lua' -c 'qa'
 	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/provider_registry_spec.lua' -c 'qa'
+	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/snacks_provider_spec.lua' -c 'qa'
 	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/selection_spec.lua' -c 'qa'
 
 test-contract:

@@ -24,9 +24,9 @@ end
 ---@param env table<string, string>
 ---@param config codex.Config
 ---@param focus boolean
----@param _on_exit? fun(handle: codex.ProviderHandle): nil
+---@param on_exit? fun(handle: codex.ProviderHandle): nil
 ---@return codex.ProviderHandle handle
-function M.open(cmd, args, env, config, focus, _on_exit)
+function M.open(cmd, args, env, config, focus, on_exit)
   local snacks = require("snacks")
   local full_cmd = build_cmd(cmd, args)
   local cwd = config.cwd or vim.fn.getcwd()
@@ -46,6 +46,17 @@ function M.open(cmd, args, env, config, focus, _on_exit)
   end
 
   local handle = { terminal = terminal, provider = "snacks" }
+
+  if on_exit and terminal.buf then
+    vim.api.nvim_create_autocmd("TermClose", {
+      buffer = terminal.buf,
+      once = true,
+      callback = function()
+        on_exit(handle)
+      end,
+    })
+  end
+
   log.debug("snacks: opened terminal")
   return handle
 end

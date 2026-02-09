@@ -9,6 +9,12 @@ Review of 14 commits from `f456dba` to `28b1dbc`, covering:
 - Pre-phase-3 LuaLS annotation pass (all 60 exported functions)
 - Pre-commit hook setup
 
+## Status
+
+- Correction 1 applied: duplicate `codex:` prefix removed from selection/add-file
+  error paths.
+- Correction 2 applied: snacks provider now wires `on_exit` to terminal lifecycle.
+
 ## Findings
 
 ### Correction 1: Error message double-prefix
