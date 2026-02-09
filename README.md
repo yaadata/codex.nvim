@@ -76,13 +76,14 @@ require("codex").setup({
 - `:Codex!` force-opens and focuses the Codex terminal
 - `:CodexFocus` focuses the terminal (opens it if needed)
 - `:CodexClose` closes the active Codex terminal session
-- `:CodexSend` sends selected lines with file path and line range
+- `:CodexSend` sends selected lines with relative file path and line range
   - when a command range is provided, it takes precedence over visual marks
   - selection is linewise; visual columns are ignored (charwise/blockwise still
     send full lines)
   - after sending, codex.nvim focuses the Codex terminal in insert mode
 - `:CodexAdd [path]` sends `/mention <path>` (or current buffer path when
   omitted)
+  - paths are normalized to be relative to the current working directory
   - paths are auto-quoted/escaped when they contain whitespace or
     shell-significant characters
   - after sending, codex.nvim focuses the Codex terminal in insert mode

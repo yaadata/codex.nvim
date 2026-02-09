@@ -19,7 +19,7 @@ local function make_fake_vim_api(overrides)
       "line 5",
     }
   local filetype = overrides.filetype or "lua"
-  local expanded_path = overrides.expanded_path or "/repo/lua/codex/init.lua"
+  local relative_path = overrides.relative_path or "lua/codex/init.lua"
   local visual_mode = overrides.visual_mode
 
   return {
@@ -46,8 +46,8 @@ local function make_fake_vim_api(overrides)
     },
     fn = {
       fnamemodify = function(_, modifier)
-        assert.equals(":p", modifier)
-        return expanded_path
+        assert.equals(":.", modifier)
+        return relative_path
       end,
       visualmode = function()
         return visual_mode
@@ -60,7 +60,7 @@ describe("codex.context.selection", function()
   it("extracts multi-line selection from visual marks", function()
     local spec = selection.get_visual_selection(make_fake_vim_api())
 
-    assert.equals("/repo/lua/codex/init.lua", spec.filepath)
+    assert.equals("lua/codex/init.lua", spec.filepath)
     assert.equals(2, spec.start_line)
     assert.equals(4, spec.end_line)
     assert.equals("lua", spec.filetype)
@@ -116,13 +116,13 @@ describe("codex.context.selection", function()
     assert.equals("no visual selection range found", err)
   end)
 
-  it("returns expanded absolute path", function()
+  it("returns relative path", function()
     local spec = selection.get_visual_selection(make_fake_vim_api({
       filepath = "relative/path.lua",
-      expanded_path = "/abs/relative/path.lua",
+      relative_path = "relative/path.lua",
     }))
 
-    assert.equals("/abs/relative/path.lua", spec.filepath)
+    assert.equals("relative/path.lua", spec.filepath)
   end)
 
   it("returns error for unnamed buffers", function()

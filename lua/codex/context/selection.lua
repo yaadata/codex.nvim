@@ -1,4 +1,5 @@
 local M = {}
+local path = require("codex.context.path")
 
 local ERR_NO_FILEPATH = "current buffer has no file path"
 local ERR_NO_SELECTION = "no visual selection range found"
@@ -211,7 +212,7 @@ function M.get_visual_selection(vim_api, opts)
   local filetype = vim_api.bo[bufnr].filetype or ""
 
   return {
-    filepath = vim_api.fn.fnamemodify(filepath, ":p"),
+    filepath = path.to_relative(vim_api, filepath),
     start_line = start_line,
     end_line = end_line,
     filetype = filetype,

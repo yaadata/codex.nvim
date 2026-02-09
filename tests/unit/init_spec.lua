@@ -204,7 +204,7 @@ local function make_selection()
   local selection = {
     calls = {},
     result = {
-      filepath = "/test/current.lua",
+      filepath = "test/current.lua",
       start_line = 1,
       end_line = 2,
       filetype = "lua",
@@ -251,6 +251,16 @@ local function make_fake_vim()
           return "/test/current-buffer.lua"
         end
         return ""
+      end,
+      fnamemodify = function(filepath, modifier)
+        assert.equals(":.", modifier)
+        if filepath == "/tmp/example.lua" then
+          return "../../tmp/example.lua"
+        end
+        if filepath == "/test/current-buffer.lua" then
+          return "../current-buffer.lua"
+        end
+        return filepath
       end,
     },
     schedule = function(cb)
@@ -688,7 +698,7 @@ describe("codex.init public api", function()
     assert.equals(1, #env.selection.calls)
     assert.equals(env.fake_vim, env.selection.calls[1].vim_api)
     assert.equals(1, #env.formatter.selection_specs)
-    assert.equals("/test/current.lua", env.formatter.selection_specs[1].filepath)
+    assert.equals("test/current.lua", env.formatter.selection_specs[1].filepath)
     assert.equals(1, #env.provider.send_calls)
     assert.equals("[selection]\n", env.provider.send_calls[1].text)
     assert.equals(1, #env.provider.focus_calls)
@@ -725,8 +735,8 @@ describe("codex.init public api", function()
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
-    assert.equals("/tmp/example.lua", env.formatter.mention_paths[1])
-    assert.equals("/mention /tmp/example.lua\n", env.provider.send_calls[1].text)
+    assert.equals("../../tmp/example.lua", env.formatter.mention_paths[1])
+    assert.equals("/mention ../../tmp/example.lua\n", env.provider.send_calls[1].text)
     assert.equals(1, #env.provider.focus_calls)
   end)
 
@@ -736,7 +746,7 @@ describe("codex.init public api", function()
     local ok = env.codex.add_file(nil)
 
     assert.is_true(ok)
-    assert.equals("/test/current-buffer.lua", env.formatter.mention_paths[1])
+    assert.equals("../current-buffer.lua", env.formatter.mention_paths[1])
   end)
 
   it("add_file returns error when path is unavailable", function()

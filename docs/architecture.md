@@ -254,7 +254,7 @@ init.lua send_selection()
     ├── selection.get_visual_selection(vim, opts)
     │       ├── resolve_range(vim_api, bufnr, opts)  -- command range or visual marks
     │       ├── nvim_buf_get_lines(bufnr, start-1, end, false)
-    │       └── return SelectionSpec { filepath, start_line, end_line, filetype, lines }
+    │       └── return SelectionSpec { relative filepath, start_line, end_line, filetype, lines }
     │
     ├── formatter.format_selection(spec)
     │       └── build fenced code block with adaptive backtick fencing

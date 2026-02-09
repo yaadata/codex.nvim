@@ -11,6 +11,7 @@ local default_deps = {
   keymaps = require("codex.nvim.keymaps"),
   formatter = require("codex.context.formatter"),
   selection = require("codex.context.selection"),
+  path = require("codex.context.path"),
   vim = vim,
 }
 
@@ -360,7 +361,7 @@ function M.send_selection(opts)
   return true
 end
 
----@param path? string Explicit path to mention. When nil, uses `vim.fn.expand("%:p")`.
+---@param path? string Explicit path to mention. When nil, uses current buffer path.
 ---@return codex.SendResult ok True when mention payload is sent.
 ---@return string|nil err
 function M.add_file(path)
@@ -377,6 +378,7 @@ function M.add_file(path)
     return false, err
   end
 
+  resolved_path = deps.path.to_relative(deps.vim, resolved_path)
   local payload = deps.formatter.format_mention(resolved_path)
   ensure_send_target_open()
   M.send(payload)
