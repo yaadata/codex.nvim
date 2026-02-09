@@ -46,6 +46,7 @@ require("codex").setup({
       title = " Codex ",
       title_pos = "center", -- left | center | right
     },
+    auto_close = false, -- close terminal buffer automatically when process exits
     keymaps = {
       toggle = "<C-c>", -- terminal-mode toggle for Codex window
       close = false, -- set a string (e.g. "<C-x>") to close Codex session
@@ -162,6 +163,9 @@ require("codex").setup({
   },
 })
 ```
+
+`terminal.keymaps.close` triggers an intentional Codex session close. `terminal.auto_close`
+controls whether provider windows auto-close only after the terminal process exits.
 
 ## Lua API
 
