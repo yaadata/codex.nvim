@@ -244,6 +244,36 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
+  it("toggle opens a new terminal when the existing terminal has no job", function()
+    with_stubbed_vim_api(function()
+      local stale_toggle_calls = 0
+      local stale_terminal = {
+        toggle = function()
+          stale_toggle_calls = stale_toggle_calls + 1
+        end,
+      }
+      local fresh_terminal = { buf = 55 }
+
+      package.loaded["snacks"] = {
+        terminal = function()
+          return fresh_terminal
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      local handle = provider.toggle(
+        { terminal = stale_terminal },
+        "codex",
+        {},
+        {},
+        { terminal = { provider_opts = {} } }
+      )
+
+      assert.equals(0, stale_toggle_calls)
+      assert.same(fresh_terminal, handle.terminal)
+    end)
+  end)
+
   it("passes command and options separately to snacks.terminal", function()
     with_stubbed_vim_api(function()
       local captured_cmd = nil

@@ -403,6 +403,20 @@ describe("codex.init public api", function()
     assert.equals(replacement, env.store.get_active().handle)
   end)
 
+  it("toggle opens a fresh session when active handle is stale", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    local stale_handle = env.store.get_active().handle
+    stale_handle.alive = false
+
+    env.codex.toggle()
+
+    assert.equals(2, #env.provider.open_calls)
+    assert.equals(0, #env.provider.toggle_calls)
+    assert.equals(1, #env.provider.close_calls)
+    assert.same(stale_handle, env.provider.close_calls[1])
+  end)
+
   it("focus opens a session when none exists", function()
     local env = setup_with_deps()
 

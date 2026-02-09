@@ -170,7 +170,7 @@ end
 ---@return codex.ProviderHandle|nil new_handle
 ---@return string|nil err
 function M.toggle(handle, cmd, args, env, config)
-  if not handle or not handle.terminal then
+  if not handle or not M.is_alive(handle) then
     return M.open(cmd, args, env, config, true)
   end
 

@@ -165,7 +165,7 @@ function M.toggle()
   local session = deps.session_store.get_active()
   local provider = get_provider()
 
-  if session and session.alive then
+  if session and session.alive and provider.is_alive(session.handle) then
     local new_handle = provider.toggle(
       session.handle,
       state.config.cmd,
