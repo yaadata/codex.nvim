@@ -8,6 +8,8 @@ local ERR_NO_SELECTION = "codex: no visual selection range found"
 ---@field line2? integer
 ---@field bufnr? integer
 
+---@param value any
+---@return boolean
 local function is_positive_integer(value)
   return type(value) == "number" and value >= 1 and math.floor(value) == value
 end
@@ -15,6 +17,11 @@ end
 ---Resolves selection range with explicit precedence:
 ---1) command-provided range (`opts.line1` + `opts.line2`)
 ---2) visual marks (`'<` and `'>`)
+---@param vim_api table
+---@param bufnr integer
+---@param opts codex.SelectionOpts|nil
+---@return integer|nil start_line
+---@return integer|nil end_line
 local function resolve_range(vim_api, bufnr, opts)
   local line1 = opts and opts.line1
   local line2 = opts and opts.line2

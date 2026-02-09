@@ -19,6 +19,7 @@ local state = {
   deps = nil,
 }
 
+---@return table
 local function get_deps()
   return state.deps or default_deps
 end
@@ -62,16 +63,22 @@ function M.setup(opts)
   end
 end
 
+---@return nil
 local function ensure_setup()
   if not state.initialized then
     error("codex.nvim: call require('codex').setup() first")
   end
 end
 
+---@return codex.Provider provider
+---@return string provider_name
 local function get_provider()
   return get_deps().providers.resolve(state.config.terminal.provider)
 end
 
+---@param deps table
+---@param dead_handle codex.ProviderHandle|nil
+---@return nil
 local function mark_session_dead_by_handle(deps, dead_handle)
   if not dead_handle then
     return

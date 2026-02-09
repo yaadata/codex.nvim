@@ -7,6 +7,8 @@ local M = {}
 ---@field filetype string
 ---@field lines string[]|string
 
+---@param text string
+---@return integer
 local function longest_backtick_run(text)
   local longest = 0
   for run in text:gmatch("`+") do
@@ -17,6 +19,8 @@ local function longest_backtick_run(text)
   return longest
 end
 
+---@param lines string[]|string|nil
+---@return string
 local function normalize_lines(lines)
   if type(lines) == "string" then
     return lines
@@ -29,10 +33,14 @@ local function normalize_lines(lines)
   return ""
 end
 
+---@param path string
+---@return boolean
 local function needs_quoting(path)
   return path:find("[%s\"'`$;&|<>!()%[%]{}*?\\]") ~= nil
 end
 
+---@param path string
+---@return string
 local function quote_path(path)
   local escaped = path:gsub("\\", "\\\\"):gsub('"', '\\"')
   return '"' .. escaped .. '"'
