@@ -42,6 +42,7 @@ require("codex").setup({
 - `:CodexFocus` focuses the terminal (opens it if needed)
 - `:CodexSend` sends selected lines with file path and line range
 - `:CodexAdd [path]` sends `/mention <path>` (or current buffer path when omitted)
+  - paths are auto-quoted/escaped when they contain whitespace or shell-significant characters
 
 ## Lua API
 

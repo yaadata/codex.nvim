@@ -9,6 +9,9 @@ This document tracks those gaps with concrete acceptance criteria.
 
 ## Gap 1: Function Documentation With Typed Inputs/Returns
 
+Status:
+- Completed in `bbe6cae`.
+
 Goal:
 - Add function-level documentation with explicit input and return types for all new Phase 2 APIs.
 
@@ -39,6 +42,9 @@ Acceptance criteria:
 4. Selection spec fields (`filepath`, `start_line`, `end_line`, `filetype`, `lines`) are typed.
 
 ## Gap 2: Mention Payload Path Safety
+
+Status:
+- Completed in current branch (pending commit).
 
 Goal:
 - Define and enforce path formatting behavior for `/mention` payloads.
@@ -102,4 +108,3 @@ Acceptance criteria:
 2. `fix(context): define mention path formatting and edge-case tests`
 3. `test(selection): lock range precedence and mode semantics`
 4. `chore(errors): normalize phase 2 error messages and assertions`
-

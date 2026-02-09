@@ -85,8 +85,15 @@ describe("codex.context.formatter", function()
   describe("format_mention", function()
     it("formats mention with spaces in path", function()
       assert.equals(
-        "/mention /tmp/dir with space/file.lua\n",
+        '/mention "/tmp/dir with space/file.lua"\n',
         formatter.format_mention("/tmp/dir with space/file.lua")
+      )
+    end)
+
+    it("escapes double-quotes and backslashes for shell-significant paths", function()
+      assert.equals(
+        '/mention "C:\\\\work\\\\my \\"file\\".lua"\n',
+        formatter.format_mention('C:\\work\\my "file".lua')
       )
     end)
 

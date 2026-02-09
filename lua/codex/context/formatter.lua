@@ -29,6 +29,15 @@ local function normalize_lines(lines)
   return ""
 end
 
+local function needs_quoting(path)
+  return path:find("[%s\"'`$;&|<>!()%[%]{}*?\\]") ~= nil
+end
+
+local function quote_path(path)
+  local escaped = path:gsub("\\", "\\\\"):gsub('"', '\\"')
+  return '"' .. escaped .. '"'
+end
+
 ---@param spec? codex.SelectionSpec
 ---@return string payload
 function M.format_selection(spec)
@@ -57,9 +66,14 @@ function M.format_selection(spec)
 end
 
 ---@param filepath? string
+---Formats a `/mention` payload. Paths are quoted and escaped when needed.
 ---@return string payload
 function M.format_mention(filepath)
-  return string.format("/mention %s\n", filepath or "")
+  local path = filepath or ""
+  if path ~= "" and needs_quoting(path) then
+    path = quote_path(path)
+  end
+  return string.format("/mention %s\n", path)
 end
 
 return M
