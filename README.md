@@ -45,11 +45,24 @@ require("codex").setup({
   - selection is linewise; visual columns are ignored (charwise/blockwise still send full lines)
 - `:CodexAdd [path]` sends `/mention <path>` (or current buffer path when omitted)
   - paths are auto-quoted/escaped when they contain whitespace or shell-significant characters
+- `:CodexResume[!]` resumes a session
+  - with an active Codex session, sends `/resume` in-process
+  - without an active session, launches `codex resume` (or `codex resume --last` with `!`)
+- `:CodexModel` sends `/model`
+- `:CodexStatus` sends `/status`
+- `:CodexPermissions` sends `/permissions`
+- `:CodexCompact` sends `/compact`
 
 ## Lua API
 
 - `require("codex").send_selection()`
 - `require("codex").add_file(path)`
+- `require("codex").send_command(slash_cmd)`
+- `require("codex").resume(opts)`
+- `require("codex").set_model()`
+- `require("codex").show_status()`
+- `require("codex").show_permissions()`
+- `require("codex").compact()`
 
 ## Providers
 
