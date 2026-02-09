@@ -52,6 +52,8 @@ require("codex").setup({
 - `:CodexStatus` sends `/status`
 - `:CodexPermissions` sends `/permissions`
 - `:CodexCompact` sends `/compact`
+- `:CodexReview [instructions]` sends `/review` (or `/review <instructions>` when provided)
+- `:CodexDiff` sends `/diff`
 
 ## Lua API
 
@@ -63,6 +65,8 @@ require("codex").setup({
 - `require("codex").show_status()`
 - `require("codex").show_permissions()`
 - `require("codex").compact()`
+- `require("codex").review(instructions)`
+- `require("codex").show_diff()`
 
 ## Providers
 
