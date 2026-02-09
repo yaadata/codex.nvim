@@ -77,6 +77,9 @@ local function make_provider()
     toggle_calls = {},
     send_ok = true,
     send_err = nil,
+    focus_ok = true,
+    focus_err = nil,
+    focus_sequence = nil,
     toggle_return_new = nil,
     on_exit_callbacks = {},
   }
@@ -119,7 +122,15 @@ local function make_provider()
 
   function provider.focus(handle)
     table.insert(provider.focus_calls, handle)
-    return true
+    if provider.focus_sequence and #provider.focus_sequence > 0 then
+      local next_focus = table.remove(provider.focus_sequence, 1)
+      if type(next_focus) == "table" then
+        return next_focus.ok, next_focus.err
+      end
+      return next_focus
+    end
+
+    return provider.focus_ok, provider.focus_err
   end
 
   function provider.toggle(handle, cmd, args, env, config)
@@ -427,6 +438,28 @@ describe("codex.init public api", function()
     assert.equals("hello", env.provider.send_calls[1].text)
     assert.equals(1, #env.provider.focus_calls)
     assert.same(active_handle, env.provider.focus_calls[1])
+  end)
+
+  it("send toggles and re-focuses when initial focus fails", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    local active_handle = env.store.get_active().handle
+    local replacement_handle = { id = "replacement", alive = true }
+    env.provider.focus_sequence = {
+      { ok = false, err = "terminal window not found" },
+      { ok = true },
+    }
+    env.provider.toggle_return_new = replacement_handle
+
+    env.codex.send("hello")
+
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals(2, #env.provider.focus_calls)
+    assert.same(active_handle, env.provider.focus_calls[1])
+    assert.same(replacement_handle, env.provider.focus_calls[2])
+    assert.equals(1, #env.provider.toggle_calls)
+    assert.same(active_handle, env.provider.toggle_calls[1].handle)
+    assert.same(replacement_handle, env.store.get_active().handle)
   end)
 
   it("send_command opens with focus when no active session", function()

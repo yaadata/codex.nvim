@@ -218,6 +218,21 @@ function M.send(text)
     return
   end
 
+  local focused = provider.focus(session.handle)
+  if focused then
+    return
+  end
+
+  local new_handle = provider.toggle(
+    session.handle,
+    state.config.cmd,
+    state.config.args,
+    state.config.env,
+    state.config
+  )
+  if new_handle then
+    session.handle = new_handle
+  end
   provider.focus(session.handle)
 end
 
