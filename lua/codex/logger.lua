@@ -10,10 +10,16 @@ local vim_levels = {
 
 M._level = levels.warn
 
+---@param name codex.LogLevel|string
+---@return nil
 function M.set_level(name)
   M._level = levels[name] or levels.warn
 end
 
+---@param level_name codex.LogLevel
+---@param msg string
+---@param ... any
+---@return nil
 local function log(level_name, msg, ...)
   if levels[level_name] < M._level then
     return
@@ -22,18 +28,30 @@ local function log(level_name, msg, ...)
   vim.notify("[codex] " .. formatted, vim_levels[level_name])
 end
 
+---@param msg string
+---@param ... any
+---@return nil
 function M.debug(msg, ...)
   log("debug", msg, ...)
 end
 
+---@param msg string
+---@param ... any
+---@return nil
 function M.info(msg, ...)
   log("info", msg, ...)
 end
 
+---@param msg string
+---@param ... any
+---@return nil
 function M.warn(msg, ...)
   log("warn", msg, ...)
 end
 
+---@param msg string
+---@param ... any
+---@return nil
 function M.error(msg, ...)
   log("error", msg, ...)
 end

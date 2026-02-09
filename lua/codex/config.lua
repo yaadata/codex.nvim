@@ -1,5 +1,6 @@
 local M = {}
 
+---@type codex.Config
 M.defaults = {
   cmd = "codex",
   args = {},
@@ -21,6 +22,8 @@ M.defaults = {
 
 local valid_providers = { auto = true, snacks = true, native = true, external = true, none = true }
 
+---@param config codex.Config
+---@return true
 function M.validate(config)
   vim.validate({
     cmd = { config.cmd, "string" },
@@ -57,6 +60,8 @@ function M.validate(config)
   return true
 end
 
+---@param user_opts? table
+---@return codex.Config
 function M.apply(user_opts)
   local config = vim.tbl_deep_extend("force", vim.deepcopy(M.defaults), user_opts or {})
   M.validate(config)
