@@ -2,10 +2,14 @@ local log = require("codex.logger")
 
 local M = {}
 
+---@return boolean
 function M.is_available()
   return true
 end
 
+---@param cmd string
+---@param args string[]
+---@return string
 local function build_cmd(cmd, args)
   local parts = { cmd }
   for _, arg in ipairs(args) do
@@ -14,6 +18,8 @@ local function build_cmd(cmd, args)
   return table.concat(parts, " ")
 end
 
+---@param bufnr integer
+---@return integer|nil winid
 local function find_win_for_buf(bufnr)
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     if vim.api.nvim_win_get_buf(win) == bufnr then
@@ -23,6 +29,13 @@ local function find_win_for_buf(bufnr)
   return nil
 end
 
+---@param cmd string
+---@param args string[]
+---@param env table<string, string>
+---@param config codex.Config
+---@param focus boolean
+---@param on_exit? fun(handle: codex.ProviderHandle): nil
+---@return codex.ProviderHandle handle
 function M.open(cmd, args, env, config, focus, on_exit)
   local full_cmd = build_cmd(cmd, args)
   local cwd = config.cwd or vim.fn.getcwd()
@@ -68,6 +81,9 @@ function M.open(cmd, args, env, config, focus, on_exit)
   return handle
 end
 
+---@param handle codex.ProviderHandle|nil
+---@return boolean ok
+---@return string|nil err
 function M.close(handle)
   if not handle then
     return true
@@ -88,6 +104,10 @@ function M.close(handle)
   return true
 end
 
+---@param handle codex.ProviderHandle|nil
+---@param text string
+---@return boolean ok
+---@return string|nil err
 function M.send(handle, text)
   if not handle or not handle.jobid then
     return false, "no active terminal"
@@ -97,6 +117,9 @@ function M.send(handle, text)
   return true
 end
 
+---@param handle codex.ProviderHandle|nil
+---@return boolean ok
+---@return string|nil err
 function M.focus(handle)
   if not handle or not handle.bufnr then
     return false, "no active terminal"
@@ -120,6 +143,13 @@ function M.focus(handle)
   return false, "terminal window not found"
 end
 
+---@param handle codex.ProviderHandle|nil
+---@param cmd string
+---@param args string[]
+---@param env table<string, string>
+---@param config codex.Config
+---@return codex.ProviderHandle|nil handle
+---@return string|nil err
 function M.toggle(handle, cmd, args, env, config)
   if not handle or not M.is_alive(handle) then
     return M.open(cmd, args, env, config, true)
@@ -161,6 +191,8 @@ function M.toggle(handle, cmd, args, env, config)
   return handle
 end
 
+---@param handle codex.ProviderHandle|nil
+---@return boolean
 function M.is_alive(handle)
   if not handle or not handle.bufnr then
     return false
@@ -168,6 +200,8 @@ function M.is_alive(handle)
   return vim.api.nvim_buf_is_valid(handle.bufnr) and handle.jobid ~= nil
 end
 
+---@param handle codex.ProviderHandle|nil
+---@return integer|nil bufnr
 function M.get_bufnr(handle)
   if handle then
     return handle.bufnr

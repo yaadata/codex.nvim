@@ -2,11 +2,15 @@ local log = require("codex.logger")
 
 local M = {}
 
+---@return boolean
 function M.is_available()
   local ok, snacks = pcall(require, "snacks")
   return ok and snacks ~= nil and snacks.terminal ~= nil
 end
 
+---@param cmd string
+---@param args string[]
+---@return string
 local function build_cmd(cmd, args)
   local parts = { cmd }
   for _, arg in ipairs(args) do
@@ -15,7 +19,14 @@ local function build_cmd(cmd, args)
   return table.concat(parts, " ")
 end
 
-function M.open(cmd, args, env, config, focus)
+---@param cmd string
+---@param args string[]
+---@param env table<string, string>
+---@param config codex.Config
+---@param focus boolean
+---@param _on_exit? fun(handle: codex.ProviderHandle): nil
+---@return codex.ProviderHandle handle
+function M.open(cmd, args, env, config, focus, _on_exit)
   local snacks = require("snacks")
   local full_cmd = build_cmd(cmd, args)
   local cwd = config.cwd or vim.fn.getcwd()
@@ -39,6 +50,9 @@ function M.open(cmd, args, env, config, focus)
   return handle
 end
 
+---@param handle codex.ProviderHandle|nil
+---@return boolean ok
+---@return string|nil err
 function M.close(handle)
   if not handle or not handle.terminal then
     return true
@@ -51,6 +65,10 @@ function M.close(handle)
   return true
 end
 
+---@param handle codex.ProviderHandle|nil
+---@param text string
+---@return boolean ok
+---@return string|nil err
 function M.send(handle, text)
   if not handle or not handle.terminal then
     return false, "no active terminal"
@@ -65,6 +83,9 @@ function M.send(handle, text)
   return false, "terminal has no job"
 end
 
+---@param handle codex.ProviderHandle|nil
+---@return boolean ok
+---@return string|nil err
 function M.focus(handle)
   if not handle or not handle.terminal then
     return false, "no active terminal"
@@ -78,6 +99,13 @@ function M.focus(handle)
   return false, "cannot focus terminal"
 end
 
+---@param handle codex.ProviderHandle|nil
+---@param cmd string
+---@param args string[]
+---@param env table<string, string>
+---@param config codex.Config
+---@return codex.ProviderHandle|nil new_handle
+---@return string|nil err
 function M.toggle(handle, cmd, args, env, config)
   if not handle or not handle.terminal then
     return M.open(cmd, args, env, config, true)
@@ -90,6 +118,8 @@ function M.toggle(handle, cmd, args, env, config)
   return handle
 end
 
+---@param handle codex.ProviderHandle|nil
+---@return boolean
 function M.is_alive(handle)
   if not handle or not handle.terminal then
     return false
@@ -103,6 +133,8 @@ function M.is_alive(handle)
   return false
 end
 
+---@param handle codex.ProviderHandle|nil
+---@return integer|nil bufnr
 function M.get_bufnr(handle)
   if handle and handle.terminal then
     return handle.terminal.buf

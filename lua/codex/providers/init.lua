@@ -11,6 +11,8 @@ local provider_modules = {
 
 local loaded = {}
 
+---@param name codex.ProviderName|"native"|"snacks"|"external"|"none"
+---@return codex.Provider|nil
 local function load_provider(name)
   if loaded[name] then
     return loaded[name]
@@ -31,6 +33,9 @@ local function load_provider(name)
   return mod
 end
 
+---@param provider_name codex.ProviderName
+---@return codex.Provider provider
+---@return string resolved_name
 function M.resolve(provider_name)
   if provider_name == "auto" then
     local snacks = load_provider("snacks")
@@ -56,6 +61,7 @@ function M.resolve(provider_name)
   return provider, provider_name
 end
 
+---@return nil
 function M.reset()
   loaded = {}
 end
