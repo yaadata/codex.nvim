@@ -79,6 +79,12 @@ function M.open(cmd, args, env, config, focus, on_exit)
     cwd = cwd,
     interactive = true,
   }
+  if config.terminal.window == "float" then
+    base_opts.win = {
+      position = "float",
+      border = config.terminal.float.border,
+    }
+  end
   if next(env) ~= nil then
     base_opts.env = env
   end

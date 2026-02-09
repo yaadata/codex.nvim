@@ -305,4 +305,30 @@ describe("codex.providers.snacks", function()
       assert.equals("float", captured_opts.win.position)
     end)
   end)
+
+  it("passes float border config to snacks when window is float", function()
+    with_stubbed_vim_api(function()
+      local captured_opts = nil
+      package.loaded["snacks"] = {
+        terminal = function(_, opts)
+          captured_opts = opts
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "float",
+          float = {
+            border = "rounded",
+          },
+          provider_opts = {},
+        },
+      }, false, nil)
+
+      assert.equals("float", captured_opts.win.position)
+      assert.equals("rounded", captured_opts.win.border)
+    end)
+  end)
 end)
