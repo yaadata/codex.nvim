@@ -26,6 +26,7 @@ lua/codex/init.lua        (public API, session lifecycle, DI container)
         │        └── none.lua
         ├──► context/
         │        ├── formatter.lua  (selection + mention payload formatting)
+        │        ├── path.lua       (CWD-relative path normalization)
         │        └── selection.lua  (visual selection extraction)
         └──► state/
                  └── session_store.lua  (session registry, alive/dead tracking)
@@ -67,6 +68,9 @@ codex.nvim/
 │   │   ├── formatter.lua            # Formats selection payloads (fenced code blocks with
 │   │   │                            # adaptive backtick fencing) and /mention payloads
 │   │   │                            # (auto-quoting paths with special characters).
+│   │   ├── path.lua                 # Normalizes file paths to CWD-relative form via
+│   │   │                            # fnamemodify(":."). Falls back to the original path
+│   │   │                            # on error.
 │   │   └── selection.lua            # Extracts visual selection from the current buffer.
 │   │                                # Resolves range via command args or visual marks.
 │   └── state/
