@@ -234,7 +234,7 @@ function M.send_selection(opts)
   local deps = get_deps()
   local spec, err = deps.selection.get_visual_selection(deps.vim, opts)
   if not spec then
-    deps.logger.error("codex: failed to collect selection: %s", err or "unknown error")
+    deps.logger.error("failed to collect selection: %s", err or "unknown error")
     return false, err
   end
 
@@ -255,8 +255,8 @@ function M.add_file(path)
   end
 
   if not resolved_path or resolved_path == "" then
-    local err = "codex: current buffer has no file path"
-    deps.logger.error("codex: failed to add file context: %s", err)
+    local err = "current buffer has no file path"
+    deps.logger.error("failed to add file context: %s", err)
     return false, err
   end
 

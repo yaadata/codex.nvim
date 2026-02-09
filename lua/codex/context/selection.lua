@@ -1,7 +1,7 @@
 local M = {}
 
-local ERR_NO_FILEPATH = "codex: current buffer has no file path"
-local ERR_NO_SELECTION = "codex: no visual selection range found"
+local ERR_NO_FILEPATH = "current buffer has no file path"
+local ERR_NO_SELECTION = "no visual selection range found"
 
 ---@class codex.SelectionOpts
 ---@field line1? integer
