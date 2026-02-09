@@ -35,10 +35,12 @@ end
 local function with_stubbed_send_env(run)
   local original_buf_is_valid = vim.api.nvim_buf_is_valid
   local original_buf_get_var = vim.api.nvim_buf_get_var
+  local original_get_option_value = vim.api.nvim_get_option_value
   local original_chansend = vim.fn.chansend
   local chansend_calls = {}
   local buf_valid = {}
   local buf_vars = {}
+  local buf_channels = {}
 
   vim.api.nvim_buf_is_valid = function(bufnr)
     return buf_valid[bufnr] == true
@@ -51,6 +53,12 @@ local function with_stubbed_send_env(run)
     end
     return value
   end
+  vim.api.nvim_get_option_value = function(name, opts)
+    if name ~= "channel" then
+      error("unsupported option")
+    end
+    return buf_channels[opts.buf] or 0
+  end
   vim.fn.chansend = function(jobid, text)
     table.insert(chansend_calls, { jobid = jobid, text = text })
   end
@@ -59,10 +67,12 @@ local function with_stubbed_send_env(run)
     chansend_calls = chansend_calls,
     buf_valid = buf_valid,
     buf_vars = buf_vars,
+    buf_channels = buf_channels,
   })
 
   vim.api.nvim_buf_is_valid = original_buf_is_valid
   vim.api.nvim_buf_get_var = original_buf_get_var
+  vim.api.nvim_get_option_value = original_get_option_value
   vim.fn.chansend = original_chansend
 
   if not ok then
@@ -191,6 +201,32 @@ describe("codex.providers.snacks", function()
       assert.is_nil(err)
       assert.equals(1, #state.chansend_calls)
       assert.same({ jobid = 88, text = "hello" }, state.chansend_calls[1])
+    end)
+  end)
+
+  it("uses terminal channel option when available", function()
+    with_stubbed_send_env(function(state)
+      state.buf_valid[42] = true
+      state.buf_channels[42] = 99
+
+      local provider = require("codex.providers.snacks")
+      local ok, err = provider.send({ terminal = { buf = 42 } }, "hello")
+
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(1, #state.chansend_calls)
+      assert.same({ jobid = 99, text = "hello" }, state.chansend_calls[1])
+    end)
+  end)
+
+  it("reports alive only when terminal has an active job channel", function()
+    with_stubbed_send_env(function(state)
+      state.buf_valid[42] = true
+      local provider = require("codex.providers.snacks")
+      assert.is_false(provider.is_alive({ terminal = { buf = 42 } }))
+
+      state.buf_vars[42] = { terminal_job_id = 33 }
+      assert.is_true(provider.is_alive({ terminal = { buf = 42 } }))
     end)
   end)
 

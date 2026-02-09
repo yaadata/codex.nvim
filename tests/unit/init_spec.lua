@@ -440,6 +440,21 @@ describe("codex.init public api", function()
     assert.same(active_handle, env.provider.focus_calls[1])
   end)
 
+  it("send reopens session when active handle is stale", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    local stale_handle = env.store.get_active().handle
+    stale_handle.alive = false
+
+    env.codex.send("hello")
+
+    assert.equals(2, #env.provider.open_calls)
+    assert.equals(1, #env.provider.close_calls)
+    assert.same(stale_handle, env.provider.close_calls[1])
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("hello", env.provider.send_calls[1].text)
+  end)
+
   it("send toggles and re-focuses when initial focus fails", function()
     local env = setup_with_deps()
     env.codex.open(false)

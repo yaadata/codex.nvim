@@ -20,6 +20,11 @@ local function resolve_jobid(term)
     return nil
   end
 
+  local ok_channel, channel = pcall(vim.api.nvim_get_option_value, "channel", { buf = bufnr })
+  if ok_channel and type(channel) == "number" and channel > 0 then
+    return channel
+  end
+
   local ok, jobid = pcall(vim.api.nvim_buf_get_var, bufnr, "terminal_job_id")
   if not ok then
     return nil
@@ -184,11 +189,7 @@ function M.is_alive(handle)
   end
 
   local term = handle.terminal
-  if term.buf and vim.api.nvim_buf_is_valid(term.buf) then
-    return true
-  end
-
-  return false
+  return resolve_jobid(term) ~= nil
 end
 
 ---@param handle codex.ProviderHandle|nil

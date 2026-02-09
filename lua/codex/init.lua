@@ -206,12 +206,12 @@ function M.send(text)
   local deps = get_deps()
 
   local session = deps.session_store.get_active()
-  if not session or not session.alive then
+  local provider = get_provider()
+  if not session or not session.alive or not provider.is_alive(session.handle) then
     M.open(false)
     session = deps.session_store.get_active()
   end
 
-  local provider = get_provider()
   local ok, err = provider.send(session.handle, text)
   if not ok then
     deps.logger.error("failed to send text: %s", err or "unknown error")
