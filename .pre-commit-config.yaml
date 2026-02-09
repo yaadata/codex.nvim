@@ -21,3 +21,8 @@ repos:
         entry: mise exec -- just test-unit
         language: system
         pass_filenames: false
+      - id: codex-test-contract
+        name: codex test-contract
+        entry: mise exec -- just test-contract
+        language: system
+        pass_filenames: false
