@@ -128,4 +128,36 @@ describe("codex.providers.snacks", function()
       assert.same({ "startinsert" }, cmd_calls)
     end)
   end)
+
+  it("passes command and options separately to snacks.terminal", function()
+    with_stubbed_vim_api(function()
+      local captured_cmd = nil
+      local captured_opts = nil
+      package.loaded["snacks"] = {
+        terminal = function(cmd, opts)
+          captured_cmd = cmd
+          captured_opts = opts
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", { "--foo", "bar" }, { CODEX_TEST = "1" }, {
+        cwd = "/tmp/work",
+        terminal = {
+          provider_opts = {
+            snacks = {
+              win = { position = "float" },
+            },
+          },
+        },
+      }, false, nil)
+
+      assert.equals("codex --foo bar", captured_cmd)
+      assert.equals("/tmp/work", captured_opts.cwd)
+      assert.equals("1", captured_opts.env.CODEX_TEST)
+      assert.is_true(captured_opts.interactive)
+      assert.equals("float", captured_opts.win.position)
+    end)
+  end)
 end)

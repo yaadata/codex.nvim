@@ -56,7 +56,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
 
   local opts = vim.tbl_deep_extend("force", base_opts, snacks_opts)
 
-  local terminal = snacks.terminal(opts)
+  local terminal = snacks.terminal(full_cmd, opts)
 
   if focus and terminal.show then
     terminal:show()
