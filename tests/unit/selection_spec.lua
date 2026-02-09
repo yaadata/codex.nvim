@@ -20,6 +20,7 @@ local function make_fake_vim_api(overrides)
     }
   local filetype = overrides.filetype or "lua"
   local expanded_path = overrides.expanded_path or "/repo/lua/codex/init.lua"
+  local visual_mode = overrides.visual_mode
 
   return {
     api = {
@@ -48,6 +49,9 @@ local function make_fake_vim_api(overrides)
         assert.equals(":p", modifier)
         return expanded_path
       end,
+      visualmode = function()
+        return visual_mode
+      end,
     },
   }
 end
@@ -71,6 +75,36 @@ describe("codex.context.selection", function()
     assert.equals(3, spec.start_line)
     assert.equals(3, spec.end_line)
     assert.same({ "line 3" }, spec.lines)
+  end)
+
+  it("extracts charwise selection using mark columns", function()
+    local spec = selection.get_visual_selection(
+      make_fake_vim_api({
+        marks = { ["<"] = { 2, 1 }, [">"] = { 4, 1 } },
+      }),
+      {
+        visual_mode = "v",
+      }
+    )
+
+    assert.equals(2, spec.start_line)
+    assert.equals(4, spec.end_line)
+    assert.same({ "ine 2", "line 3", "li" }, spec.lines)
+  end)
+
+  it("extracts blockwise selection using mark columns", function()
+    local spec = selection.get_visual_selection(
+      make_fake_vim_api({
+        marks = { ["<"] = { 2, 1 }, [">"] = { 4, 3 } },
+      }),
+      {
+        visual_mode = string.char(22),
+      }
+    )
+
+    assert.equals(2, spec.start_line)
+    assert.equals(4, spec.end_line)
+    assert.same({ "ine", "ine", "ine" }, spec.lines)
   end)
 
   it("returns error when visual marks are invalid", function()

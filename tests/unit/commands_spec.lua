@@ -192,6 +192,47 @@ describe("codex.nvim command registration", function()
     end)
   end)
 
+  it("dispatches :CodexSend with visual_mode when range matches visual marks", function()
+    with_stubbed_command_registration(function(registered)
+      local original_get_current_buf = vim.api.nvim_get_current_buf
+      local original_get_mark = vim.api.nvim_buf_get_mark
+      local original_visualmode = vim.fn.visualmode
+      local calls = {}
+
+      vim.api.nvim_get_current_buf = function()
+        return 1
+      end
+      vim.api.nvim_buf_get_mark = function(_, mark)
+        if mark == "<" then
+          return { 2, 1 }
+        end
+        if mark == ">" then
+          return { 6, 3 }
+        end
+        return { 0, 0 }
+      end
+      vim.fn.visualmode = function()
+        return string.char(22)
+      end
+
+      package.loaded["codex"] = {
+        send_selection = function(opts)
+          table.insert(calls, opts)
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      registered.CodexSend.callback({ line1 = 2, line2 = 6, range = 2 })
+
+      vim.api.nvim_get_current_buf = original_get_current_buf
+      vim.api.nvim_buf_get_mark = original_get_mark
+      vim.fn.visualmode = original_visualmode
+
+      assert.equals(1, #calls)
+      assert.same({ line1 = 2, line2 = 6, visual_mode = string.char(22) }, calls[1])
+    end)
+  end)
+
   it("dispatches :CodexAdd with explicit argument", function()
     with_stubbed_command_registration(function(registered)
       local paths = {}

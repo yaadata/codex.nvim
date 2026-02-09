@@ -94,6 +94,7 @@
 ---@field bang boolean
 ---@field line1 integer
 ---@field line2 integer
+---@field range integer
 ---@field args string
 
 return {}
