@@ -120,6 +120,19 @@ local function reshow_window(term_config, bufnr)
   return open_window_for_buf(term_config, bufnr)
 end
 
+---@param bufnr integer
+---@return nil
+local function set_terminal_keymaps(bufnr)
+  vim.keymap.set("t", "<C-c>", function()
+    require("codex").toggle()
+  end, {
+    buffer = bufnr,
+    silent = true,
+    nowait = true,
+    desc = "Codex: Toggle terminal",
+  })
+end
+
 ---@param cmd string
 ---@param args string[]
 ---@param env table<string, string>
@@ -153,6 +166,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   handle.jobid = jobid
 
   vim.bo[bufnr].buflisted = false
+  set_terminal_keymaps(bufnr)
 
   if focus then
     vim.cmd("startinsert")

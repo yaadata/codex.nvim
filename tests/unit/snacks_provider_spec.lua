@@ -1,14 +1,25 @@
 local function with_stubbed_vim_api(run)
   local original_create_autocmd = vim.api.nvim_create_autocmd
+  local original_keymap_set = vim.keymap.set
   local autocmds = {}
+  local keymap_set_calls = {}
 
   vim.api.nvim_create_autocmd = function(event, spec)
     table.insert(autocmds, { event = event, spec = spec })
     return #autocmds
   end
+  vim.keymap.set = function(mode, lhs, rhs, opts)
+    table.insert(keymap_set_calls, {
+      mode = mode,
+      lhs = lhs,
+      rhs = rhs,
+      opts = opts,
+    })
+  end
 
-  local ok, err = pcall(run, autocmds)
+  local ok, err = pcall(run, autocmds, keymap_set_calls)
   vim.api.nvim_create_autocmd = original_create_autocmd
+  vim.keymap.set = original_keymap_set
 
   if not ok then
     error(err)
@@ -22,7 +33,7 @@ describe("codex.providers.snacks", function()
   end)
 
   it("registers a TermClose autocmd when on_exit callback is provided", function()
-    with_stubbed_vim_api(function(autocmds)
+    with_stubbed_vim_api(function(autocmds, keymap_set_calls)
       local terminal = { buf = 42 }
       package.loaded["snacks"] = {
         terminal = function()
@@ -47,6 +58,14 @@ describe("codex.providers.snacks", function()
       assert.equals("TermClose", autocmds[1].event)
       assert.equals(42, autocmds[1].spec.buffer)
       assert.is_true(autocmds[1].spec.once)
+      assert.equals(1, #keymap_set_calls)
+      assert.equals("t", keymap_set_calls[1].mode)
+      assert.equals("<C-c>", keymap_set_calls[1].lhs)
+      assert.is_function(keymap_set_calls[1].rhs)
+      assert.equals(42, keymap_set_calls[1].opts.buffer)
+      assert.is_true(keymap_set_calls[1].opts.silent)
+      assert.is_true(keymap_set_calls[1].opts.nowait)
+      assert.equals("Codex: Toggle terminal", keymap_set_calls[1].opts.desc)
 
       autocmds[1].spec.callback()
       assert.equals(1, #exited)
@@ -55,7 +74,7 @@ describe("codex.providers.snacks", function()
   end)
 
   it("does not register TermClose autocmd when on_exit callback is missing", function()
-    with_stubbed_vim_api(function(autocmds)
+    with_stubbed_vim_api(function(autocmds, keymap_set_calls)
       package.loaded["snacks"] = {
         terminal = function()
           return { buf = 42 }
@@ -66,6 +85,22 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, { terminal = { provider_opts = {} } }, true, nil)
 
       assert.equals(0, #autocmds)
+      assert.equals(1, #keymap_set_calls)
+    end)
+  end)
+
+  it("does not register terminal keymap when snacks terminal has no numeric buffer", function()
+    with_stubbed_vim_api(function(_, keymap_set_calls)
+      package.loaded["snacks"] = {
+        terminal = function()
+          return {}
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, { terminal = { provider_opts = {} } }, true, nil)
+
+      assert.equals(0, #keymap_set_calls)
     end)
   end)
 end)

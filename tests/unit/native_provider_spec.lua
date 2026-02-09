@@ -46,6 +46,7 @@ local function with_stubbed_native_env(run)
   local original_fn = {}
   local original_cmd = vim.cmd
   local original_bo = vim.bo
+  local original_keymap_set = vim.keymap.set
   local original_columns = vim.o.columns
   local original_lines = vim.o.lines
 
@@ -72,6 +73,7 @@ local function with_stubbed_native_env(run)
     termopen_calls = {},
     chansend_calls = {},
     jobstop_calls = {},
+    keymap_set_calls = {},
     startinsert_calls = 0,
   }
 
@@ -204,6 +206,15 @@ local function with_stubbed_native_env(run)
     end
   end
 
+  local function keymap_set(mode, lhs, rhs, opts)
+    table.insert(state.keymap_set_calls, {
+      mode = mode,
+      lhs = lhs,
+      rhs = rhs,
+      opts = opts,
+    })
+  end
+
   vim.api.nvim_list_wins = nvim_list_wins
   vim.api.nvim_win_get_buf = nvim_win_get_buf
   vim.api.nvim_get_current_win = nvim_get_current_win
@@ -223,6 +234,7 @@ local function with_stubbed_native_env(run)
   vim.fn.jobstop = jobstop
   vim.cmd = fake_cmd
   vim.bo = fake_bo
+  vim.keymap.set = keymap_set
   vim.o.columns = 120
   vim.o.lines = 50
 
@@ -236,6 +248,7 @@ local function with_stubbed_native_env(run)
   end
   vim.cmd = original_cmd
   vim.bo = original_bo
+  vim.keymap.set = original_keymap_set
   vim.o.columns = original_columns
   vim.o.lines = original_lines
 
@@ -289,6 +302,25 @@ describe("codex.providers.native", function()
       provider.open("codex", {}, env, cfg, false)
 
       assert.same(env, state.termopen_calls[1].opts.env)
+    end)
+  end)
+
+  it("maps terminal <C-c> to codex toggle for the terminal buffer", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+
+      provider.open("codex", {}, {}, cfg, false)
+
+      assert.equals(1, #state.keymap_set_calls)
+      local map = state.keymap_set_calls[1]
+      assert.equals("t", map.mode)
+      assert.equals("<C-c>", map.lhs)
+      assert.is_function(map.rhs)
+      assert.equals(2, map.opts.buffer)
+      assert.is_true(map.opts.silent)
+      assert.is_true(map.opts.nowait)
+      assert.equals("Codex: Toggle terminal", map.opts.desc)
     end)
   end)
 

@@ -19,6 +19,19 @@ local function build_cmd(cmd, args)
   return table.concat(parts, " ")
 end
 
+---@param bufnr integer
+---@return nil
+local function set_terminal_keymaps(bufnr)
+  vim.keymap.set("t", "<C-c>", function()
+    require("codex").toggle()
+  end, {
+    buffer = bufnr,
+    silent = true,
+    nowait = true,
+    desc = "Codex: Toggle terminal",
+  })
+end
+
 ---@param cmd string
 ---@param args string[]
 ---@param env table<string, string>
@@ -50,6 +63,10 @@ function M.open(cmd, args, env, config, focus, on_exit)
   end
 
   local handle = { terminal = terminal, provider = "snacks" }
+
+  if type(terminal.buf) == "number" then
+    set_terminal_keymaps(terminal.buf)
+  end
 
   if on_exit and terminal.buf then
     vim.api.nvim_create_autocmd("TermClose", {
