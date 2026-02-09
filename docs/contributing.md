@@ -136,7 +136,8 @@ Four hooks run before every commit (`.pre-commit-config.yaml`):
 
 1. **codex-fmt-check** -- `mise exec -- just fmt-check`
 2. **codex-lint** -- `mise exec -- just lint`
-3. **codex-md-fmt-check** -- `mise exec -- mdformat --number --check docs/ README.md`
+3. **codex-md-fmt-check** --
+   `mise exec -- mdformat --number --check docs/ README.md`
 4. **codex-test-unit** -- `mise exec -- just test-unit`
 
 Run all hooks manually against the full repo:

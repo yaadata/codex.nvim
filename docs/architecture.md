@@ -80,8 +80,10 @@ codex.nvim/
 ├── .stylua.toml                     # Stylua formatter configuration.
 ├── selene.toml                      # Selene linter configuration.
 ├── codex.yml                        # Custom selene standard (lua51 + vim/test globals).
-├── mise.toml                        # Mise tool version pins (stylua, selene, pre-commit).
-└── .pre-commit-config.yaml          # Pre-commit hooks (fmt-check, lint, test-unit).
+├── mise.toml                        # Mise tool version pins (stylua, selene, mdformat,
+│                                    # pre-commit).
+└── .pre-commit-config.yaml          # Pre-commit hooks (fmt-check, lint, md-fmt-check,
+                                     # test-unit).
 ```
 
 ## Key Design Patterns

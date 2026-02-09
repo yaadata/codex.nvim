@@ -70,16 +70,11 @@ require("codex").setup({
 
 ## Providers
 
-- `auto`: prefers `snacks` when available, falls back to `native`
-- `snacks`: `snacks.nvim` terminal integration
-- `native`: built-in `vim.fn.termopen` split terminal
-- `external`: reserved stub provider
-- `none`: no-op provider for tests/headless flows
+`auto` (default) prefers `snacks` when available, falls back to `native`.
+See [docs/architecture.md](docs/architecture.md) for the full provider
+interface and implementation details.
 
 ## Development
 
-```sh
-mise exec -- just test
-mise exec -- just fmt-check
-mise exec -- just lint
-```
+See [docs/contributing.md](docs/contributing.md) for setup, testing,
+formatting, linting, and code style guidelines.
