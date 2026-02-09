@@ -8,6 +8,7 @@ local default_deps = {
   providers = require("codex.providers"),
   session_store = require("codex.state.session_store"),
   commands = require("codex.nvim.commands"),
+  keymaps = require("codex.nvim.keymaps"),
   formatter = require("codex.context.formatter"),
   selection = require("codex.context.selection"),
   vim = vim,
@@ -45,6 +46,7 @@ function M.setup(opts)
   deps.logger.set_level(state.config.log_level)
 
   deps.commands.register()
+  deps.keymaps.register(state.config)
 
   deps.vim.api.nvim_create_autocmd("VimLeavePre", {
     group = deps.vim.api.nvim_create_augroup("codex_cleanup", { clear = true }),

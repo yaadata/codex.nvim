@@ -261,10 +261,18 @@ local function setup_with_deps(overrides)
   local fake_vim = make_fake_vim()
   local formatter = make_formatter()
   local selection = make_selection()
+  local call_order = {}
 
   local commands = { register_calls = 0 }
   function commands.register()
     commands.register_calls = commands.register_calls + 1
+    table.insert(call_order, "commands")
+  end
+
+  local keymaps = { register_calls = 0 }
+  function keymaps.register()
+    keymaps.register_calls = keymaps.register_calls + 1
+    table.insert(call_order, "keymaps")
   end
 
   local providers = { resolve_calls = {} }
@@ -284,6 +292,7 @@ local function setup_with_deps(overrides)
       session_store = store,
       logger = logger,
       commands = commands,
+      keymaps = keymaps,
       formatter = formatter,
       selection = selection,
       vim = fake_vim,
@@ -299,6 +308,8 @@ local function setup_with_deps(overrides)
     formatter = formatter,
     selection = selection,
     commands = commands,
+    keymaps = keymaps,
+    call_order = call_order,
     providers = providers,
   }
 end
@@ -319,6 +330,8 @@ describe("codex.init public api", function()
     local env = setup_with_deps({ log_level = "info" })
 
     assert.equals(1, env.commands.register_calls)
+    assert.equals(1, env.keymaps.register_calls)
+    assert.same({ "commands", "keymaps" }, env.call_order)
     assert.equals("info", env.logger.set_levels[1])
     assert.equals(1, #env.fake_vim._autocmds)
     assert.equals("VimLeavePre", env.fake_vim._autocmds[1].event)
