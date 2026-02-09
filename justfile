@@ -10,14 +10,7 @@ bootstrap-test-deps:
 test: bootstrap-test-deps test-unit test-contract
 
 test-unit:
-	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/config_spec.lua' -c 'qa'
-	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/commands_spec.lua' -c 'qa'
-	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/formatter_spec.lua' -c 'qa'
-	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/init_spec.lua' -c 'qa'
-	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/session_store_spec.lua' -c 'qa'
-	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/provider_registry_spec.lua' -c 'qa'
-	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/snacks_provider_spec.lua' -c 'qa'
-	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/unit/selection_spec.lua' -c 'qa'
+	for f in tests/unit/*_spec.lua; do CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c "PlenaryBustedFile $f" -c 'qa'; done
 
 test-contract:
 	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/contract/provider_contract_spec.lua' -c 'qa'
