@@ -215,7 +215,10 @@ function M.send(text)
   local ok, err = provider.send(session.handle, text)
   if not ok then
     deps.logger.error("failed to send text: %s", err or "unknown error")
+    return
   end
+
+  provider.focus(session.handle)
 end
 
 ---@param slash_cmd string Slash command name with or without a leading `/`.

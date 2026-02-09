@@ -125,6 +125,7 @@ function M.focus(handle)
 
   if handle.terminal.show then
     handle.terminal:show()
+    vim.cmd("startinsert")
     return true
   end
 

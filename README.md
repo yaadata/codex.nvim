@@ -74,10 +74,12 @@ require("codex").setup({
   - when a command range is provided, it takes precedence over visual marks
   - selection is linewise; visual columns are ignored (charwise/blockwise still
     send full lines)
+  - after sending, codex.nvim focuses the Codex terminal in insert mode
 - `:CodexAdd [path]` sends `/mention <path>` (or current buffer path when
   omitted)
   - paths are auto-quoted/escaped when they contain whitespace or
     shell-significant characters
+  - after sending, codex.nvim focuses the Codex terminal in insert mode
 - `:CodexResume[!]` resumes a session
   - with an active Codex session, sends `/resume` in-process
   - without an active session, launches `codex resume` (or `codex resume --last`

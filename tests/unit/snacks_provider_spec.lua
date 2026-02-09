@@ -1,8 +1,10 @@
 local function with_stubbed_vim_api(run)
   local original_create_autocmd = vim.api.nvim_create_autocmd
   local original_keymap_set = vim.keymap.set
+  local original_cmd = vim.cmd
   local autocmds = {}
   local keymap_set_calls = {}
+  local cmd_calls = {}
 
   vim.api.nvim_create_autocmd = function(event, spec)
     table.insert(autocmds, { event = event, spec = spec })
@@ -16,10 +18,14 @@ local function with_stubbed_vim_api(run)
       opts = opts,
     })
   end
+  vim.cmd = function(cmd)
+    table.insert(cmd_calls, cmd)
+  end
 
-  local ok, err = pcall(run, autocmds, keymap_set_calls)
+  local ok, err = pcall(run, autocmds, keymap_set_calls, cmd_calls)
   vim.api.nvim_create_autocmd = original_create_autocmd
   vim.keymap.set = original_keymap_set
+  vim.cmd = original_cmd
 
   if not ok then
     error(err)
@@ -101,6 +107,25 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, { terminal = { provider_opts = {} } }, true, nil)
 
       assert.equals(0, #keymap_set_calls)
+    end)
+  end)
+
+  it("focuses snacks terminal and enters insert mode", function()
+    with_stubbed_vim_api(function(_, _, cmd_calls)
+      local shown = 0
+      local terminal = {
+        show = function()
+          shown = shown + 1
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      local ok, err = provider.focus({ terminal = terminal })
+
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(1, shown)
+      assert.same({ "startinsert" }, cmd_calls)
     end)
   end)
 end)

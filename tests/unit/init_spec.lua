@@ -412,7 +412,21 @@ describe("codex.init public api", function()
     assert.is_false(env.provider.open_calls[1].focus)
     assert.equals(1, #env.provider.send_calls)
     assert.equals("hello", env.provider.send_calls[1].text)
+    assert.equals(0, #env.provider.focus_calls)
     assert.matches("failed to send text: boom", env.logger.errors[1])
+  end)
+
+  it("send focuses active terminal after successful send", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    local active_handle = env.store.get_active().handle
+
+    env.codex.send("hello")
+
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("hello", env.provider.send_calls[1].text)
+    assert.equals(1, #env.provider.focus_calls)
+    assert.same(active_handle, env.provider.focus_calls[1])
   end)
 
   it("send_command opens with focus when no active session", function()
@@ -613,6 +627,7 @@ describe("codex.init public api", function()
     assert.equals("/test/current.lua", env.formatter.selection_specs[1].filepath)
     assert.equals(1, #env.provider.send_calls)
     assert.equals("[selection]\n", env.provider.send_calls[1].text)
+    assert.equals(1, #env.provider.focus_calls)
   end)
 
   it("send_selection logs and returns false when selection fails", function()
@@ -646,6 +661,7 @@ describe("codex.init public api", function()
     assert.is_true(ok)
     assert.equals("/tmp/example.lua", env.formatter.mention_paths[1])
     assert.equals("/mention /tmp/example.lua\n", env.provider.send_calls[1].text)
+    assert.equals(1, #env.provider.focus_calls)
   end)
 
   it("add_file resolves current buffer path when argument is nil", function()
