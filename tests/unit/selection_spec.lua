@@ -79,7 +79,7 @@ describe("codex.context.selection", function()
     }))
 
     assert.is_nil(spec)
-    assert.equals("no visual selection range found", err)
+    assert.equals("codex: no visual selection range found", err)
   end)
 
   it("returns expanded absolute path", function()
@@ -95,7 +95,7 @@ describe("codex.context.selection", function()
     local spec, err = selection.get_visual_selection(make_fake_vim_api({ filepath = "" }))
 
     assert.is_nil(spec)
-    assert.equals("current buffer has no file path", err)
+    assert.equals("codex: current buffer has no file path", err)
   end)
 
   it("uses explicit range when provided", function()

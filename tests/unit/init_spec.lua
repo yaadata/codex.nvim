@@ -418,15 +418,15 @@ describe("codex.init public api", function()
 
   it("send_selection logs and returns false when selection fails", function()
     local env = setup_with_deps()
-    env.selection.err = "no visual selection range found"
+    env.selection.err = "codex: no visual selection range found"
 
     local ok, err = env.codex.send_selection()
 
     assert.is_false(ok)
-    assert.equals("no visual selection range found", err)
+    assert.equals("codex: no visual selection range found", err)
     assert.equals(0, #env.provider.send_calls)
     assert.matches(
-      "failed to collect selection: no visual selection range found",
+      "codex: failed to collect selection: codex: no visual selection range found",
       env.logger.errors[1]
     )
   end)
@@ -474,9 +474,12 @@ describe("codex.init public api", function()
     local ok, err = env.codex.add_file(nil)
 
     assert.is_false(ok)
-    assert.equals("current buffer has no file path", err)
+    assert.equals("codex: current buffer has no file path", err)
     assert.equals(0, #env.provider.send_calls)
-    assert.matches("failed to add file: current buffer has no file path", env.logger.errors[1])
+    assert.matches(
+      "codex: failed to add file context: codex: current buffer has no file path",
+      env.logger.errors[1]
+    )
   end)
 
   it("close removes session and is_running reflects alive state", function()

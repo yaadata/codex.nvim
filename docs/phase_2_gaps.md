@@ -65,7 +65,7 @@ Acceptance criteria:
 ## Gap 3: Selection Source Rules and Mode Semantics
 
 Status:
-- Completed in current branch (pending commit).
+- Completed in `3830e60`.
 
 Goal:
 - Clarify and test selection behavior across command ranges and visual marks.
@@ -87,7 +87,7 @@ Acceptance criteria:
 ## Gap 4: User-Facing Error Message Consistency
 
 Status:
-- Pending.
+- Completed in current branch (pending commit).
 
 Goal:
 - Standardize error strings/log lines for Phase 2 flows.

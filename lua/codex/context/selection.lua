@@ -1,5 +1,8 @@
 local M = {}
 
+local ERR_NO_FILEPATH = "codex: current buffer has no file path"
+local ERR_NO_SELECTION = "codex: no visual selection range found"
+
 ---@class codex.SelectionOpts
 ---@field line1? integer
 ---@field line2? integer
@@ -42,12 +45,12 @@ function M.get_visual_selection(vim_api, opts)
   local bufnr = opts.bufnr or vim_api.api.nvim_get_current_buf()
   local filepath = vim_api.api.nvim_buf_get_name(bufnr)
   if not filepath or filepath == "" then
-    return nil, "current buffer has no file path"
+    return nil, ERR_NO_FILEPATH
   end
 
   local start_line, end_line = resolve_range(vim_api, bufnr, opts)
   if not start_line or not end_line then
-    return nil, "no visual selection range found"
+    return nil, ERR_NO_SELECTION
   end
 
   if start_line > end_line then
