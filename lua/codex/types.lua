@@ -37,6 +37,7 @@
 ---@field toggle string|false
 ---@field open string|false
 ---@field focus string|false
+---@field close string|false
 ---@field send string|false
 ---@field add string|false
 ---@field resume string|false

@@ -29,6 +29,7 @@ describe("codex.config", function()
       assert.is_false(config.defaults.auto_start)
       assert.equals("warn", config.defaults.log_level)
       assert.equals("<leader>ot", config.defaults.keymaps.toggle)
+      assert.equals("<leader>ox", config.defaults.keymaps.close)
       assert.equals("<leader>os", config.defaults.keymaps.send)
       assert.equals("<leader>oR", config.defaults.keymaps.review)
       assert.is_false(config.defaults.keymaps_force)
@@ -68,6 +69,7 @@ describe("codex.config", function()
       assert.equals(50, cfg.terminal.hsplit.size_pct)
       assert.equals("<leader>xx", cfg.keymaps.toggle)
       assert.is_false(cfg.keymaps.status)
+      assert.equals("<leader>ox", cfg.keymaps.close)
       assert.equals("<leader>os", cfg.keymaps.send)
       -- non-overridden values preserved
       assert.equals("auto", cfg.terminal.provider)
@@ -194,7 +196,7 @@ describe("codex.config", function()
             },
           })
         end,
-        'codex: invalid keymaps action "launch", expected one of: toggle, open, focus, send, add, resume, model, status, permissions, compact, review, diff'
+        'codex: invalid keymaps action "launch", expected one of: toggle, open, focus, close, send, add, resume, model, status, permissions, compact, review, diff'
       )
     end)
 

@@ -24,6 +24,14 @@ function M.register()
     nargs = 0,
   })
 
+  vim.api.nvim_create_user_command("CodexClose", function()
+    local codex = require("codex")
+    codex.close()
+  end, {
+    desc = "Close the active Codex terminal session",
+    nargs = 0,
+  })
+
   ---@param opts codex.UserCommandOpts
   vim.api.nvim_create_user_command("CodexSend", function(opts)
     local codex = require("codex")

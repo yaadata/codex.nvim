@@ -61,9 +61,10 @@ describe("codex.nvim.keymaps", function()
 
     keymaps.register(config.apply({}), fake_vim)
 
-    assert.equals(13, #fake_vim._set_calls)
+    assert.equals(14, #fake_vim._set_calls)
     assert.is_not_nil(fake_vim._maps.n["<leader>ot"])
     assert.is_not_nil(fake_vim._maps.n["<leader>oo"])
+    assert.is_not_nil(fake_vim._maps.n["<leader>ox"])
     assert.is_not_nil(fake_vim._maps.n["<leader>os"])
     assert.is_not_nil(fake_vim._maps.x["<leader>os"])
     assert.is_function(fake_vim._maps.x["<leader>os"].rhs)
@@ -87,7 +88,7 @@ describe("codex.nvim.keymaps", function()
 
     keymaps.register(config.apply({ keymaps = { status = false } }), fake_vim)
 
-    assert.equals(12, #fake_vim._set_calls)
+    assert.equals(13, #fake_vim._set_calls)
     assert.is_nil(fake_vim._maps.n["<leader>oi"])
   end)
 
@@ -112,7 +113,7 @@ describe("codex.nvim.keymaps", function()
 
     keymaps.register(config.apply({}), fake_vim)
 
-    assert.equals(12, #fake_vim._set_calls)
+    assert.equals(13, #fake_vim._set_calls)
     assert.equals("<Cmd>UserToggle<CR>", fake_vim._maps.n["<leader>ot"].rhs)
   end)
 
@@ -126,7 +127,7 @@ describe("codex.nvim.keymaps", function()
 
     keymaps.register(config.apply({ keymaps_force = true }), fake_vim)
 
-    assert.equals(13, #fake_vim._set_calls)
+    assert.equals(14, #fake_vim._set_calls)
     assert.equals("<Cmd>Codex<CR>", fake_vim._maps.n["<leader>ot"].rhs)
   end)
 
@@ -145,8 +146,8 @@ describe("codex.nvim.keymaps", function()
       fake_vim
     )
 
-    assert.equals(25, #fake_vim._set_calls)
-    assert.equals(13, #fake_vim._del_calls)
+    assert.equals(27, #fake_vim._set_calls)
+    assert.equals(14, #fake_vim._del_calls)
     assert.is_nil(fake_vim._maps.n["<leader>ot"])
     assert.is_not_nil(fake_vim._maps.n["<leader>xx"])
     assert.is_nil(fake_vim._maps.n["<leader>oi"])
@@ -165,7 +166,7 @@ describe("codex.nvim.keymaps", function()
       fake_vim
     )
 
-    assert.equals(11, #fake_vim._set_calls)
+    assert.equals(12, #fake_vim._set_calls)
     assert.is_nil(fake_vim._maps.n["<leader>os"])
     assert.is_nil(fake_vim._maps.x["<leader>os"])
   end)

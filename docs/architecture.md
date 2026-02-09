@@ -192,10 +192,10 @@ failures downstream.
 
 ### Auto-Open
 
-Commands that need an active session (`send`, `send_command`, `focus`) will
-automatically open a new terminal session if none exists. This means users never
-need to explicitly call `:Codex` before sending text -- the terminal
-materialises on demand.
+APIs that need an active session (`send`, `send_command`, `focus`,
+`send_selection`, `add_file`) automatically open one when needed. The lower-level
+`send` API opens without focus, while command-facing flows (`:CodexSend`,
+`:CodexAdd`) ensure the terminal is opened with focus before payload dispatch.
 
 ## Component Interaction
 
@@ -231,7 +231,7 @@ init.lua toggle()
     ├── session_store.get_active()
     ├── providers.resolve(config.terminal.provider)
     │
-    ├── [active + alive] → provider.toggle(handle, cmd, args, env, config)
+    ├── [active + provider.is_alive(handle)] → provider.toggle(handle, cmd, args, env, config)
     │                       └── if new_handle returned, update session.handle
     │
     └── [no active session] → open_session(args, focus=true)
@@ -258,8 +258,10 @@ init.lua send_selection()
     ├── formatter.format_selection(spec)
     │       └── build fenced code block with adaptive backtick fencing
     │
+    ├── ensure_send_target_open()
+    │       └── [no active session] → open_session(args, focus=true)
+    │
     └── M.send(payload)
-            ├── [no active session] → M.open(false)  -- auto-open without focus
             └── provider.send(session.handle, text)
 ```
 

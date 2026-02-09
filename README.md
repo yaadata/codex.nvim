@@ -51,6 +51,7 @@ require("codex").setup({
     toggle = "<leader>ot",
     open = "<leader>oo",
     focus = "<leader>of",
+    close = "<leader>ox",
     send = "<leader>os",
     add = "<leader>oa",
     resume = "<leader>or",
@@ -70,6 +71,7 @@ require("codex").setup({
 - `:Codex` toggles the Codex terminal
 - `:Codex!` force-opens and focuses the Codex terminal
 - `:CodexFocus` focuses the terminal (opens it if needed)
+- `:CodexClose` closes the active Codex terminal session
 - `:CodexSend` sends selected lines with file path and line range
   - when a command range is provided, it takes precedence over visual marks
   - selection is linewise; visual columns are ignored (charwise/blockwise still
@@ -102,6 +104,7 @@ require("codex").setup({
     toggle = "<leader>ot",
     open = "<leader>oo",
     focus = "<leader>of",
+    close = "<leader>ox",
     send = "<leader>os",
     add = "<leader>oa",
     resume = "<leader>or",
@@ -145,6 +148,7 @@ expands to the expected key.
 
 - `require("codex").send_selection()`
 - `require("codex").add_file(path)`
+- `require("codex").close()`
 - `require("codex").send_command(slash_cmd)`
 - `require("codex").resume(opts)`
 - `require("codex").set_model()`

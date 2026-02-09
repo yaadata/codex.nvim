@@ -36,6 +36,7 @@ M.defaults = {
     toggle = "<leader>ot",
     open = "<leader>oo",
     focus = "<leader>of",
+    close = "<leader>ox",
     send = "<leader>os",
     add = "<leader>oa",
     resume = "<leader>or",
@@ -55,6 +56,7 @@ local valid_keymap_actions = {
   toggle = true,
   open = true,
   focus = true,
+  close = true,
   send = true,
   add = true,
   resume = true,
@@ -66,7 +68,7 @@ local valid_keymap_actions = {
   diff = true,
 }
 local valid_keymap_action_list =
-  "toggle, open, focus, send, add, resume, model, status, permissions, compact, review, diff"
+  "toggle, open, focus, close, send, add, resume, model, status, permissions, compact, review, diff"
 
 ---@param config codex.Config
 ---@return true

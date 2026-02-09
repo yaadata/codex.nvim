@@ -29,6 +29,7 @@ describe("codex.nvim command registration", function()
 
       assert.is_not_nil(registered.Codex)
       assert.is_not_nil(registered.CodexFocus)
+      assert.is_not_nil(registered.CodexClose)
       assert.is_not_nil(registered.CodexSend)
       assert.is_not_nil(registered.CodexAdd)
       assert.is_not_nil(registered.CodexResume)
@@ -51,6 +52,9 @@ describe("codex.nvim command registration", function()
         registered.CodexFocus.opts.desc
       )
       assert.equals(0, registered.CodexFocus.opts.nargs)
+
+      assert.equals("Close the active Codex terminal session", registered.CodexClose.opts.desc)
+      assert.equals(0, registered.CodexClose.opts.nargs)
 
       assert.equals(
         "Send visual selection to Codex with file path and line range",
@@ -150,6 +154,23 @@ describe("codex.nvim command registration", function()
       registered.CodexFocus.callback()
 
       assert.equals(1, focus_calls)
+    end)
+  end)
+
+  it("dispatches :CodexClose to close", function()
+    with_stubbed_command_registration(function(registered)
+      local close_calls = 0
+
+      package.loaded["codex"] = {
+        close = function()
+          close_calls = close_calls + 1
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      registered.CodexClose.callback()
+
+      assert.equals(1, close_calls)
     end)
   end)
 
