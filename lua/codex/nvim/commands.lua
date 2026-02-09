@@ -92,6 +92,27 @@ function M.register()
     desc = "Run Codex /compact in the active session",
     nargs = 0,
   })
+
+  ---@param opts codex.UserCommandOpts
+  vim.api.nvim_create_user_command("CodexReview", function(opts)
+    local codex = require("codex")
+    local instructions = opts.args
+    if instructions == "" then
+      instructions = nil
+    end
+    codex.review(instructions)
+  end, {
+    desc = "Run Codex /review (or /review <instructions>)",
+    nargs = "*",
+  })
+
+  vim.api.nvim_create_user_command("CodexDiff", function()
+    local codex = require("codex")
+    codex.show_diff()
+  end, {
+    desc = "Run Codex /diff in the active session",
+    nargs = 0,
+  })
 end
 
 return M
