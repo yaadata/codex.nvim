@@ -32,10 +32,41 @@ M.defaults = {
   },
   cwd = nil,
   log_level = "warn",
+  keymaps = {
+    toggle = "<leader>ot",
+    open = "<leader>oo",
+    focus = "<leader>of",
+    send = "<leader>os",
+    add = "<leader>oa",
+    resume = "<leader>or",
+    model = "<leader>om",
+    status = "<leader>oi",
+    permissions = "<leader>op",
+    compact = "<leader>oc",
+    review = "<leader>oR",
+    diff = "<leader>od",
+  },
+  keymaps_force = false,
 }
 
 local valid_providers = { auto = true, snacks = true, native = true, external = true, none = true }
 local valid_windows = { vsplit = true, hsplit = true, float = true }
+local valid_keymap_actions = {
+  toggle = true,
+  open = true,
+  focus = true,
+  send = true,
+  add = true,
+  resume = true,
+  model = true,
+  status = true,
+  permissions = true,
+  compact = true,
+  review = true,
+  diff = true,
+}
+local valid_keymap_action_list =
+  "toggle, open, focus, send, add, resume, model, status, permissions, compact, review, diff"
 
 ---@param config codex.Config
 ---@return true
@@ -47,7 +78,28 @@ function M.validate(config)
     auto_start = { config.auto_start, "boolean" },
     terminal = { config.terminal, "table" },
     log_level = { config.log_level, "string" },
+    keymaps_force = { config.keymaps_force, "boolean" },
   })
+
+  if config.keymaps ~= false then
+    vim.validate({
+      keymaps = { config.keymaps, "table" },
+    })
+    for action, lhs in pairs(config.keymaps) do
+      if not valid_keymap_actions[action] then
+        error(
+          string.format(
+            "codex: invalid keymaps action %q, expected one of: %s",
+            action,
+            valid_keymap_action_list
+          )
+        )
+      end
+      if lhs ~= false and type(lhs) ~= "string" then
+        error(string.format("codex: keymaps.%s must be a string or false", action))
+      end
+    end
+  end
 
   vim.validate({
     provider = { config.terminal.provider, "string" },

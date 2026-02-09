@@ -28,6 +28,10 @@ describe("codex.config", function()
       assert.equals("center", config.defaults.terminal.float.title_pos)
       assert.is_false(config.defaults.auto_start)
       assert.equals("warn", config.defaults.log_level)
+      assert.equals("<leader>ot", config.defaults.keymaps.toggle)
+      assert.equals("<leader>os", config.defaults.keymaps.send)
+      assert.equals("<leader>oR", config.defaults.keymaps.review)
+      assert.is_false(config.defaults.keymaps_force)
     end)
   end)
 
@@ -51,6 +55,10 @@ describe("codex.config", function()
           vsplit = { side = "left" },
           hsplit = { size_pct = 50 },
         },
+        keymaps = {
+          toggle = "<leader>xx",
+          status = false,
+        },
       })
       assert.equals("/usr/local/bin/codex", cfg.cmd)
       assert.equals("hsplit", cfg.terminal.window)
@@ -58,8 +66,17 @@ describe("codex.config", function()
       assert.equals(40, cfg.terminal.vsplit.size_pct)
       assert.equals("bottom", cfg.terminal.hsplit.side)
       assert.equals(50, cfg.terminal.hsplit.size_pct)
+      assert.equals("<leader>xx", cfg.keymaps.toggle)
+      assert.is_false(cfg.keymaps.status)
+      assert.equals("<leader>os", cfg.keymaps.send)
       -- non-overridden values preserved
       assert.equals("auto", cfg.terminal.provider)
+      assert.is_false(cfg.keymaps_force)
+    end)
+
+    it("accepts disabling all default keymaps", function()
+      local cfg = config.apply({ keymaps = false })
+      assert.is_false(cfg.keymaps)
     end)
 
     it("does not mutate defaults", function()
@@ -160,6 +177,51 @@ describe("codex.config", function()
       assert_error_contains(function()
         config.validate(cfg)
       end, "terminal.float.title")
+    end)
+
+    it("accepts keymaps = false", function()
+      local cfg = make_valid_config()
+      cfg.keymaps = false
+      assert.is_true(config.validate(cfg))
+    end)
+
+    it("rejects unknown keymap actions", function()
+      assert.has_error(
+        function()
+          config.apply({
+            keymaps = {
+              launch = "<leader>ol",
+            },
+          })
+        end,
+        'codex: invalid keymaps action "launch", expected one of: toggle, open, focus, send, add, resume, model, status, permissions, compact, review, diff'
+      )
+    end)
+
+    it("rejects keymap values that are not string|false", function()
+      assert.has_error(function()
+        config.apply({
+          keymaps = {
+            toggle = 42,
+          },
+        })
+      end, "codex: keymaps.toggle must be a string or false")
+    end)
+
+    it("rejects non-table keymaps when not false", function()
+      local cfg = make_valid_config()
+      cfg.keymaps = true
+      assert_error_contains(function()
+        config.validate(cfg)
+      end, "keymaps: expected table")
+    end)
+
+    it("rejects non-boolean keymaps_force", function()
+      local cfg = make_valid_config()
+      cfg.keymaps_force = "yes"
+      assert_error_contains(function()
+        config.validate(cfg)
+      end, "keymaps_force: expected boolean")
     end)
   end)
 end)

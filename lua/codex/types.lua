@@ -33,6 +33,20 @@
 ---@field title string
 ---@field title_pos "left"|"center"|"right"
 
+---@class codex.KeymapConfig
+---@field toggle string|false
+---@field open string|false
+---@field focus string|false
+---@field send string|false
+---@field add string|false
+---@field resume string|false
+---@field model string|false
+---@field status string|false
+---@field permissions string|false
+---@field compact string|false
+---@field review string|false
+---@field diff string|false
+
 ---@class codex.TerminalConfig
 ---@field provider codex.ProviderName
 ---@field window codex.WindowType
@@ -50,6 +64,8 @@
 ---@field terminal codex.TerminalConfig
 ---@field cwd string|nil
 ---@field log_level codex.LogLevel
+---@field keymaps codex.KeymapConfig|false
+---@field keymaps_force boolean
 
 ---@class codex.SessionSpec
 ---@field handle codex.ProviderHandle
