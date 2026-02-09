@@ -87,7 +87,7 @@ Acceptance criteria:
 ## Gap 4: User-Facing Error Message Consistency
 
 Status:
-- Completed in current branch (pending commit).
+- Completed in `7f00430`.
 
 Goal:
 - Standardize error strings/log lines for Phase 2 flows.
