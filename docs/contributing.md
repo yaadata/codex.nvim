@@ -132,13 +132,22 @@ Selene configuration (`selene.toml` + `codex.yml`):
 
 ## Pre-Commit Hooks
 
-Four hooks run before every commit (`.pre-commit-config.yaml`):
+The following hooks run before every commit (`.pre-commit-config.yaml`):
+
+**Pre-commit stage** (runs on file content):
 
 1. **codex-fmt-check** -- `mise exec -- just fmt-check`
 2. **codex-lint** -- `mise exec -- just lint`
 3. **codex-md-fmt-check** --
    `mise exec -- mdformat --number --check docs/ README.md`
 4. **codex-test-unit** -- `mise exec -- just test-unit`
+5. **codex-test-contract** -- `mise exec -- just test-contract`
+
+**Commit-msg stage** (validates the commit message):
+
+6. **conventional-pre-commit** -- enforces the conventional commit format
+   described in the Git Workflow section. Requires a scope from the allowed
+   list and one of the allowed types. Uses `--strict` mode.
 
 Run all hooks manually against the full repo:
 
@@ -285,6 +294,10 @@ Use [conventional commits](https://www.conventionalcommits.org/):
 
 **Scopes:** `core`, `config`, `commands`, `context`, `providers`, `snacks`,
 `state`, `just`, `readme`, `plan`, `dev`
+
+These conventions are enforced by a `commit-msg` hook via
+[conventional-pre-commit](https://github.com/compilerla/conventional-pre-commit).
+Both type and scope are required (`--strict --force-scope`).
 
 **Examples** (from project history):
 
