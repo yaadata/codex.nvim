@@ -6,6 +6,8 @@ local default_deps = {
   providers = require("codex.providers"),
   session_store = require("codex.state.session_store"),
   commands = require("codex.nvim.commands"),
+  formatter = require("codex.context.formatter"),
+  selection = require("codex.context.selection"),
   vim = vim,
 }
 
@@ -204,6 +206,39 @@ function M.send(text)
   if not ok then
     deps.logger.error("failed to send text: %s", err or "unknown error")
   end
+end
+
+function M.send_selection(opts)
+  ensure_setup()
+  local deps = get_deps()
+  local spec, err = deps.selection.get_visual_selection(deps.vim, opts)
+  if not spec then
+    deps.logger.error("failed to collect selection: %s", err or "unknown error")
+    return false, err
+  end
+
+  local payload = deps.formatter.format_selection(spec)
+  M.send(payload)
+  return true
+end
+
+function M.add_file(path)
+  ensure_setup()
+  local deps = get_deps()
+  local resolved_path = path
+  if resolved_path == nil then
+    resolved_path = deps.vim.fn.expand("%:p")
+  end
+
+  if not resolved_path or resolved_path == "" then
+    local err = "current buffer has no file path"
+    deps.logger.error("failed to add file: %s", err)
+    return false, err
+  end
+
+  local payload = deps.formatter.format_mention(resolved_path)
+  M.send(payload)
+  return true
 end
 
 function M.is_running()

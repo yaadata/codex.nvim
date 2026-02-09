@@ -29,6 +29,8 @@ describe("codex.nvim command registration", function()
 
       assert.is_not_nil(registered.Codex)
       assert.is_not_nil(registered.CodexFocus)
+      assert.is_not_nil(registered.CodexSend)
+      assert.is_not_nil(registered.CodexAdd)
 
       assert.equals(
         "Toggle Codex terminal (use ! to force open and focus)",
@@ -42,6 +44,17 @@ describe("codex.nvim command registration", function()
         registered.CodexFocus.opts.desc
       )
       assert.equals(0, registered.CodexFocus.opts.nargs)
+
+      assert.equals(
+        "Send visual selection to Codex with file path and line range",
+        registered.CodexSend.opts.desc
+      )
+      assert.equals(0, registered.CodexSend.opts.nargs)
+      assert.is_true(registered.CodexSend.opts.range)
+
+      assert.equals("Add file context to Codex via /mention", registered.CodexAdd.opts.desc)
+      assert.equals("?", registered.CodexAdd.opts.nargs)
+      assert.equals("file", registered.CodexAdd.opts.complete)
     end)
   end)
 
@@ -102,6 +115,62 @@ describe("codex.nvim command registration", function()
       registered.CodexFocus.callback()
 
       assert.equals(1, focus_calls)
+    end)
+  end)
+
+  it("dispatches :CodexSend with range options", function()
+    with_stubbed_command_registration(function(registered)
+      local calls = {}
+
+      package.loaded["codex"] = {
+        send_selection = function(opts)
+          table.insert(calls, opts)
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      registered.CodexSend.callback({ line1 = 2, line2 = 6 })
+
+      assert.equals(1, #calls)
+      assert.same({ line1 = 2, line2 = 6 }, calls[1])
+    end)
+  end)
+
+  it("dispatches :CodexAdd with explicit argument", function()
+    with_stubbed_command_registration(function(registered)
+      local paths = {}
+
+      package.loaded["codex"] = {
+        add_file = function(path)
+          table.insert(paths, path)
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      registered.CodexAdd.callback({ args = "/tmp/test.lua" })
+
+      assert.equals(1, #paths)
+      assert.equals("/tmp/test.lua", paths[1])
+    end)
+  end)
+
+  it("dispatches :CodexAdd without argument as nil", function()
+    with_stubbed_command_registration(function(registered)
+      local called = false
+      local received_path = "unset"
+
+      package.loaded["codex"] = {
+        add_file = function(path)
+          called = true
+          received_path = path
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      registered.CodexAdd.callback({ args = "" })
+
+      assert.is_true(called)
+      assert.is_nil(received_path)
     end)
   end)
 end)

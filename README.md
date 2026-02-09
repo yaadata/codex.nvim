@@ -40,6 +40,13 @@ require("codex").setup({
 - `:Codex` toggles the Codex terminal
 - `:Codex!` force-opens and focuses the Codex terminal
 - `:CodexFocus` focuses the terminal (opens it if needed)
+- `:CodexSend` sends selected lines with file path and line range
+- `:CodexAdd [path]` sends `/mention <path>` (or current buffer path when omitted)
+
+## Lua API
+
+- `require("codex").send_selection()`
+- `require("codex").add_file(path)`
 
 ## Providers
 

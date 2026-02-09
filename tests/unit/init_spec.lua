@@ -169,6 +169,53 @@ local function make_logger()
   return logger
 end
 
+local function make_formatter()
+  local formatter = {
+    selection_specs = {},
+    mention_paths = {},
+    selection_payload = "[selection]\n",
+  }
+
+  function formatter.format_selection(spec)
+    table.insert(formatter.selection_specs, spec)
+    return formatter.selection_payload
+  end
+
+  function formatter.format_mention(path)
+    table.insert(formatter.mention_paths, path)
+    return "/mention " .. path .. "\n"
+  end
+
+  return formatter
+end
+
+local function make_selection()
+  local selection = {
+    calls = {},
+    result = {
+      filepath = "/test/current.lua",
+      start_line = 1,
+      end_line = 2,
+      filetype = "lua",
+      lines = { "line 1", "line 2" },
+    },
+    err = nil,
+  }
+
+  function selection.get_visual_selection(vim_api, opts)
+    table.insert(selection.calls, {
+      vim_api = vim_api,
+      opts = opts,
+    })
+    if selection.err then
+      return nil, selection.err
+    end
+    return selection.result
+  end
+
+  return selection
+end
+
 local function make_fake_vim()
   local augroups = {}
   local autocmds = {}
@@ -188,6 +235,12 @@ local function make_fake_vim()
       getcwd = function()
         return "/test/cwd"
       end,
+      expand = function(expr)
+        if expr == "%:p" then
+          return "/test/current-buffer.lua"
+        end
+        return ""
+      end,
     },
     schedule = function(cb)
       table.insert(scheduled, cb)
@@ -206,6 +259,8 @@ local function setup_with_deps(overrides)
   local store = make_session_store()
   local logger = make_logger()
   local fake_vim = make_fake_vim()
+  local formatter = make_formatter()
+  local selection = make_selection()
 
   local commands = { register_calls = 0 }
   function commands.register()
@@ -229,6 +284,8 @@ local function setup_with_deps(overrides)
       session_store = store,
       logger = logger,
       commands = commands,
+      formatter = formatter,
+      selection = selection,
       vim = fake_vim,
     },
   }, overrides or {}))
@@ -239,6 +296,8 @@ local function setup_with_deps(overrides)
     store = store,
     logger = logger,
     fake_vim = fake_vim,
+    formatter = formatter,
+    selection = selection,
     commands = commands,
     providers = providers,
   }
@@ -341,6 +400,83 @@ describe("codex.init public api", function()
     assert.equals(1, #env.provider.send_calls)
     assert.equals("hello", env.provider.send_calls[1].text)
     assert.matches("failed to send text: boom", env.logger.errors[1])
+  end)
+
+  it("send_selection formats and sends the visual payload", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.send_selection()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.selection.calls)
+    assert.equals(env.fake_vim, env.selection.calls[1].vim_api)
+    assert.equals(1, #env.formatter.selection_specs)
+    assert.equals("/test/current.lua", env.formatter.selection_specs[1].filepath)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("[selection]\n", env.provider.send_calls[1].text)
+  end)
+
+  it("send_selection logs and returns false when selection fails", function()
+    local env = setup_with_deps()
+    env.selection.err = "no visual selection range found"
+
+    local ok, err = env.codex.send_selection()
+
+    assert.is_false(ok)
+    assert.equals("no visual selection range found", err)
+    assert.equals(0, #env.provider.send_calls)
+    assert.matches(
+      "failed to collect selection: no visual selection range found",
+      env.logger.errors[1]
+    )
+  end)
+
+  it("send_selection forwards explicit range options to selection extractor", function()
+    local env = setup_with_deps()
+
+    env.codex.send_selection({ line1 = 3, line2 = 5 })
+
+    assert.same({ line1 = 3, line2 = 5 }, env.selection.calls[1].opts)
+  end)
+
+  it("add_file sends /mention with explicit path", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.add_file("/tmp/example.lua")
+
+    assert.is_true(ok)
+    assert.equals("/tmp/example.lua", env.formatter.mention_paths[1])
+    assert.equals("/mention /tmp/example.lua\n", env.provider.send_calls[1].text)
+  end)
+
+  it("add_file resolves current buffer path when argument is nil", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.add_file(nil)
+
+    assert.is_true(ok)
+    assert.equals("/test/current-buffer.lua", env.formatter.mention_paths[1])
+  end)
+
+  it("add_file returns error when path is unavailable", function()
+    local env = setup_with_deps({
+      _deps = {
+        vim = vim.tbl_deep_extend("force", make_fake_vim(), {
+          fn = {
+            expand = function()
+              return ""
+            end,
+          },
+        }),
+      },
+    })
+
+    local ok, err = env.codex.add_file(nil)
+
+    assert.is_false(ok)
+    assert.equals("current buffer has no file path", err)
+    assert.equals(0, #env.provider.send_calls)
+    assert.matches("failed to add file: current buffer has no file path", env.logger.errors[1])
   end)
 
   it("close removes session and is_running reflects alive state", function()
