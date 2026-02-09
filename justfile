@@ -29,3 +29,10 @@ fmt-check:
 
 lint:
 	if [ -f selene.toml ]; then selene --config selene.toml lua plugin tests; else selene lua plugin tests; fi
+
+pre-commit-install:
+	mise install pre-commit
+	mise exec -- pre-commit install --hook-type pre-commit
+
+pre-commit-run:
+	mise exec -- pre-commit run --all-files

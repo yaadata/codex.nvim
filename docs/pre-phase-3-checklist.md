@@ -6,6 +6,23 @@ Before starting Phase 3 (`:CodexResume`, model/session controls), close remainin
 LuaLS annotation and function documentation gaps so the codebase has a clear,
 typed contract for core modules.
 
+Also enforce local validation gates before each commit via `pre-commit`.
+
+## Commit Gate (Required)
+
+Install and enable pre-commit hooks for this repo:
+
+```sh
+mise install
+just pre-commit-install
+```
+
+Hooks run on each commit and execute:
+
+- `just fmt-check`
+- `just lint`
+- `just test-unit`
+
 ## Audit Snapshot (2026-02-09)
 
 - Files audited: `lua/**`, `plugin/**`
@@ -101,6 +118,7 @@ tests.
 - `mise exec -- just fmt-check`
 - `mise exec -- just lint`
 - `mise exec -- just test-unit`
+5. `pre-commit` is installed and active for local commit-time validation.
 
 ## Suggested Commit Sequence
 
@@ -108,4 +126,3 @@ tests.
 2. `docs(config): annotate config, session_store, and logger function contracts`
 3. `docs(providers): annotate provider registry and implementations`
 4. `docs(commands): annotate neovim command registration layer`
-

@@ -1,0 +1,18 @@
+repos:
+  - repo: local
+    hooks:
+      - id: codex-fmt-check
+        name: codex fmt-check
+        entry: mise exec -- just fmt-check
+        language: system
+        pass_filenames: false
+      - id: codex-lint
+        name: codex lint
+        entry: mise exec -- just lint
+        language: system
+        pass_filenames: false
+      - id: codex-test-unit
+        name: codex test-unit
+        entry: mise exec -- just test-unit
+        language: system
+        pass_filenames: false
