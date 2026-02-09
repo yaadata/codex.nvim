@@ -8,6 +8,30 @@ function M.is_available()
   return ok and snacks ~= nil and snacks.terminal ~= nil
 end
 
+---@param term table
+---@return integer|nil
+local function resolve_jobid(term)
+  if type(term.jobid) == "number" and term.jobid > 0 then
+    return term.jobid
+  end
+
+  local bufnr = term.buf
+  if type(bufnr) ~= "number" or not vim.api.nvim_buf_is_valid(bufnr) then
+    return nil
+  end
+
+  local ok, jobid = pcall(vim.api.nvim_buf_get_var, bufnr, "terminal_job_id")
+  if not ok then
+    return nil
+  end
+
+  if type(jobid) == "number" and jobid > 0 then
+    return jobid
+  end
+
+  return nil
+end
+
 ---@param cmd string
 ---@param args string[]
 ---@return string
@@ -107,8 +131,9 @@ function M.send(handle, text)
   end
 
   local term = handle.terminal
-  if term.jobid then
-    vim.fn.chansend(term.jobid, text)
+  local jobid = resolve_jobid(term)
+  if jobid then
+    vim.fn.chansend(jobid, text)
     return true
   end
 

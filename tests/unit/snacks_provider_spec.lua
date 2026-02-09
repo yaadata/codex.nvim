@@ -32,6 +32,44 @@ local function with_stubbed_vim_api(run)
   end
 end
 
+local function with_stubbed_send_env(run)
+  local original_buf_is_valid = vim.api.nvim_buf_is_valid
+  local original_buf_get_var = vim.api.nvim_buf_get_var
+  local original_chansend = vim.fn.chansend
+  local chansend_calls = {}
+  local buf_valid = {}
+  local buf_vars = {}
+
+  vim.api.nvim_buf_is_valid = function(bufnr)
+    return buf_valid[bufnr] == true
+  end
+  vim.api.nvim_buf_get_var = function(bufnr, name)
+    local vars = buf_vars[bufnr] or {}
+    local value = vars[name]
+    if value == nil then
+      error("missing buffer var")
+    end
+    return value
+  end
+  vim.fn.chansend = function(jobid, text)
+    table.insert(chansend_calls, { jobid = jobid, text = text })
+  end
+
+  local ok, err = pcall(run, {
+    chansend_calls = chansend_calls,
+    buf_valid = buf_valid,
+    buf_vars = buf_vars,
+  })
+
+  vim.api.nvim_buf_is_valid = original_buf_is_valid
+  vim.api.nvim_buf_get_var = original_buf_get_var
+  vim.fn.chansend = original_chansend
+
+  if not ok then
+    error(err)
+  end
+end
+
 describe("codex.providers.snacks", function()
   before_each(function()
     package.loaded["snacks"] = nil
@@ -126,6 +164,47 @@ describe("codex.providers.snacks", function()
       assert.is_nil(err)
       assert.equals(1, shown)
       assert.same({ "startinsert" }, cmd_calls)
+    end)
+  end)
+
+  it("sends text using terminal.jobid when available", function()
+    with_stubbed_send_env(function(state)
+      local provider = require("codex.providers.snacks")
+      local ok, err = provider.send({ terminal = { jobid = 77 } }, "hello")
+
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(1, #state.chansend_calls)
+      assert.same({ jobid = 77, text = "hello" }, state.chansend_calls[1])
+    end)
+  end)
+
+  it("falls back to b:terminal_job_id when terminal.jobid is missing", function()
+    with_stubbed_send_env(function(state)
+      state.buf_valid[42] = true
+      state.buf_vars[42] = { terminal_job_id = 88 }
+
+      local provider = require("codex.providers.snacks")
+      local ok, err = provider.send({ terminal = { buf = 42 } }, "hello")
+
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(1, #state.chansend_calls)
+      assert.same({ jobid = 88, text = "hello" }, state.chansend_calls[1])
+    end)
+  end)
+
+  it("returns an error when no terminal job id is available", function()
+    with_stubbed_send_env(function(state)
+      state.buf_valid[42] = true
+      state.buf_vars[42] = {}
+
+      local provider = require("codex.providers.snacks")
+      local ok, err = provider.send({ terminal = { buf = 42 } }, "hello")
+
+      assert.is_false(ok)
+      assert.equals("terminal has no job", err)
+      assert.equals(0, #state.chansend_calls)
     end)
   end)
 
