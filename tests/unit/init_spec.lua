@@ -477,6 +477,53 @@ describe("codex.init public api", function()
     assert.equals("/compact\n", env.provider.send_calls[1].text)
   end)
 
+  it("review dispatches /review when no instructions are provided", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.review()
+
+    assert.is_true(ok)
+    assert.equals("/review\n", env.provider.send_calls[1].text)
+  end)
+
+  it("review dispatches /review with inline instructions", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.review("focus on security")
+
+    assert.is_true(ok)
+    assert.equals("/review focus on security\n", env.provider.send_calls[1].text)
+  end)
+
+  it("review treats empty instructions as plain /review", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.review("")
+
+    assert.is_true(ok)
+    assert.equals("/review\n", env.provider.send_calls[1].text)
+  end)
+
+  it("review opens with focus when no active session exists", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.review()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.is_true(env.provider.open_calls[1].focus)
+    assert.equals("/review\n", env.provider.send_calls[1].text)
+  end)
+
+  it("show_diff dispatches /diff", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.show_diff()
+
+    assert.is_true(ok)
+    assert.equals("/diff\n", env.provider.send_calls[1].text)
+  end)
+
   it("resume sends /resume when an active session exists", function()
     local env = setup_with_deps()
     env.codex.open(false)

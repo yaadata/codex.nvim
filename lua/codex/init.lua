@@ -267,6 +267,22 @@ function M.compact()
   return M.send_command("compact")
 end
 
+---@param instructions? string Optional inline review instructions.
+---@return codex.SendResult ok True when `/review` is sent.
+---@return string|nil err
+function M.review(instructions)
+  if instructions == nil or instructions == "" then
+    return M.send_command("review")
+  end
+  return M.send_command("review " .. instructions)
+end
+
+---@return codex.SendResult ok True when `/diff` is sent.
+---@return string|nil err
+function M.show_diff()
+  return M.send_command("diff")
+end
+
 ---@class codex.ResumeOpts
 ---@field last? boolean Use `codex resume --last` only when launching a new process.
 
