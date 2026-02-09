@@ -7,6 +7,8 @@ local CTRL_V = string.char(22)
 ---@class codex.SelectionOpts
 ---@field line1? integer
 ---@field line2? integer
+---@field start_col? integer
+---@field end_col? integer
 ---@field bufnr? integer
 ---@field visual_mode? string
 
@@ -14,6 +16,12 @@ local CTRL_V = string.char(22)
 ---@return boolean
 local function is_positive_integer(value)
   return type(value) == "number" and value >= 1 and math.floor(value) == value
+end
+
+---@param value any
+---@return boolean
+local function is_non_negative_integer(value)
+  return type(value) == "number" and value >= 0 and math.floor(value) == value
 end
 
 ---@param line1 integer
@@ -160,11 +168,17 @@ function M.get_visual_selection(vim_api, opts)
 
   local start_mark = vim_api.api.nvim_buf_get_mark(bufnr, "<")
   local end_mark = vim_api.api.nvim_buf_get_mark(bufnr, ">")
+  local explicit_start_line = opts.line1
+  local explicit_end_line = opts.line2
+  local explicit_start_col = opts.start_col
+  local explicit_end_col = opts.end_col
   local marks = {
-    start_line = start_mark[1] or 0,
-    start_col = start_mark[2] or 0,
-    end_line = end_mark[1] or 0,
-    end_col = end_mark[2] or 0,
+    start_line = is_positive_integer(explicit_start_line) and explicit_start_line
+      or (start_mark[1] or 0),
+    start_col = is_non_negative_integer(explicit_start_col) and explicit_start_col
+      or (start_mark[2] or 0),
+    end_line = is_positive_integer(explicit_end_line) and explicit_end_line or (end_mark[1] or 0),
+    end_col = is_non_negative_integer(explicit_end_col) and explicit_end_col or (end_mark[2] or 0),
   }
 
   local start_line, end_line = resolve_range(marks, opts)

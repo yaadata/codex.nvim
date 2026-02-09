@@ -184,4 +184,23 @@ describe("codex.context.selection", function()
     assert.equals(3, spec.end_line)
     assert.same({ "line 2", "line 3" }, spec.lines)
   end)
+
+  it("uses explicit line and column opts when visual marks are unavailable", function()
+    local spec = selection.get_visual_selection(
+      make_fake_vim_api({
+        marks = { ["<"] = { 0, 0 }, [">"] = { 0, 0 } },
+      }),
+      {
+        line1 = 2,
+        line2 = 4,
+        start_col = 1,
+        end_col = 1,
+        visual_mode = "v",
+      }
+    )
+
+    assert.equals(2, spec.start_line)
+    assert.equals(4, spec.end_line)
+    assert.same({ "ine 2", "line 3", "li" }, spec.lines)
+  end)
 end)

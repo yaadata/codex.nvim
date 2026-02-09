@@ -1,4 +1,5 @@
 local config = require("codex.config")
+local CTRL_V = string.char(22)
 
 ---@return table
 local function make_fake_vim()
@@ -39,6 +40,27 @@ local function make_fake_vim()
         end
         return ""
       end,
+      line = function(mark)
+        if mark == "v" then
+          return 2
+        end
+        if mark == "." then
+          return 6
+        end
+        return 1
+      end,
+      col = function(mark)
+        if mark == "v" then
+          return 3
+        end
+        if mark == "." then
+          return 9
+        end
+        return 1
+      end,
+      visualmode = function()
+        return CTRL_V
+      end,
     },
     cmd = function(command)
       table.insert(cmd_calls, command)
@@ -58,6 +80,12 @@ describe("codex.nvim.keymaps", function()
   it("registers all default keymaps with expected mode coverage", function()
     local fake_vim = make_fake_vim()
     local keymaps = require("codex.nvim.keymaps")
+    local send_calls = {}
+    package.loaded["codex"] = {
+      send_selection = function(opts)
+        table.insert(send_calls, opts)
+      end,
+    }
 
     keymaps.register(config.apply({}), fake_vim)
 
@@ -70,7 +98,14 @@ describe("codex.nvim.keymaps", function()
     assert.is_function(fake_vim._maps.x["<leader>os"].rhs)
 
     fake_vim._maps.x["<leader>os"].rhs()
-    assert.same({ "'<,'>CodexSend" }, fake_vim._cmd_calls)
+    assert.equals(1, #send_calls)
+    assert.same({
+      line1 = 2,
+      line2 = 6,
+      start_col = 2,
+      end_col = 8,
+      visual_mode = CTRL_V,
+    }, send_calls[1])
   end)
 
   it("registers no keymaps when keymaps=false", function()

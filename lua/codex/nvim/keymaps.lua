@@ -1,4 +1,5 @@
 local M = {}
+local CTRL_V = string.char(22)
 
 ---@class codex.RegisteredKeymap
 ---@field mode string
@@ -94,7 +95,34 @@ function M.register(config, vim_api)
   if maps.send ~= false then
     set_mapping(vim_api, "n", maps.send, "<Cmd>CodexSend<CR>", "Codex: Send current line", force)
     set_mapping(vim_api, "x", maps.send, function()
-      vim_api.cmd("'<,'>CodexSend")
+      local mode = vim_api.fn.visualmode and vim_api.fn.visualmode(1) or nil
+      if mode ~= "v" and mode ~= "V" and mode ~= CTRL_V then
+        mode = nil
+      end
+
+      local line1 = vim_api.fn.line("v")
+      local line2 = vim_api.fn.line(".")
+      local start_col = vim_api.fn.col("v")
+      local end_col = vim_api.fn.col(".")
+
+      if type(start_col) == "number" and start_col > 0 then
+        start_col = start_col - 1
+      else
+        start_col = nil
+      end
+      if type(end_col) == "number" and end_col > 0 then
+        end_col = end_col - 1
+      else
+        end_col = nil
+      end
+
+      require("codex").send_selection({
+        line1 = line1,
+        line2 = line2,
+        start_col = start_col,
+        end_col = end_col,
+        visual_mode = mode,
+      })
     end, "Codex: Send selection", force)
   end
 end
