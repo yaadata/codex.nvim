@@ -1,5 +1,10 @@
 local M = {}
 
+---@class codex.SelectionOpts
+---@field line1? integer
+---@field line2? integer
+---@field bufnr? integer
+
 local function resolve_range(vim_api, bufnr, opts)
   if opts and opts.line1 and opts.line2 then
     return opts.line1, opts.line2
@@ -17,6 +22,10 @@ local function resolve_range(vim_api, bufnr, opts)
   return start_line, end_line
 end
 
+---@param vim_api table|nil
+---@param opts? codex.SelectionOpts
+---@return codex.SelectionSpec|nil spec
+---@return string|nil err
 function M.get_visual_selection(vim_api, opts)
   vim_api = vim_api or vim
   opts = opts or {}

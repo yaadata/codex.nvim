@@ -1,5 +1,7 @@
 local M = {}
 
+---@alias codex.SendResult boolean
+
 local default_deps = {
   config = require("codex.config"),
   logger = require("codex.logger"),
@@ -21,6 +23,8 @@ local function get_deps()
   return state.deps or default_deps
 end
 
+---@param opts? table
+---@return nil
 function M.setup(opts)
   opts = opts or {}
 
@@ -81,6 +85,8 @@ local function mark_session_dead_by_handle(deps, dead_handle)
   end
 end
 
+---@param focus? boolean
+---@return nil
 function M.open(focus)
   ensure_setup()
   local deps = get_deps()
@@ -123,6 +129,7 @@ function M.open(focus)
   })
 end
 
+---@return nil
 function M.close()
   local deps = get_deps()
   local session = deps.session_store.get_active()
@@ -135,6 +142,7 @@ function M.close()
   deps.session_store.remove(session.id)
 end
 
+---@return nil
 function M.toggle()
   ensure_setup()
   local deps = get_deps()
@@ -176,6 +184,7 @@ function M.toggle()
   })
 end
 
+---@return nil
 function M.focus()
   ensure_setup()
   local deps = get_deps()
@@ -191,6 +200,8 @@ function M.focus()
   M.open(true)
 end
 
+---@param text string
+---@return nil
 function M.send(text)
   ensure_setup()
   local deps = get_deps()
@@ -208,6 +219,9 @@ function M.send(text)
   end
 end
 
+---@param opts? codex.SelectionOpts Selection range override; falls back to visual marks when omitted.
+---@return codex.SendResult ok True when selection payload is sent.
+---@return string|nil err
 function M.send_selection(opts)
   ensure_setup()
   local deps = get_deps()
@@ -222,6 +236,9 @@ function M.send_selection(opts)
   return true
 end
 
+---@param path? string Explicit path to mention. When nil, uses `vim.fn.expand("%:p")`.
+---@return codex.SendResult ok True when mention payload is sent.
+---@return string|nil err
 function M.add_file(path)
   ensure_setup()
   local deps = get_deps()
@@ -241,6 +258,7 @@ function M.add_file(path)
   return true
 end
 
+---@return boolean
 function M.is_running()
   local deps = get_deps()
   local session = deps.session_store.get_active()
@@ -252,6 +270,7 @@ function M.is_running()
   return provider.is_alive(session.handle)
 end
 
+---@return table|nil
 function M.get_config()
   local deps = get_deps()
   return state.config and deps.vim.deepcopy(state.config) or nil

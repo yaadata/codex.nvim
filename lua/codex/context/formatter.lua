@@ -1,5 +1,12 @@
 local M = {}
 
+---@class codex.SelectionSpec
+---@field filepath string
+---@field start_line integer
+---@field end_line integer
+---@field filetype string
+---@field lines string[]|string
+
 local function longest_backtick_run(text)
   local longest = 0
   for run in text:gmatch("`+") do
@@ -22,6 +29,8 @@ local function normalize_lines(lines)
   return ""
 end
 
+---@param spec? codex.SelectionSpec
+---@return string payload
 function M.format_selection(spec)
   spec = spec or {}
 
@@ -47,6 +56,8 @@ function M.format_selection(spec)
   )
 end
 
+---@param filepath? string
+---@return string payload
 function M.format_mention(filepath)
   return string.format("/mention %s\n", filepath or "")
 end
