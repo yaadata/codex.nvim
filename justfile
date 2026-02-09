@@ -17,9 +17,11 @@ test-contract:
 
 fmt:
 	stylua lua plugin tests
+	mdformat --number docs/ README.md
 
 fmt-check:
 	stylua --check lua plugin tests
+	mdformat --number --check docs/ README.md
 
 lint:
 	if [ -f selene.toml ]; then selene --config selene.toml lua plugin tests; else selene lua plugin tests; fi

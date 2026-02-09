@@ -11,6 +11,11 @@ repos:
         entry: mise exec -- just lint
         language: system
         pass_filenames: false
+      - id: codex-md-fmt-check
+        name: codex md-fmt-check
+        entry: mise exec -- mdformat --number --check docs/ README.md
+        language: system
+        pass_filenames: false
       - id: codex-test-unit
         name: codex test-unit
         entry: mise exec -- just test-unit
