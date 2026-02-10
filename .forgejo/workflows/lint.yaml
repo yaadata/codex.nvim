@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Install Essentials
         run: |
-          apt-get update && apt-get install -y nodejs npm wget git tar xz-utils
+          apt-get update && apt-get install -y nodejs npm wget git tar xz-utils pipx python3-venv
 
       - name: Checkout code
         uses: https://code.forgejo.org/actions/checkout@v6
@@ -64,8 +64,12 @@ jobs:
 
       - name: Install lint toolchain
         run: |
+          unset GITHUB_TOKEN
+          unset GH_TOKEN
           ~/.local/bin/mise install
 
       - name: Run check
         run: |
+          unset GITHUB_TOKEN
+          unset GH_TOKEN
           ~/.local/bin/mise exec -- just "${{ matrix.command }}"
