@@ -28,6 +28,10 @@ describe("codex.config", function()
       assert.equals("center", config.defaults.terminal.float.title_pos)
       assert.equals("<C-c>", config.defaults.terminal.keymaps.toggle)
       assert.is_false(config.defaults.terminal.keymaps.close)
+      assert.equals("<C-h>", config.defaults.terminal.keymaps.nav_left)
+      assert.equals("<C-j>", config.defaults.terminal.keymaps.nav_down)
+      assert.equals("<C-k>", config.defaults.terminal.keymaps.nav_up)
+      assert.equals("<C-l>", config.defaults.terminal.keymaps.nav_right)
       assert.is_false(config.defaults.auto_start)
       assert.equals("warn", config.defaults.log_level)
       assert.equals("<leader>ot", config.defaults.keymaps.toggle)
@@ -72,6 +76,10 @@ describe("codex.config", function()
       assert.equals(50, cfg.terminal.hsplit.size_pct)
       assert.equals("<C-c>", cfg.terminal.keymaps.toggle)
       assert.equals("<C-d>", cfg.terminal.keymaps.close)
+      assert.equals("<C-h>", cfg.terminal.keymaps.nav_left)
+      assert.equals("<C-j>", cfg.terminal.keymaps.nav_down)
+      assert.equals("<C-k>", cfg.terminal.keymaps.nav_up)
+      assert.equals("<C-l>", cfg.terminal.keymaps.nav_right)
       assert.equals("<leader>xx", cfg.keymaps.toggle)
       assert.is_false(cfg.keymaps.status)
       assert.equals("<leader>ox", cfg.keymaps.close)
@@ -201,15 +209,18 @@ describe("codex.config", function()
     end)
 
     it("rejects unknown terminal keymap actions", function()
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              hide = "<C-x>",
+      assert.has_error(
+        function()
+          config.apply({
+            terminal = {
+              keymaps = {
+                hide = "<C-x>",
+              },
             },
-          },
-        })
-      end, 'codex: invalid terminal.keymaps action "hide", expected one of: toggle, close')
+          })
+        end,
+        'codex: invalid terminal.keymaps action "hide", expected one of: toggle, close, nav_left, nav_down, nav_up, nav_right'
+      )
     end)
 
     it("rejects terminal keymap values that are not string|false", function()

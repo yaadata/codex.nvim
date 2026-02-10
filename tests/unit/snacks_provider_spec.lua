@@ -127,6 +127,63 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
+  it("registers directional split navigation keymaps for vsplit", function()
+    with_stubbed_vim_api(function(_, keymap_set_calls)
+      package.loaded["snacks"] = {
+        terminal = function()
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "vsplit",
+          provider_opts = {},
+        },
+      }, true, nil)
+
+      assert.equals(5, #keymap_set_calls)
+      assert.equals("<C-h>", keymap_set_calls[2].lhs)
+      assert.equals("<C-\\><C-n><C-w>h", keymap_set_calls[2].rhs)
+      assert.equals("<C-j>", keymap_set_calls[3].lhs)
+      assert.equals("<C-\\><C-n><C-w>j", keymap_set_calls[3].rhs)
+      assert.equals("<C-k>", keymap_set_calls[4].lhs)
+      assert.equals("<C-\\><C-n><C-w>k", keymap_set_calls[4].rhs)
+      assert.equals("<C-l>", keymap_set_calls[5].lhs)
+      assert.equals("<C-\\><C-n><C-w>l", keymap_set_calls[5].rhs)
+    end)
+  end)
+
+  it("does not register directional split navigation keymaps for float", function()
+    with_stubbed_vim_api(function(_, keymap_set_calls)
+      package.loaded["snacks"] = {
+        terminal = function()
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "float",
+          float = {
+            border = "rounded",
+          },
+          provider_opts = {},
+        },
+      }, true, nil)
+
+      assert.equals(1, #keymap_set_calls)
+      assert.equals("<C-c>", keymap_set_calls[1].lhs)
+
+      local forbidden = { ["<C-h>"] = true, ["<C-j>"] = true, ["<C-k>"] = true, ["<C-l>"] = true }
+      for _, map in ipairs(keymap_set_calls) do
+        assert.is_nil(forbidden[map.lhs])
+      end
+    end)
+  end)
+
   it("registers configured terminal toggle and close keymaps", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
       package.loaded["snacks"] = {
@@ -153,6 +210,63 @@ describe("codex.providers.snacks", function()
       assert.equals("t", keymap_set_calls[2].mode)
       assert.equals("<C-x>", keymap_set_calls[2].lhs)
       assert.equals("Codex: Close terminal", keymap_set_calls[2].opts.desc)
+    end)
+  end)
+
+  it("uses configured directional split navigation keymaps", function()
+    with_stubbed_vim_api(function(_, keymap_set_calls)
+      package.loaded["snacks"] = {
+        terminal = function()
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "vsplit",
+          keymaps = {
+            nav_left = "<A-h>",
+            nav_down = "<A-j>",
+            nav_up = "<A-k>",
+            nav_right = "<A-l>",
+          },
+          provider_opts = {},
+        },
+      }, true, nil)
+
+      assert.equals(5, #keymap_set_calls)
+      assert.equals("<A-h>", keymap_set_calls[2].lhs)
+      assert.equals("<A-j>", keymap_set_calls[3].lhs)
+      assert.equals("<A-k>", keymap_set_calls[4].lhs)
+      assert.equals("<A-l>", keymap_set_calls[5].lhs)
+    end)
+  end)
+
+  it("allows disabling directional split navigation keymaps", function()
+    with_stubbed_vim_api(function(_, keymap_set_calls)
+      package.loaded["snacks"] = {
+        terminal = function()
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "vsplit",
+          keymaps = {
+            nav_left = false,
+            nav_down = false,
+            nav_up = false,
+            nav_right = false,
+          },
+          provider_opts = {},
+        },
+      }, true, nil)
+
+      assert.equals(1, #keymap_set_calls)
+      assert.equals("<C-c>", keymap_set_calls[1].lhs)
     end)
   end)
 

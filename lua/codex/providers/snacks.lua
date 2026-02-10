@@ -50,9 +50,17 @@ end
 
 ---@param bufnr integer
 ---@param keymaps codex.TerminalKeymapConfig|nil
+---@param window_type codex.WindowType|nil
 ---@return nil
-local function set_terminal_keymaps(bufnr, keymaps)
-  local maps = keymaps or { toggle = "<C-c>", close = false }
+local function set_terminal_keymaps(bufnr, keymaps, window_type)
+  local maps = vim.tbl_extend("force", {
+    toggle = "<C-c>",
+    close = false,
+    nav_left = "<C-h>",
+    nav_down = "<C-j>",
+    nav_up = "<C-k>",
+    nav_right = "<C-l>",
+  }, keymaps or {})
 
   if maps.toggle then
     vim.keymap.set("t", maps.toggle, function()
@@ -76,6 +84,26 @@ local function set_terminal_keymaps(bufnr, keymaps)
       nowait = true,
       desc = "Codex: Close terminal",
     })
+  end
+
+  if window_type == "vsplit" or window_type == "hsplit" then
+    local nav = {
+      { maps.nav_left, "<C-\\><C-n><C-w>h", "Codex: Move to left window" },
+      { maps.nav_down, "<C-\\><C-n><C-w>j", "Codex: Move to below window" },
+      { maps.nav_up, "<C-\\><C-n><C-w>k", "Codex: Move to above window" },
+      { maps.nav_right, "<C-\\><C-n><C-w>l", "Codex: Move to right window" },
+    }
+
+    for _, map in ipairs(nav) do
+      if map[1] then
+        vim.keymap.set("t", map[1], map[2], {
+          buffer = bufnr,
+          silent = true,
+          nowait = true,
+          desc = map[3],
+        })
+      end
+    end
   end
 end
 
@@ -119,7 +147,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local handle = { terminal = terminal, provider = "snacks" }
 
   if type(terminal.buf) == "number" then
-    set_terminal_keymaps(terminal.buf, config.terminal.keymaps)
+    set_terminal_keymaps(terminal.buf, config.terminal.keymaps, config.terminal.window)
   end
 
   if on_exit and terminal.buf then

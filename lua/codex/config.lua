@@ -28,6 +28,10 @@ M.defaults = {
     keymaps = {
       toggle = "<C-c>",
       close = false,
+      nav_left = "<C-h>",
+      nav_down = "<C-j>",
+      nav_up = "<C-k>",
+      nav_right = "<C-l>",
     },
     provider_opts = {
       snacks = {},
@@ -56,8 +60,15 @@ M.defaults = {
 
 local valid_providers = { auto = true, snacks = true, native = true, external = true, none = true }
 local valid_windows = { vsplit = true, hsplit = true, float = true }
-local valid_terminal_keymap_actions = { toggle = true, close = true }
-local valid_terminal_keymap_action_list = "toggle, close"
+local valid_terminal_keymap_actions = {
+  toggle = true,
+  close = true,
+  nav_left = true,
+  nav_down = true,
+  nav_up = true,
+  nav_right = true,
+}
+local valid_terminal_keymap_action_list = "toggle, close, nav_left, nav_down, nav_up, nav_right"
 local valid_keymap_actions = {
   toggle = true,
   open = true,

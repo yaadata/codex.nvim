@@ -22,6 +22,10 @@ local function make_config(overrides)
       keymaps = {
         toggle = "<C-c>",
         close = false,
+        nav_left = "<C-h>",
+        nav_down = "<C-j>",
+        nav_up = "<C-k>",
+        nav_right = "<C-l>",
       },
     },
   }
@@ -317,7 +321,7 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(1, #state.keymap_set_calls)
+      assert.equals(5, #state.keymap_set_calls)
       local map = state.keymap_set_calls[1]
       assert.equals("t", map.mode)
       assert.equals("<C-c>", map.lhs)
@@ -343,7 +347,7 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(2, #state.keymap_set_calls)
+      assert.equals(6, #state.keymap_set_calls)
       local toggle_map = state.keymap_set_calls[1]
       local close_map = state.keymap_set_calls[2]
       assert.equals("t", toggle_map.mode)
@@ -382,6 +386,110 @@ describe("codex.providers.native", function()
       assert.is_function(scheduled[1])
 
       vim.schedule = original_schedule
+    end)
+  end)
+
+  it("registers directional split navigation keymaps for vsplit", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          window = "vsplit",
+        },
+      })
+
+      provider.open("codex", {}, {}, cfg, false)
+
+      assert.equals(5, #state.keymap_set_calls)
+      assert.equals("<C-h>", state.keymap_set_calls[2].lhs)
+      assert.equals("<C-\\><C-n><C-w>h", state.keymap_set_calls[2].rhs)
+      assert.equals("<C-j>", state.keymap_set_calls[3].lhs)
+      assert.equals("<C-\\><C-n><C-w>j", state.keymap_set_calls[3].rhs)
+      assert.equals("<C-k>", state.keymap_set_calls[4].lhs)
+      assert.equals("<C-\\><C-n><C-w>k", state.keymap_set_calls[4].rhs)
+      assert.equals("<C-l>", state.keymap_set_calls[5].lhs)
+      assert.equals("<C-\\><C-n><C-w>l", state.keymap_set_calls[5].rhs)
+    end)
+  end)
+
+  it("registers directional split navigation keymaps for hsplit", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          window = "hsplit",
+        },
+      })
+
+      provider.open("codex", {}, {}, cfg, false)
+
+      assert.equals(5, #state.keymap_set_calls)
+    end)
+  end)
+
+  it("does not register directional split navigation keymaps for float", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          window = "float",
+        },
+      })
+
+      provider.open("codex", {}, {}, cfg, false)
+
+      assert.equals(1, #state.keymap_set_calls)
+      assert.equals("<C-c>", state.keymap_set_calls[1].lhs)
+
+      local forbidden = { ["<C-h>"] = true, ["<C-j>"] = true, ["<C-k>"] = true, ["<C-l>"] = true }
+      for _, map in ipairs(state.keymap_set_calls) do
+        assert.is_nil(forbidden[map.lhs])
+      end
+    end)
+  end)
+
+  it("uses configured directional split navigation keymaps", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          keymaps = {
+            nav_left = "<A-h>",
+            nav_down = "<A-j>",
+            nav_up = "<A-k>",
+            nav_right = "<A-l>",
+          },
+        },
+      })
+
+      provider.open("codex", {}, {}, cfg, false)
+
+      assert.equals(5, #state.keymap_set_calls)
+      assert.equals("<A-h>", state.keymap_set_calls[2].lhs)
+      assert.equals("<A-j>", state.keymap_set_calls[3].lhs)
+      assert.equals("<A-k>", state.keymap_set_calls[4].lhs)
+      assert.equals("<A-l>", state.keymap_set_calls[5].lhs)
+    end)
+  end)
+
+  it("allows disabling directional split navigation keymaps", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          keymaps = {
+            nav_left = false,
+            nav_down = false,
+            nav_up = false,
+            nav_right = false,
+          },
+        },
+      })
+
+      provider.open("codex", {}, {}, cfg, false)
+
+      assert.equals(1, #state.keymap_set_calls)
+      assert.equals("<C-c>", state.keymap_set_calls[1].lhs)
     end)
   end)
 
