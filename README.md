@@ -2,7 +2,8 @@
 
 Neovim plugin for running the Codex CLI in an embedded terminal.
 
-> **Primary home:** [Codeberg](https://codeberg.org/yaadata/codex.nvim) · mirrored on [GitHub](https://github.com/yaadata/codex.nvim)
+> **Primary home:** [Codeberg](https://codeberg.org/yaadata/codex.nvim) ·
+> mirrored on [GitHub](https://github.com/yaadata/codex.nvim)
 
 ## Requirements
 
@@ -14,6 +15,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
+  version = '0.1',
   config = function()
     require("codex").setup({})
   end,
@@ -176,11 +178,11 @@ require("codex").setup({
 })
 ```
 
-`terminal.keymaps.close` triggers an intentional Codex session close. `terminal.auto_close`
-controls whether provider windows auto-close only after the terminal process exits.
-`terminal.keymaps.nav` is applied only for split windows (`vsplit`/`hsplit`).
-Set `terminal.keymaps.nav = false` to disable all navigation keymaps, or set
-individual directions to `false`.
+`terminal.keymaps.close` triggers an intentional Codex session close.
+`terminal.auto_close` controls whether provider windows auto-close only after
+the terminal process exits. `terminal.keymaps.nav` is applied only for split
+windows (`vsplit`/`hsplit`). Set `terminal.keymaps.nav = false` to disable all
+navigation keymaps, or set individual directions to `false`.
 
 ## Lua API
 
