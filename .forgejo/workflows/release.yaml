@@ -1,0 +1,119 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    if: startsWith(github.event.head_commit.message, 'RELEASE:') || startsWith(github.event.head_commit.message, 'release:')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Essentials
+        run: |
+          apt-get update && apt-get install -y nodejs npm wget
+
+      - name: Checkout code
+        uses: https://code.forgejo.org/actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Extract tag from commit message
+        id: extract_tag
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          FIRST_LINE=$(echo "$COMMIT_MSG" | head -n 1)
+          TAG=$(echo "$FIRST_LINE" | sed -E 's/^[Rr][Ee][Ll][Ee][Aa][Ss][Ee]: *//')
+
+          if [ -z "$TAG" ]; then
+            echo "Error: no tag found in commit message"
+            exit 1
+          fi
+
+          if ! [[ "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "Error: tag must be in format v0.0.0, v0.0.0-alpha, or v0.0.0-rc.1"
+            exit 1
+          fi
+
+          if [[ ! "$TAG" =~ ^v ]]; then
+            TAG="v$TAG"
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Creating release for tag: $TAG"
+
+      - name: Check if tag exists
+        run: |
+          TAG="${{ steps.extract_tag.outputs.tag }}"
+          if git show-ref --tags --verify --quiet "refs/tags/${TAG}"; then
+            echo "Error: tag ${TAG} already exists"
+            exit 1
+          fi
+
+      - name: Create and push tag
+        run: |
+          TAG="${{ steps.extract_tag.outputs.tag }}"
+          git config user.name "forgejo-actions[bot]"
+          git config user.email "forgejo-actions[bot]@noreply.codeberg.org"
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Get previous tag
+        id: get_previous_tag
+        run: |
+          TAG="${{ steps.extract_tag.outputs.tag }}"
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
+          echo "previous_tag=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+          echo "Previous tag: $PREVIOUS_TAG"
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          TAG="${{ steps.extract_tag.outputs.tag }}"
+          PREVIOUS_TAG="${{ steps.get_previous_tag.outputs.previous_tag }}"
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" "${PREVIOUS_TAG}..${TAG}" 2>/dev/null || git log --pretty=format:"- %s (%h)" -20)
+            CHANGELOG_LINE="**Full Changelog**: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${PREVIOUS_TAG}...${TAG}"
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" -20)
+            CHANGELOG_LINE="**Full Changelog**: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          fi
+
+          NOTES="## What's Changed
+
+          ${COMMITS}
+
+          ${CHANGELOG_LINE}"
+
+          echo "$NOTES" > release_notes.md
+          echo "Generated release notes"
+
+      - name: Create Forgejo release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.extract_tag.outputs.tag }}"
+          NOTES=$(cat release_notes.md)
+
+          NOTES_ESCAPED=$(printf '%s' "$NOTES" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+          if [[ "$TAG" == *-* ]]; then
+            PRERELEASE=true
+          else
+            PRERELEASE=false
+          fi
+
+          curl --fail-with-body -X POST \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}/releases" \
+            -d "{
+              \"tag_name\": \"${TAG}\",
+              \"name\": \"${TAG}\",
+              \"body\": ${NOTES_ESCAPED},
+              \"draft\": false,
+              \"prerelease\": ${PRERELEASE}
+            }"
