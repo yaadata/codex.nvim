@@ -9,7 +9,7 @@ repos:
           - --strict
           - --verbose
           - --scopes
-          - core,config,commands,context,providers,state,project
+          - core,config,context,providers,state,project,nvim,codex
           - feat
           - fix
           - docs
@@ -17,6 +17,7 @@ repos:
           - chore
           - test
           - refactor
+          - release
   - repo: local
     hooks:
       - id: codex-fmt-check
