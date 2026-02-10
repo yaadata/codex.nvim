@@ -127,9 +127,22 @@ function M.open(cmd, args, env, config, focus, on_exit)
     auto_close = config.terminal.auto_close == true,
   }
   if config.terminal.window == "float" then
+    local float = config.terminal.float or {}
     base_opts.win = {
       position = "float",
-      border = config.terminal.float.border,
+      border = float.border or "rounded",
+    }
+  elseif config.terminal.window == "vsplit" then
+    local vsplit = config.terminal.vsplit or {}
+    base_opts.win = {
+      position = vsplit.side or "right",
+      width = (vsplit.size_pct or 40) / 100,
+    }
+  elseif config.terminal.window == "hsplit" then
+    local hsplit = config.terminal.hsplit or {}
+    base_opts.win = {
+      position = hsplit.side or "bottom",
+      height = (hsplit.size_pct or 30) / 100,
     }
   end
   if next(env) ~= nil then

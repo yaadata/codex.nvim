@@ -692,4 +692,67 @@ describe("codex.providers.native", function()
       assert.equals(1, state.startinsert_calls)
     end)
   end)
+
+  it("uses default vsplit config when vsplit sub-table is nil", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          window = "vsplit",
+          vsplit = vim.NIL,
+        },
+      })
+      cfg.terminal.vsplit = nil
+
+      local handle = provider.open("codex", {}, {}, cfg, false)
+
+      assert.equals(2, handle.bufnr)
+      assert.equals(2, handle.winid)
+      assert.equals("botright vsplit", state.cmd_calls[1])
+      assert.equals(48, state.win_width_calls[1].width)
+    end)
+  end)
+
+  it("uses default hsplit config when hsplit sub-table is nil", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          window = "hsplit",
+          hsplit = vim.NIL,
+        },
+      })
+      cfg.terminal.hsplit = nil
+
+      local handle = provider.open("codex", {}, {}, cfg, false)
+
+      assert.equals(2, handle.bufnr)
+      assert.equals(2, handle.winid)
+      assert.equals("botright split", state.cmd_calls[1])
+      assert.equals(15, state.win_height_calls[1].height)
+    end)
+  end)
+
+  it("uses default float config when float sub-table is nil", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          window = "float",
+          float = vim.NIL,
+        },
+      })
+      cfg.terminal.float = nil
+
+      provider.open("codex", {}, {}, cfg, true)
+
+      assert.equals(1, #state.open_win_calls)
+      local open_call = state.open_win_calls[1]
+      assert.equals(96, open_call.opts.width)
+      assert.equals(40, open_call.opts.height)
+      assert.equals("rounded", open_call.opts.border)
+      assert.equals(" Codex ", open_call.opts.title)
+      assert.equals("center", open_call.opts.title_pos)
+    end)
+  end)
 end)

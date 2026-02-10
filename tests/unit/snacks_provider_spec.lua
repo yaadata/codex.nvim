@@ -225,6 +225,7 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           window = "vsplit",
+          vsplit = { side = "right", size_pct = 40 },
           keymaps = {
             nav_left = "<A-h>",
             nav_down = "<A-j>",
@@ -255,6 +256,7 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           window = "vsplit",
+          vsplit = { side = "right", size_pct = 40 },
           keymaps = {
             nav_left = false,
             nav_down = false,
@@ -507,6 +509,60 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
+  it("passes vsplit config to snacks when window is vsplit", function()
+    with_stubbed_vim_api(function()
+      local captured_opts = nil
+      package.loaded["snacks"] = {
+        terminal = function(_, opts)
+          captured_opts = opts
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "vsplit",
+          vsplit = {
+            side = "left",
+            size_pct = 40,
+          },
+          provider_opts = {},
+        },
+      }, false, nil)
+
+      assert.equals("left", captured_opts.win.position)
+      assert.equals(0.4, captured_opts.win.width)
+    end)
+  end)
+
+  it("passes hsplit config to snacks when window is hsplit", function()
+    with_stubbed_vim_api(function()
+      local captured_opts = nil
+      package.loaded["snacks"] = {
+        terminal = function(_, opts)
+          captured_opts = opts
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "hsplit",
+          hsplit = {
+            side = "bottom",
+            size_pct = 30,
+          },
+          provider_opts = {},
+        },
+      }, false, nil)
+
+      assert.equals("bottom", captured_opts.win.position)
+      assert.equals(0.3, captured_opts.win.height)
+    end)
+  end)
+
   it("passes float border config to snacks when window is float", function()
     with_stubbed_vim_api(function()
       local captured_opts = nil
@@ -524,6 +580,75 @@ describe("codex.providers.snacks", function()
           float = {
             border = "rounded",
           },
+          provider_opts = {},
+        },
+      }, false, nil)
+
+      assert.equals("float", captured_opts.win.position)
+      assert.equals("rounded", captured_opts.win.border)
+    end)
+  end)
+
+  it("uses default vsplit win config when vsplit sub-table is nil", function()
+    with_stubbed_vim_api(function()
+      local captured_opts = nil
+      package.loaded["snacks"] = {
+        terminal = function(_, opts)
+          captured_opts = opts
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "vsplit",
+          provider_opts = {},
+        },
+      }, false, nil)
+
+      assert.equals("right", captured_opts.win.position)
+      assert.equals(0.4, captured_opts.win.width)
+    end)
+  end)
+
+  it("uses default hsplit win config when hsplit sub-table is nil", function()
+    with_stubbed_vim_api(function()
+      local captured_opts = nil
+      package.loaded["snacks"] = {
+        terminal = function(_, opts)
+          captured_opts = opts
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "hsplit",
+          provider_opts = {},
+        },
+      }, false, nil)
+
+      assert.equals("bottom", captured_opts.win.position)
+      assert.equals(0.3, captured_opts.win.height)
+    end)
+  end)
+
+  it("uses default float win config when float sub-table is nil", function()
+    with_stubbed_vim_api(function()
+      local captured_opts = nil
+      package.loaded["snacks"] = {
+        terminal = function(_, opts)
+          captured_opts = opts
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          window = "float",
           provider_opts = {},
         },
       }, false, nil)

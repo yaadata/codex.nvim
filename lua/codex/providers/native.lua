@@ -69,22 +69,25 @@ end
 ---@return integer winid
 local function open_window_for_buf(term_config, bufnr)
   if term_config.window == "vsplit" then
-    local winid = open_vsplit(term_config.vsplit.side)
+    local vsplit = term_config.vsplit or {}
+    local winid = open_vsplit(vsplit.side or "right")
     vim.api.nvim_win_set_buf(winid, bufnr)
-    vim.api.nvim_win_set_width(winid, pct_size(vim.o.columns, term_config.vsplit.size_pct))
+    vim.api.nvim_win_set_width(winid, pct_size(vim.o.columns, vsplit.size_pct or 40))
     return winid
   end
 
   if term_config.window == "hsplit" then
-    local winid = open_hsplit(term_config.hsplit.side)
+    local hsplit = term_config.hsplit or {}
+    local winid = open_hsplit(hsplit.side or "bottom")
     vim.api.nvim_win_set_buf(winid, bufnr)
-    vim.api.nvim_win_set_height(winid, pct_size(vim.o.lines, term_config.hsplit.size_pct))
+    vim.api.nvim_win_set_height(winid, pct_size(vim.o.lines, hsplit.size_pct or 30))
     return winid
   end
 
   if term_config.window == "float" then
-    local width = pct_size(vim.o.columns, term_config.float.width_pct)
-    local height = pct_size(vim.o.lines, term_config.float.height_pct)
+    local float = term_config.float or {}
+    local width = pct_size(vim.o.columns, float.width_pct or 80)
+    local height = pct_size(vim.o.lines, float.height_pct or 80)
     local row = math.max(0, math.floor((vim.o.lines - height) / 2))
     local col = math.max(0, math.floor((vim.o.columns - width) / 2))
 
@@ -94,9 +97,9 @@ local function open_window_for_buf(term_config, bufnr)
       height = height,
       row = row,
       col = col,
-      border = term_config.float.border,
-      title = term_config.float.title,
-      title_pos = term_config.float.title_pos,
+      border = float.border or "rounded",
+      title = float.title or " Codex ",
+      title_pos = float.title_pos or "center",
       style = "minimal",
     })
   end
