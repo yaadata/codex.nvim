@@ -53,13 +53,15 @@ end
 ---@param window_type codex.WindowType|nil
 ---@return nil
 local function set_terminal_keymaps(bufnr, keymaps, window_type)
-  local maps = vim.tbl_extend("force", {
+  local maps = vim.tbl_deep_extend("force", {
     toggle = "<C-c>",
     close = false,
-    nav_left = "<C-h>",
-    nav_down = "<C-j>",
-    nav_up = "<C-k>",
-    nav_right = "<C-l>",
+    nav = {
+      left = "<C-h>",
+      down = "<C-j>",
+      up = "<C-k>",
+      right = "<C-l>",
+    },
   }, keymaps or {})
 
   if maps.toggle then
@@ -86,12 +88,12 @@ local function set_terminal_keymaps(bufnr, keymaps, window_type)
     })
   end
 
-  if window_type == "vsplit" or window_type == "hsplit" then
+  if (window_type == "vsplit" or window_type == "hsplit") and maps.nav then
     local nav = {
-      { maps.nav_left, "<C-\\><C-n><C-w>h", "Codex: Move to left window" },
-      { maps.nav_down, "<C-\\><C-n><C-w>j", "Codex: Move to below window" },
-      { maps.nav_up, "<C-\\><C-n><C-w>k", "Codex: Move to above window" },
-      { maps.nav_right, "<C-\\><C-n><C-w>l", "Codex: Move to right window" },
+      { maps.nav.left, "<C-\\><C-n><C-w>h", "Codex: Move to left window" },
+      { maps.nav.down, "<C-\\><C-n><C-w>j", "Codex: Move to below window" },
+      { maps.nav.up, "<C-\\><C-n><C-w>k", "Codex: Move to above window" },
+      { maps.nav.right, "<C-\\><C-n><C-w>l", "Codex: Move to right window" },
     }
 
     for _, map in ipairs(nav) do

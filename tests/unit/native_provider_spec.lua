@@ -22,10 +22,12 @@ local function make_config(overrides)
       keymaps = {
         toggle = "<C-c>",
         close = false,
-        nav_left = "<C-h>",
-        nav_down = "<C-j>",
-        nav_up = "<C-k>",
-        nav_right = "<C-l>",
+        nav = {
+          left = "<C-h>",
+          down = "<C-j>",
+          up = "<C-k>",
+          right = "<C-l>",
+        },
       },
     },
   }
@@ -454,10 +456,12 @@ describe("codex.providers.native", function()
       local cfg = make_config({
         terminal = {
           keymaps = {
-            nav_left = "<A-h>",
-            nav_down = "<A-j>",
-            nav_up = "<A-k>",
-            nav_right = "<A-l>",
+            nav = {
+              left = "<A-h>",
+              down = "<A-j>",
+              up = "<A-k>",
+              right = "<A-l>",
+            },
           },
         },
       })
@@ -478,10 +482,7 @@ describe("codex.providers.native", function()
       local cfg = make_config({
         terminal = {
           keymaps = {
-            nav_left = false,
-            nav_down = false,
-            nav_up = false,
-            nav_right = false,
+            nav = false,
           },
         },
       })

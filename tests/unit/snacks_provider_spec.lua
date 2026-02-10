@@ -227,10 +227,12 @@ describe("codex.providers.snacks", function()
           window = "vsplit",
           vsplit = { side = "right", size_pct = 40 },
           keymaps = {
-            nav_left = "<A-h>",
-            nav_down = "<A-j>",
-            nav_up = "<A-k>",
-            nav_right = "<A-l>",
+            nav = {
+              left = "<A-h>",
+              down = "<A-j>",
+              up = "<A-k>",
+              right = "<A-l>",
+            },
           },
           provider_opts = {},
         },
@@ -258,10 +260,7 @@ describe("codex.providers.snacks", function()
           window = "vsplit",
           vsplit = { side = "right", size_pct = 40 },
           keymaps = {
-            nav_left = false,
-            nav_down = false,
-            nav_up = false,
-            nav_right = false,
+            nav = false,
           },
           provider_opts = {},
         },

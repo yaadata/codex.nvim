@@ -33,13 +33,16 @@
 ---@field title string
 ---@field title_pos "left"|"center"|"right"
 
+---@class codex.NavKeymapConfig
+---@field left string|false
+---@field down string|false
+---@field up string|false
+---@field right string|false
+
 ---@class codex.TerminalKeymapConfig
 ---@field toggle string|false
 ---@field close string|false
----@field nav_left string|false
----@field nav_down string|false
----@field nav_up string|false
----@field nav_right string|false
+---@field nav codex.NavKeymapConfig|false
 
 ---@class codex.KeymapConfig
 ---@field toggle string|false

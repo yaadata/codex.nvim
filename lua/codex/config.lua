@@ -28,10 +28,12 @@ M.defaults = {
     keymaps = {
       toggle = "<C-c>",
       close = false,
-      nav_left = "<C-h>",
-      nav_down = "<C-j>",
-      nav_up = "<C-k>",
-      nav_right = "<C-l>",
+      nav = {
+        left = "<C-h>",
+        down = "<C-j>",
+        up = "<C-k>",
+        right = "<C-l>",
+      },
     },
     provider_opts = {
       snacks = {},
@@ -63,12 +65,11 @@ local valid_windows = { vsplit = true, hsplit = true, float = true }
 local valid_terminal_keymap_actions = {
   toggle = true,
   close = true,
-  nav_left = true,
-  nav_down = true,
-  nav_up = true,
-  nav_right = true,
+  nav = true,
 }
-local valid_terminal_keymap_action_list = "toggle, close, nav_left, nav_down, nav_up, nav_right"
+local valid_terminal_keymap_action_list = "toggle, close, nav"
+local valid_nav_keymap_actions = { left = true, down = true, up = true, right = true }
+local valid_nav_keymap_action_list = "left, down, up, right"
 local valid_keymap_actions = {
   toggle = true,
   open = true,
@@ -148,7 +149,32 @@ function M.validate(config)
         )
       )
     end
-    if lhs ~= false and type(lhs) ~= "string" then
+
+    if action == "nav" then
+      if lhs ~= false and type(lhs) ~= "table" then
+        error("codex: terminal.keymaps.nav must be a table or false")
+      end
+
+      if type(lhs) == "table" then
+        for direction, direction_lhs in pairs(lhs) do
+          if not valid_nav_keymap_actions[direction] then
+            error(
+              string.format(
+                "codex: invalid terminal.keymaps.nav action %q, expected one of: %s",
+                direction,
+                valid_nav_keymap_action_list
+              )
+            )
+          end
+
+          if direction_lhs ~= false and type(direction_lhs) ~= "string" then
+            error(
+              string.format("codex: terminal.keymaps.nav.%s must be a string or false", direction)
+            )
+          end
+        end
+      end
+    elseif lhs ~= false and type(lhs) ~= "string" then
       error(string.format("codex: terminal.keymaps.%s must be a string or false", action))
     end
   end

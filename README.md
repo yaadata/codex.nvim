@@ -50,10 +50,12 @@ require("codex").setup({
     keymaps = {
       toggle = "<C-c>", -- terminal-mode toggle for Codex window
       close = false, -- set a string (e.g. "<C-x>") to close Codex session
-      nav_left = "<C-h>", -- split windows only; set false to disable
-      nav_down = "<C-j>", -- split windows only; set false to disable
-      nav_up = "<C-k>", -- split windows only; set false to disable
-      nav_right = "<C-l>", -- split windows only; set false to disable
+      nav = {
+        left = "<C-h>", -- split windows only; set false to disable
+        down = "<C-j>", -- split windows only; set false to disable
+        up = "<C-k>", -- split windows only; set false to disable
+        right = "<C-l>", -- split windows only; set false to disable
+      },
     },
   },
   keymaps = {
@@ -163,10 +165,12 @@ require("codex").setup({
     keymaps = {
       toggle = "<C-c>",
       close = "<C-x>",
-      nav_left = "<A-h>",
-      nav_down = "<A-j>",
-      nav_up = "<A-k>",
-      nav_right = "<A-l>",
+      nav = {
+        left = "<A-h>",
+        down = "<A-j>",
+        up = "<A-k>",
+        right = "<A-l>",
+      },
     },
   },
 })
@@ -174,8 +178,9 @@ require("codex").setup({
 
 `terminal.keymaps.close` triggers an intentional Codex session close. `terminal.auto_close`
 controls whether provider windows auto-close only after the terminal process exits.
-`terminal.keymaps.nav_left/nav_down/nav_up/nav_right` are applied only for split
-windows (`vsplit`/`hsplit`), and each can be disabled with `false`.
+`terminal.keymaps.nav` is applied only for split windows (`vsplit`/`hsplit`).
+Set `terminal.keymaps.nav = false` to disable all navigation keymaps, or set
+individual directions to `false`.
 
 ## Lua API
 
