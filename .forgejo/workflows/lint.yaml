@@ -62,6 +62,12 @@ jobs:
           wget -qO- https://mise.run | sh
           ~/.local/bin/mise --version
 
+      - name: Install uv
+        run: |
+          wget -qO- https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          ~/.local/bin/uv --version
+
       - name: Install lint toolchain
         run: |
           unset GITHUB_TOKEN
