@@ -1,0 +1,135 @@
+name: Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: &applicable_paths
+      - "**/*.lua"
+      - "justfile"
+      - "mise.toml"
+      - ".forgejo/workflows/test.yaml"
+  pull_request:
+    types: [opened, synchronize]
+    paths: *applicable_paths
+
+jobs:
+  unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Essentials
+        run: |
+          apt-get update && apt-get install -y nodejs npm wget git tar xz-utils
+
+      - name: Checkout code
+        uses: https://code.forgejo.org/actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Neovim
+        run: |
+          case "$(uname -m)" in
+            x86_64) NVIM_ARCH="x86_64" ;;
+            aarch64|arm64) NVIM_ARCH="arm64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          NVIM_VERSION="v0.11.0"
+          NVIM_TARBALL="nvim-linux-${NVIM_ARCH}.tar.gz"
+          NVIM_URL="https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/${NVIM_TARBALL}"
+
+          wget -q "$NVIM_URL"
+          tar xzf "$NVIM_TARBALL"
+          mv "nvim-linux-${NVIM_ARCH}" /opt/nvim
+          ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
+          nvim --version | head -n 1
+
+      - name: Install Just
+        run: |
+          case "$(uname -m)" in
+            x86_64) JUST_ARCH="x86_64-unknown-linux-musl" ;;
+            aarch64|arm64) JUST_ARCH="aarch64-unknown-linux-musl" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          JUST_VERSION="1.43.0"
+          JUST_TARBALL="just-${JUST_VERSION}-${JUST_ARCH}.tar.gz"
+          JUST_URL="https://github.com/casey/just/releases/download/${JUST_VERSION}/${JUST_TARBALL}"
+
+          wget -qO- "$JUST_URL" | tar xzf - -C /usr/local/bin just
+          just --version
+
+      - name: Bootstrap test deps
+        run: |
+          just bootstrap-test-deps
+
+      - name: Run unit tests
+        run: |
+          just test-unit
+
+  contract:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Essentials
+        run: |
+          apt-get update && apt-get install -y nodejs npm wget git tar xz-utils
+
+      - name: Checkout code
+        uses: https://code.forgejo.org/actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Neovim
+        run: |
+          case "$(uname -m)" in
+            x86_64) NVIM_ARCH="x86_64" ;;
+            aarch64|arm64) NVIM_ARCH="arm64" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          NVIM_VERSION="v0.11.0"
+          NVIM_TARBALL="nvim-linux-${NVIM_ARCH}.tar.gz"
+          NVIM_URL="https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/${NVIM_TARBALL}"
+
+          wget -q "$NVIM_URL"
+          tar xzf "$NVIM_TARBALL"
+          mv "nvim-linux-${NVIM_ARCH}" /opt/nvim
+          ln -sf /opt/nvim/bin/nvim /usr/local/bin/nvim
+          nvim --version | head -n 1
+
+      - name: Install Just
+        run: |
+          case "$(uname -m)" in
+            x86_64) JUST_ARCH="x86_64-unknown-linux-musl" ;;
+            aarch64|arm64) JUST_ARCH="aarch64-unknown-linux-musl" ;;
+            *)
+              echo "Unsupported architecture: $(uname -m)"
+              exit 1
+              ;;
+          esac
+
+          JUST_VERSION="1.43.0"
+          JUST_TARBALL="just-${JUST_VERSION}-${JUST_ARCH}.tar.gz"
+          JUST_URL="https://github.com/casey/just/releases/download/${JUST_VERSION}/${JUST_TARBALL}"
+
+          wget -qO- "$JUST_URL" | tar xzf - -C /usr/local/bin just
+          just --version
+
+      - name: Bootstrap test deps
+        run: |
+          just bootstrap-test-deps
+
+      - name: Run contract tests
+        run: |
+          just test-contract
