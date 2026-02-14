@@ -146,8 +146,8 @@ The following hooks run before every commit (`.pre-commit-config.yaml`):
 **Commit-msg stage** (validates the commit message):
 
 6. **conventional-pre-commit** -- enforces the conventional commit format
-   described in the Git Workflow section. Requires a scope from the allowed
-   list and one of the allowed types. Uses `--strict` mode.
+   described in the Git Workflow section. Requires a scope from the allowed list
+   and one of the allowed types. Uses `--strict` mode.
 
 Run all hooks manually against the full repo:
 
@@ -271,8 +271,8 @@ See `tests/unit/init_spec.lua` for the canonical examples of all mock factories:
 
 Contract tests (`tests/contract/provider_contract_spec.lua`) verify structural
 compliance: every provider module exports all 9 required methods as functions,
-`is_available` returns a boolean, and nil-handle methods behave correctly.
-The currently registered providers are `native` and `snacks`.
+`is_available` returns a boolean, and nil-handle methods behave correctly. The
+currently registered providers are `native` and `snacks`.
 
 When adding a new provider, add an entry to the `provider_modules` table in the
 contract test file.
@@ -291,23 +291,25 @@ Use [conventional commits](https://www.conventionalcommits.org/):
 <type>(<scope>): <subject>
 ```
 
-**Types:** `feat`, `fix`, `docs`, `chore`, `test`, `refactor`
+**Types:** `feat`, `fix`, `docs`, `enhance`, `chore`, `test`, `refactor`,
+`release`
 
-**Scopes:** `core`, `config`, `commands`, `context`, `providers`, `snacks`,
-`state`, `just`, `readme`, `plan`, `dev`
+**Scopes:** `core`, `config`, `context`, `providers`, `state`, `project`,
+`nvim`, `codex`
 
 These conventions are enforced by a `commit-msg` hook via
 [conventional-pre-commit](https://github.com/compilerla/conventional-pre-commit).
-Both type and scope are required (`--strict --force-scope`).
+Allowed commit types and scopes are enforced by `--strict` with explicit
+`--scopes`.
 
-**Examples** (from project history):
+**Examples:**
 
 ```
-feat(commands): register CodexReview and CodexDiff commands
+feat(codex): register CodexReview and CodexDiff commands
 feat(core): add review and diff slash command wrappers
-fix(snacks): wire on_exit callback to terminal lifecycle
-chore(just): update test-unit to be a loop
-docs(readme): document review and diff commands
+fix(nvim): wire on_exit callback to terminal lifecycle
+chore(project): update .gitignore
+docs(project): add LICENSE file
 test(core): add resume dual-mode behavior tests
 ```
 
