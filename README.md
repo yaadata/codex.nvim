@@ -31,7 +31,7 @@ require("codex").setup({
   env = {},
   auto_start = false,
   terminal = {
-    provider = "auto", -- auto | snacks | native | external | none
+    provider = "auto", -- auto | snacks | native
     window = "vsplit", -- vsplit | hsplit | float
     vsplit = {
       side = "right", -- left | right

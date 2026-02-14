@@ -272,6 +272,7 @@ See `tests/unit/init_spec.lua` for the canonical examples of all mock factories:
 Contract tests (`tests/contract/provider_contract_spec.lua`) verify structural
 compliance: every provider module exports all 9 required methods as functions,
 `is_available` returns a boolean, and nil-handle methods behave correctly.
+The currently registered providers are `native` and `snacks`.
 
 When adding a new provider, add an entry to the `provider_modules` table in the
 contract test file.

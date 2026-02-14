@@ -5,13 +5,11 @@ local M = {}
 local provider_modules = {
   native = "codex.providers.native",
   snacks = "codex.providers.snacks",
-  external = "codex.providers.external",
-  none = "codex.providers.none",
 }
 
 local loaded = {}
 
----@param name codex.ProviderName|"native"|"snacks"|"external"|"none"
+---@param name codex.ProviderName|"native"|"snacks"
 ---@return codex.Provider|nil
 local function load_provider(name)
   if loaded[name] then

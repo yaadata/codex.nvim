@@ -4,8 +4,6 @@
 ---| "auto"
 ---| "native"
 ---| "snacks"
----| "external"
----| "none"
 
 ---@alias codex.LogLevel
 ---| "debug"

@@ -21,9 +21,7 @@ lua/codex/init.lua        (public API, session lifecycle, DI container)
         ├──► nvim/keymaps.lua     (default keymap registration)
         ├──► providers/init.lua   (provider registry + auto-resolution)
         │        ├── native.lua
-        │        ├── snacks.lua
-        │        ├── external.lua
-        │        └── none.lua
+        │        └── snacks.lua
         ├──► context/
         │        ├── formatter.lua  (selection + mention payload formatting)
         │        ├── path.lua       (CWD-relative path normalization)
@@ -62,8 +60,6 @@ codex.nvim/
 │   │   │                            # vsplit, hsplit, or float windows, plus
 │   │   │                            # terminal-local keymaps from terminal.keymaps.
 │   │   ├── snacks.lua               # Provider backed by snacks.nvim terminal integration.
-│   │   ├── external.lua             # Reserved stub for future external terminal support.
-│   │   └── none.lua                 # No-op provider for tests and headless environments.
 │   ├── context/
 │   │   ├── formatter.lua            # Formats selection payloads (fenced code blocks with
 │   │   │                            # adaptive backtick fencing) and /mention payloads
@@ -310,8 +306,8 @@ own internal handle structure; the core never inspects handle contents.
 
 1. Create `lua/codex/providers/<name>.lua` following the
    `local M = {} / return M` pattern.
-2. Implement all 9 methods from `codex.Provider` (use `none.lua` as a minimal
-   skeleton).
+2. Implement all 9 methods from `codex.Provider` (use `native.lua` or
+   `snacks.lua` as a reference).
 3. Register the module path in the `provider_modules` table in
    `providers/init.lua`.
 4. Add the new name to the `valid_providers` table in `config.lua`.

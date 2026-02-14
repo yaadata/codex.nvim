@@ -40,7 +40,6 @@ M.defaults = {
     },
     provider_opts = {
       snacks = {},
-      external = { cmd = nil },
     },
   },
   cwd = nil,
@@ -63,7 +62,7 @@ M.defaults = {
   keymaps_force = false,
 }
 
-local valid_providers = { auto = true, snacks = true, native = true, external = true, none = true }
+local valid_providers = { auto = true, snacks = true, native = true }
 local valid_windows = { vsplit = true, hsplit = true, float = true }
 local valid_terminal_keymap_actions = {
   toggle = true,
@@ -185,7 +184,7 @@ function M.validate(config)
   if not valid_providers[config.terminal.provider] then
     error(
       string.format(
-        "codex: invalid terminal.provider %q, expected one of: auto, snacks, native, external, none",
+        "codex: invalid terminal.provider %q, expected one of: auto, snacks, native",
         config.terminal.provider
       )
     )
