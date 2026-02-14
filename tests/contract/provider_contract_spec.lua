@@ -6,6 +6,7 @@ local required_methods = {
   "focus",
   "toggle",
   "is_alive",
+  "is_ready",
   "get_bufnr",
 }
 
@@ -38,6 +39,11 @@ describe("provider contract", function()
 
       it("is_alive returns a boolean for nil handle", function()
         local result = provider.is_alive(nil)
+        assert.is_boolean(result)
+      end)
+
+      it("is_ready returns a boolean for nil handle", function()
+        local result = provider.is_ready(nil)
         assert.is_boolean(result)
       end)
 

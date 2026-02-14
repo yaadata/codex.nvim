@@ -63,6 +63,12 @@ function M.is_alive(_handle)
 end
 
 ---@param _handle? codex.ProviderHandle
+---@return boolean
+function M.is_ready(_handle)
+  return false
+end
+
+---@param _handle? codex.ProviderHandle
 ---@return integer|nil bufnr
 function M.get_bufnr(_handle)
   return nil

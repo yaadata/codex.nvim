@@ -5,7 +5,7 @@
 codex.nvim is a Neovim plugin that orchestrates an embedded terminal session for
 the Codex CLI. The architecture centres on a **pluggable provider** abstraction:
 all terminal management (opening, closing, sending text, focus, toggling) is
-delegated to a provider that satisfies an 8-method interface contract, while the
+delegated to a provider that satisfies a 9-method interface contract, while the
 core module (`init.lua`) owns session lifecycle, dependency wiring, and the
 public Lua API.
 
@@ -83,7 +83,7 @@ codex.nvim/
 │   ├── unit/                        # Unit tests (one *_spec.lua per module).
 │   └── contract/
 │       └── provider_contract_spec.lua  # Structural compliance tests verifying every
-│                                       # provider exports the required 8 methods.
+│                                       # provider exports the required 9 methods.
 ├── docs/                            # Internal planning and developer documentation.
 ├── justfile                         # Task runner (test, fmt, lint, bootstrap).
 ├── .stylua.toml                     # Stylua formatter configuration.
@@ -118,7 +118,7 @@ private. This convention is consistent across every file in `lua/codex/`.
 
 ### Provider Abstraction
 
-Providers implement an 8-method interface defined in `types.lua` as
+Providers implement a 9-method interface defined in `types.lua` as
 `codex.Provider`:
 
 | Method         | Signature                                                                        |
@@ -130,6 +130,7 @@ Providers implement an 8-method interface defined in `types.lua` as
 | `focus`        | `fun(handle): boolean, string\|nil`                                              |
 | `toggle`       | `fun(handle, cmd, args, env, config): ProviderHandle\|nil, string\|nil`          |
 | `is_alive`     | `fun(handle): boolean`                                                           |
+| `is_ready`     | `fun(handle): boolean`                                                           |
 | `get_bufnr`    | `fun(handle): integer\|nil`                                                      |
 
 The provider registry (`providers/init.lua`) maps provider names to module paths
@@ -137,7 +138,7 @@ and lazy-loads them on first resolve. Auto-resolution prefers `snacks` when
 available, falling back to `native`.
 
 Contract tests (`tests/contract/provider_contract_spec.lua`) verify that every
-registered provider exports all 8 methods as functions and handles nil handles
+registered provider exports all 9 methods as functions and handles nil handles
 gracefully.
 
 ### Handle-Based State
@@ -201,6 +202,10 @@ APIs that need an active session (`send`, `send_command`, `focus`,
 `send_selection`, `add_file`) automatically open one when needed. The lower-level
 `send` API opens without focus, while command-facing flows (`:CodexSend`,
 `:CodexAdd`) ensure the terminal is opened with focus before payload dispatch.
+If the provider handle is not yet ready, payloads are queued and retried on a
+timer (`terminal.startup_retry_interval_ms`) until ready or timeout
+(`terminal.startup_timeout_ms`). Providers apply a startup grace delay via
+`terminal.startup_grace_ms` before reporting readiness.
 
 ## Component Interaction
 
@@ -263,11 +268,10 @@ init.lua send_selection()
     ├── formatter.format_selection(spec)
     │       └── build fenced code block with adaptive backtick fencing
     │
-    ├── ensure_send_target_open()
-    │       └── [no active session] → open_session(args, focus=true)
-    │
-    └── M.send(payload)
-            └── provider.send(session.handle, text)
+    └── dispatch_send(payload)
+            ├── [active + ready] → provider.send(session.handle, text)
+            ├── [no active session] → open_session(args, focus=true)
+            └── [not ready yet] → queue + retry loop (defer_fn) until ready/timeout
 ```
 
 ## Type System
@@ -289,7 +293,7 @@ Key types:
 | `codex.KeymapConfig`         | class | Keymap action table (`string` or `false` per action)          |
 | `codex.ProviderName`         | alias | Union of valid provider name strings                          |
 | `codex.LogLevel`             | alias | Union of log level strings                                    |
-| `codex.Provider`             | class | 8-method structural interface for providers                   |
+| `codex.Provider`             | class | 9-method structural interface for providers                   |
 | `codex.ProviderHandle`       | alias | Opaque handle (`table`) returned by `provider.open()`         |
 | `codex.Session`              | class | Session record extending `codex.SessionSpec`                  |
 | `codex.SessionSpec`          | class | Spec for creating a new session                               |
@@ -306,7 +310,7 @@ own internal handle structure; the core never inspects handle contents.
 
 1. Create `lua/codex/providers/<name>.lua` following the
    `local M = {} / return M` pattern.
-2. Implement all 8 methods from `codex.Provider` (use `none.lua` as a minimal
+2. Implement all 9 methods from `codex.Provider` (use `none.lua` as a minimal
    skeleton).
 3. Register the module path in the `provider_modules` table in
    `providers/init.lua`.

@@ -19,7 +19,20 @@ local state = {
   config = nil,
   initialized = false,
   deps = nil,
+  pending_sends = {},
+  flush_scheduled = false,
+  flush_active = false,
 }
+
+---@class codex.PendingSend
+---@field text string
+---@field open_focus boolean
+---@field pre_focus boolean
+---@field post_focus boolean
+---@field command_path string|nil
+---@field created_at integer
+---@field opened_in_dispatch boolean
+---@field reopen_attempted boolean
 
 ---@return table
 local function get_deps()
@@ -44,6 +57,9 @@ function M.setup(opts)
   config_opts._deps = nil
 
   state.config = deps.config.apply(config_opts)
+  state.pending_sends = {}
+  state.flush_scheduled = false
+  state.flush_active = false
   deps.logger.set_level(state.config.log_level)
 
   deps.commands.register()
@@ -135,16 +151,229 @@ local function open_session(args, focus)
   })
 end
 
+---@param deps table
+---@return integer
+local function now_ms(deps)
+  return deps.vim.uv.now()
+end
+
+---@param session codex.Session|nil
+---@param provider codex.Provider
+---@return boolean
+local function session_is_alive(session, provider)
+  return session ~= nil and session.alive and provider.is_alive(session.handle)
+end
+
+---@param session codex.Session|nil
+---@param provider codex.Provider
+---@return boolean
+local function session_is_ready(session, provider)
+  if not session_is_alive(session, provider) then
+    return false
+  end
+  return provider.is_ready(session.handle)
+end
+
+---@param session codex.Session
+---@param provider codex.Provider
 ---@return nil
-local function ensure_send_target_open()
-  local deps = get_deps()
-  local session = deps.session_store.get_active()
-  local provider = get_provider()
-  if session and session.alive and provider.is_alive(session.handle) then
+local function apply_post_send_focus(session, provider)
+  local focused = provider.focus(session.handle)
+  if focused then
     return
   end
 
-  open_session(state.config.args, true)
+  local new_handle = provider.toggle(
+    session.handle,
+    state.config.cmd,
+    state.config.args,
+    state.config.env,
+    state.config
+  )
+  if new_handle then
+    session.handle = new_handle
+  end
+  provider.focus(session.handle)
+end
+
+---@param item codex.PendingSend
+---@param err string|nil
+---@return nil
+local function log_send_failure(item, err)
+  local deps = get_deps()
+  local failure = err or "unknown error"
+  if item.command_path then
+    deps.logger.error("failed to send command %s: %s", item.command_path, failure)
+    return
+  end
+  deps.logger.error("failed to send text: %s", failure)
+end
+
+---@param item codex.PendingSend
+---@return nil
+local function log_send_timeout(item)
+  log_send_failure(item, "timed out waiting for terminal readiness")
+end
+
+---@param item codex.PendingSend
+---@param session codex.Session
+---@param provider codex.Provider
+---@return boolean ok
+---@return string|nil err
+local function send_item_now(item, session, provider)
+  if item.pre_focus then
+    provider.focus(session.handle)
+  end
+
+  local ok, err = provider.send(session.handle, item.text)
+  if not ok then
+    return false, err
+  end
+
+  if item.post_focus then
+    apply_post_send_focus(session, provider)
+  end
+  return true
+end
+
+local flush_pending_sends
+
+---@param delay_ms integer
+---@return nil
+local function schedule_send_flush(delay_ms)
+  if state.flush_scheduled then
+    return
+  end
+
+  local deps = get_deps()
+  state.flush_scheduled = true
+  local run = function()
+    state.flush_scheduled = false
+    flush_pending_sends()
+  end
+
+  if type(deps.vim.defer_fn) == "function" then
+    deps.vim.defer_fn(run, delay_ms)
+    return
+  end
+  deps.vim.schedule(run)
+end
+
+---@param item codex.PendingSend
+---@return boolean sent
+---@return boolean keep_retrying
+local function flush_pending_send_item(item)
+  local deps = get_deps()
+  local session = deps.session_store.get_active()
+  local provider = get_provider()
+
+  if not session or not session.alive then
+    open_session(state.config.args, item.open_focus)
+    session = deps.session_store.get_active()
+    provider = get_provider()
+  end
+
+  if
+    session
+    and session.alive
+    and not provider.is_alive(session.handle)
+    and not item.opened_in_dispatch
+    and not item.reopen_attempted
+  then
+    open_session(state.config.args, item.open_focus)
+    session = deps.session_store.get_active()
+    provider = get_provider()
+    item.reopen_attempted = true
+  end
+
+  if not session_is_alive(session, provider) or not session_is_ready(session, provider) then
+    local elapsed_ms = now_ms(deps) - item.created_at
+    if elapsed_ms >= state.config.terminal.startup_timeout_ms then
+      log_send_timeout(item)
+      return false, false
+    end
+    return false, true
+  end
+
+  local ok, err = send_item_now(item, session, provider)
+  if not ok then
+    log_send_failure(item, err)
+    return false, false
+  end
+  return true, false
+end
+
+flush_pending_sends = function()
+  if state.flush_active then
+    return
+  end
+  state.flush_active = true
+
+  while true do
+    local item = state.pending_sends[1]
+    if not item then
+      break
+    end
+
+    local sent, keep_retrying = flush_pending_send_item(item)
+    if sent or not keep_retrying then
+      table.remove(state.pending_sends, 1)
+    else
+      break
+    end
+  end
+
+  state.flush_active = false
+  if #state.pending_sends > 0 then
+    schedule_send_flush(state.config.terminal.startup_retry_interval_ms)
+  end
+end
+
+---@class codex.DispatchSendOpts
+---@field open_focus? boolean
+---@field pre_focus? boolean
+---@field post_focus? boolean
+---@field command_path? string
+
+---@param text string
+---@param opts? codex.DispatchSendOpts
+---@return codex.SendResult ok True when payload is sent immediately or queued for retry.
+---@return string|nil err
+local function dispatch_send(text, opts)
+  opts = opts or {}
+  local deps = get_deps()
+  local item = {
+    text = text,
+    open_focus = opts.open_focus == true,
+    pre_focus = opts.pre_focus == true,
+    post_focus = opts.post_focus == true,
+    command_path = opts.command_path,
+    created_at = now_ms(deps),
+    opened_in_dispatch = false,
+    reopen_attempted = false,
+  }
+  local session = deps.session_store.get_active()
+  local provider = get_provider()
+
+  if not session or not session.alive then
+    open_session(state.config.args, item.open_focus)
+    session = deps.session_store.get_active()
+    provider = get_provider()
+    item.opened_in_dispatch = true
+  end
+
+  if session_is_ready(session, provider) then
+    local ok, err = send_item_now(item, session, provider)
+    if not ok then
+      log_send_failure(item, err)
+      return false, err
+    end
+    return true
+  end
+
+  table.insert(state.pending_sends, item)
+  flush_pending_sends()
+  return true
 end
 
 ---@param focus? boolean
@@ -162,12 +391,14 @@ function M.close()
   local deps = get_deps()
   local session = deps.session_store.get_active()
   if not session then
+    state.pending_sends = {}
     return
   end
 
   local provider = get_provider()
   provider.close(session.handle)
   deps.session_store.remove(session.id)
+  state.pending_sends = {}
 end
 
 ---@return nil
@@ -213,40 +444,14 @@ function M.focus()
 end
 
 ---@param text string
----@return nil
+---@return codex.SendResult ok True when payload is sent immediately or queued.
+---@return string|nil err
 function M.send(text)
   ensure_setup()
-  local deps = get_deps()
-
-  local session = deps.session_store.get_active()
-  local provider = get_provider()
-  if not session or not session.alive or not provider.is_alive(session.handle) then
-    M.open(false)
-    session = deps.session_store.get_active()
-  end
-
-  local ok, err = provider.send(session.handle, text)
-  if not ok then
-    deps.logger.error("failed to send text: %s", err or "unknown error")
-    return
-  end
-
-  local focused = provider.focus(session.handle)
-  if focused then
-    return
-  end
-
-  local new_handle = provider.toggle(
-    session.handle,
-    state.config.cmd,
-    state.config.args,
-    state.config.env,
-    state.config
-  )
-  if new_handle then
-    session.handle = new_handle
-  end
-  provider.focus(session.handle)
+  return dispatch_send(text, {
+    open_focus = false,
+    post_focus = true,
+  })
 end
 
 ---@param slash_cmd string Slash command name with or without a leading `/`.
@@ -254,26 +459,14 @@ end
 ---@return string|nil err
 function M.send_command(slash_cmd)
   ensure_setup()
-  local deps = get_deps()
-
   local normalized = slash_cmd:gsub("^/+", "")
   local command_path = "/" .. normalized
   local command_text = command_path .. "\n"
-
-  local session = deps.session_store.get_active()
-  local provider = get_provider()
-  if session and session.alive and provider.is_alive(session.handle) then
-    provider.focus(session.handle)
-  else
-    open_session(state.config.args, true)
-    session = deps.session_store.get_active()
-  end
-
-  local ok, err = provider.send(session.handle, command_text)
-  if not ok then
-    deps.logger.error("failed to send command %s: %s", command_path, err or "unknown error")
-  end
-  return ok, err
+  return dispatch_send(command_text, {
+    open_focus = true,
+    pre_focus = true,
+    command_path = command_path,
+  })
 end
 
 ---@return codex.SendResult ok True when `/model` is sent.
@@ -356,9 +549,10 @@ function M.send_selection(opts)
   end
 
   local payload = deps.formatter.format_selection(spec)
-  ensure_send_target_open()
-  M.send(payload)
-  return true
+  return dispatch_send(payload, {
+    open_focus = true,
+    post_focus = true,
+  })
 end
 
 ---@param path? string Explicit path to mention. When nil, uses current buffer path.
@@ -380,9 +574,10 @@ function M.add_file(path)
 
   resolved_path = deps.path.to_relative(deps.vim, resolved_path)
   local payload = deps.formatter.format_mention(resolved_path)
-  ensure_send_target_open()
-  M.send(payload)
-  return true
+  return dispatch_send(payload, {
+    open_focus = true,
+    post_focus = true,
+  })
 end
 
 ---@return boolean

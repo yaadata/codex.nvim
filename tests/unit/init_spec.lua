@@ -82,6 +82,9 @@ local function make_provider()
     focus_sequence = nil,
     toggle_return_new = nil,
     on_exit_callbacks = {},
+    is_alive_fn = nil,
+    is_ready_fn = nil,
+    send_fn = nil,
   }
 
   function provider.is_available()
@@ -117,6 +120,9 @@ local function make_provider()
 
   function provider.send(handle, text)
     table.insert(provider.send_calls, { handle = handle, text = text })
+    if provider.send_fn then
+      return provider.send_fn(handle, text)
+    end
     return provider.send_ok, provider.send_err
   end
 
@@ -145,10 +151,20 @@ local function make_provider()
   end
 
   function provider.is_alive(handle)
+    if provider.is_alive_fn then
+      return provider.is_alive_fn(handle)
+    end
     return handle and handle.alive ~= false
   end
 
-  function provider.get_bufnr()
+  function provider.is_ready(handle)
+    if provider.is_ready_fn then
+      return provider.is_ready_fn(handle)
+    end
+    return provider.is_alive(handle)
+  end
+
+  function provider.get_bufnr(_handle)
     return nil
   end
 
@@ -231,6 +247,27 @@ local function make_fake_vim()
   local augroups = {}
   local autocmds = {}
   local scheduled = {}
+  local deferred = {}
+  local runtime = { now = 0 }
+
+  local function run_next_deferred()
+    if #deferred == 0 then
+      return false
+    end
+    local next_timer = table.remove(deferred, 1)
+    runtime.now = runtime.now + next_timer.delay_ms
+    next_timer.cb()
+    return true
+  end
+
+  local function run_all_deferred(limit)
+    local max_runs = limit or 100
+    local runs = 0
+    while runs < max_runs and run_next_deferred() do
+      runs = runs + 1
+    end
+    return runs
+  end
 
   return {
     api = {
@@ -266,10 +303,22 @@ local function make_fake_vim()
     schedule = function(cb)
       table.insert(scheduled, cb)
     end,
+    defer_fn = function(cb, delay_ms)
+      table.insert(deferred, { cb = cb, delay_ms = delay_ms })
+    end,
+    uv = {
+      now = function()
+        return runtime.now
+      end,
+    },
     deepcopy = vim.deepcopy,
     _augroups = augroups,
     _autocmds = autocmds,
     _scheduled = scheduled,
+    _deferred = deferred,
+    _runtime = runtime,
+    _run_next_deferred = run_next_deferred,
+    _run_all_deferred = run_all_deferred,
   }
 end
 
@@ -333,6 +382,17 @@ local function setup_with_deps(overrides)
     call_order = call_order,
     providers = providers,
   }
+end
+
+---@param fake_vim table
+---@param runs integer
+---@return nil
+local function run_deferred(fake_vim, runs)
+  for _ = 1, runs do
+    if not fake_vim._run_next_deferred() then
+      return
+    end
+  end
 end
 
 describe("codex.init public api", function()
@@ -540,6 +600,65 @@ describe("codex.init public api", function()
     assert.matches("failed to send command /compact: boom", env.logger.errors[1])
   end)
 
+  it("send_command queues when terminal is starting and flushes later", function()
+    local env = setup_with_deps({
+      terminal = {
+        startup_timeout_ms = 200,
+        startup_retry_interval_ms = 50,
+      },
+    })
+    env.provider.is_alive_fn = function(handle)
+      return handle and env.fake_vim._runtime.now >= 100
+    end
+
+    local ok, err = env.codex.send_command("status")
+
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.equals(1, #env.provider.open_calls)
+    assert.is_true(env.provider.open_calls[1].focus)
+    assert.equals(0, #env.provider.send_calls)
+    assert.equals(1, #env.fake_vim._deferred)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(0, #env.provider.send_calls)
+    assert.equals(1, #env.fake_vim._deferred)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("/status\n", env.provider.send_calls[1].text)
+    assert.equals(1, #env.provider.focus_calls)
+  end)
+
+  it("send_command waits for provider readiness even when process is alive", function()
+    local env = setup_with_deps({
+      terminal = {
+        startup_timeout_ms = 300,
+        startup_retry_interval_ms = 50,
+      },
+    })
+    env.provider.is_alive_fn = function(handle)
+      return handle and true
+    end
+    env.provider.is_ready_fn = function(handle)
+      return handle and env.fake_vim._runtime.now >= 150
+    end
+
+    local ok, err = env.codex.send_command("status")
+
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.equals(0, #env.provider.send_calls)
+    assert.equals(1, #env.fake_vim._deferred)
+
+    run_deferred(env.fake_vim, 2)
+    assert.equals(0, #env.provider.send_calls)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("/status\n", env.provider.send_calls[1].text)
+  end)
+
   it("set_model dispatches /model", function()
     local env = setup_with_deps()
 
@@ -704,6 +823,53 @@ describe("codex.init public api", function()
     assert.equals(1, #env.provider.focus_calls)
   end)
 
+  it("send_selection waits for startup readiness before sending", function()
+    local env = setup_with_deps({
+      terminal = {
+        startup_timeout_ms = 200,
+        startup_retry_interval_ms = 50,
+      },
+    })
+    env.provider.is_alive_fn = function(handle)
+      return handle and env.fake_vim._runtime.now >= 100
+    end
+
+    local ok = env.codex.send_selection()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.is_true(env.provider.open_calls[1].focus)
+    assert.equals(0, #env.provider.send_calls)
+    assert.equals(1, #env.fake_vim._deferred)
+
+    run_deferred(env.fake_vim, 2)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("[selection]\n", env.provider.send_calls[1].text)
+  end)
+
+  it("send_selection drops queued payload after startup timeout", function()
+    local env = setup_with_deps({
+      terminal = {
+        startup_timeout_ms = 120,
+        startup_retry_interval_ms = 50,
+      },
+    })
+    env.provider.is_alive_fn = function()
+      return false
+    end
+
+    local ok = env.codex.send_selection()
+
+    assert.is_true(ok)
+    assert.equals(0, #env.provider.send_calls)
+    run_deferred(env.fake_vim, 3)
+    assert.equals(0, #env.provider.send_calls)
+    assert.matches(
+      "failed to send text: timed out waiting for terminal readiness",
+      env.logger.errors[1]
+    )
+  end)
+
   it("send_selection logs and returns false when selection fails", function()
     local env = setup_with_deps()
     env.selection.err = "no visual selection range found"
@@ -738,6 +904,27 @@ describe("codex.init public api", function()
     assert.equals("../../tmp/example.lua", env.formatter.mention_paths[1])
     assert.equals("/mention ../../tmp/example.lua\n", env.provider.send_calls[1].text)
     assert.equals(1, #env.provider.focus_calls)
+  end)
+
+  it("queued payloads flush in FIFO order once startup readiness is reached", function()
+    local env = setup_with_deps({
+      terminal = {
+        startup_timeout_ms = 200,
+        startup_retry_interval_ms = 50,
+      },
+    })
+    env.provider.is_alive_fn = function(handle)
+      return handle and env.fake_vim._runtime.now >= 100
+    end
+
+    env.codex.send("first")
+    env.codex.send("second")
+
+    assert.equals(0, #env.provider.send_calls)
+    run_deferred(env.fake_vim, 2)
+    assert.equals(2, #env.provider.send_calls)
+    assert.equals("first", env.provider.send_calls[1].text)
+    assert.equals("second", env.provider.send_calls[2].text)
   end)
 
   it("add_file resolves current buffer path when argument is nil", function()

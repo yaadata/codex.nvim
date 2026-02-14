@@ -66,6 +66,9 @@
 ---@field hsplit codex.HsplitConfig
 ---@field float codex.FloatConfig
 ---@field auto_close boolean
+---@field startup_timeout_ms number
+---@field startup_retry_interval_ms number
+---@field startup_grace_ms number
 ---@field keymaps codex.TerminalKeymapConfig
 ---@field provider_opts table<string, table>
 
@@ -100,6 +103,7 @@
 ---@field focus fun(handle: codex.ProviderHandle|nil): boolean, string|nil
 ---@field toggle fun(handle: codex.ProviderHandle|nil, cmd: string, args: string[], env: table<string, string>, config: codex.Config): codex.ProviderHandle|nil, string|nil
 ---@field is_alive fun(handle: codex.ProviderHandle|nil): boolean
+---@field is_ready fun(handle: codex.ProviderHandle|nil): boolean
 ---@field get_bufnr fun(handle: codex.ProviderHandle|nil): integer|nil
 
 ---@class codex.UserCommandOpts

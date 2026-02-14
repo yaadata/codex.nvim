@@ -68,7 +68,7 @@ just test-contract
 ```
 
 Runs `tests/contract/provider_contract_spec.lua` which verifies that every
-registered provider exports all 8 required methods and handles nil handles
+registered provider exports all 9 required methods and handles nil handles
 correctly.
 
 ### Test Environment
@@ -270,7 +270,7 @@ See `tests/unit/init_spec.lua` for the canonical examples of all mock factories:
 ### Contract Tests
 
 Contract tests (`tests/contract/provider_contract_spec.lua`) verify structural
-compliance: every provider module exports all 8 required methods as functions,
+compliance: every provider module exports all 9 required methods as functions,
 `is_available` returns a boolean, and nil-handle methods behave correctly.
 
 When adding a new provider, add an entry to the `provider_modules` table in the

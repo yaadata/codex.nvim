@@ -25,6 +25,9 @@ M.defaults = {
       title_pos = "center",
     },
     auto_close = false,
+    startup_timeout_ms = 2000,
+    startup_retry_interval_ms = 50,
+    startup_grace_ms = 400,
     keymaps = {
       toggle = "<C-c>",
       close = false,
@@ -207,6 +210,9 @@ function M.validate(config)
     ["terminal.float.border"] = { config.terminal.float.border, "string" },
     ["terminal.float.title"] = { config.terminal.float.title, "string" },
     ["terminal.float.title_pos"] = { config.terminal.float.title_pos, "string" },
+    ["terminal.startup_timeout_ms"] = { config.terminal.startup_timeout_ms, "number" },
+    ["terminal.startup_retry_interval_ms"] = { config.terminal.startup_retry_interval_ms, "number" },
+    ["terminal.startup_grace_ms"] = { config.terminal.startup_grace_ms, "number" },
   })
 
   if config.terminal.vsplit.side ~= "left" and config.terminal.vsplit.side ~= "right" then
@@ -239,6 +245,18 @@ function M.validate(config)
     and config.terminal.float.title_pos ~= "right"
   then
     error("codex: terminal.float.title_pos must be 'left', 'center', or 'right'")
+  end
+
+  if config.terminal.startup_timeout_ms < 1 then
+    error("codex: terminal.startup_timeout_ms must be >= 1")
+  end
+
+  if config.terminal.startup_retry_interval_ms < 1 then
+    error("codex: terminal.startup_retry_interval_ms must be >= 1")
+  end
+
+  if config.terminal.startup_grace_ms < 0 then
+    error("codex: terminal.startup_grace_ms must be >= 0")
   end
 
   return true

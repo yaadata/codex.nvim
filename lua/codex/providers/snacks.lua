@@ -8,6 +8,15 @@ function M.is_available()
   return ok and snacks ~= nil and snacks.terminal ~= nil
 end
 
+---@return integer
+local function now_ms()
+  local uv = vim.uv or vim.loop
+  if not uv or type(uv.now) ~= "function" then
+    return 0
+  end
+  return uv.now()
+end
+
 ---@param term table
 ---@return integer|nil
 local function resolve_jobid(term)
@@ -159,7 +168,11 @@ function M.open(cmd, args, env, config, focus, on_exit)
     terminal:show()
   end
 
-  local handle = { terminal = terminal, provider = "snacks" }
+  local handle = {
+    terminal = terminal,
+    provider = "snacks",
+    ready_at_ms = now_ms() + (config.terminal.startup_grace_ms or 0),
+  }
 
   if type(terminal.buf) == "number" then
     set_terminal_keymaps(terminal.buf, config.terminal.keymaps, config.terminal.window)
@@ -258,6 +271,20 @@ function M.is_alive(handle)
 
   local term = handle.terminal
   return resolve_jobid(term) ~= nil
+end
+
+---@param handle codex.ProviderHandle|nil
+---@return boolean
+function M.is_ready(handle)
+  if not M.is_alive(handle) then
+    return false
+  end
+
+  if type(handle.ready_at_ms) ~= "number" then
+    return true
+  end
+
+  return now_ms() >= handle.ready_at_ms
 end
 
 ---@param handle codex.ProviderHandle|nil

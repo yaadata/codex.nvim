@@ -7,6 +7,15 @@ function M.is_available()
   return true
 end
 
+---@return integer
+local function now_ms()
+  local uv = vim.uv or vim.loop
+  if not uv or type(uv.now) ~= "function" then
+    return 0
+  end
+  return uv.now()
+end
+
 ---@param cmd string
 ---@param args string[]
 ---@return string
@@ -212,7 +221,12 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local prev_win = vim.api.nvim_get_current_win()
   local bufnr, winid = create_window(term_config)
 
-  local handle = { bufnr = bufnr, winid = winid, jobid = nil }
+  local handle = {
+    bufnr = bufnr,
+    winid = winid,
+    jobid = nil,
+    ready_at_ms = now_ms() + (term_config.startup_grace_ms or 0),
+  }
   local termopen_opts = {
     cwd = cwd,
     on_exit = function(_, exit_code)
@@ -346,6 +360,20 @@ function M.is_alive(handle)
     return false
   end
   return vim.api.nvim_buf_is_valid(handle.bufnr) and handle.jobid ~= nil
+end
+
+---@param handle codex.ProviderHandle|nil
+---@return boolean
+function M.is_ready(handle)
+  if not M.is_alive(handle) then
+    return false
+  end
+
+  if type(handle.ready_at_ms) ~= "number" then
+    return true
+  end
+
+  return now_ms() >= handle.ready_at_ms
 end
 
 ---@param handle codex.ProviderHandle|nil
