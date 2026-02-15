@@ -200,7 +200,7 @@ local function make_formatter()
   local formatter = {
     selection_specs = {},
     mention_paths = {},
-    selection_payload = "[selection]\n",
+    selection_payload = "[selection]",
   }
 
   function formatter.format_selection(spec)
@@ -210,7 +210,7 @@ local function make_formatter()
 
   function formatter.format_mention(path)
     table.insert(formatter.mention_paths, path)
-    return "/mention " .. path .. "\n"
+    return "/mention " .. path
   end
 
   return formatter
@@ -894,8 +894,31 @@ describe("codex.init public api", function()
     assert.equals(1, #env.formatter.selection_specs)
     assert.equals("test/current.lua", env.formatter.selection_specs[1].filepath)
     assert.equals(1, #env.provider.send_calls)
-    assert.equals("[selection]\n", env.provider.send_calls[1].text)
+    assert.equals("\27[200~[selection]\27[201~", env.provider.send_calls[1].text)
     assert.equals(1, #env.provider.focus_calls)
+  end)
+
+  it("send_selection wraps real formatter output in bracketed paste", function()
+    local real_formatter = require("codex.context.formatter")
+    local env = setup_with_deps({
+      _deps = {
+        formatter = real_formatter,
+      },
+    })
+    env.selection.result = {
+      filepath = "justfile",
+      start_line = 12,
+      end_line = 14,
+      filetype = "",
+      lines = { "```", "test-unit:" },
+    }
+
+    local ok = env.codex.send_selection()
+    local expected_payload = real_formatter.format_selection(env.selection.result)
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("\27[200~" .. expected_payload .. "\27[201~", env.provider.send_calls[1].text)
   end)
 
   it("send_selection waits for startup readiness before sending", function()
@@ -918,7 +941,7 @@ describe("codex.init public api", function()
 
     run_deferred(env.fake_vim, 2)
     assert.equals(1, #env.provider.send_calls)
-    assert.equals("[selection]\n", env.provider.send_calls[1].text)
+    assert.equals("\27[200~[selection]\27[201~", env.provider.send_calls[1].text)
   end)
 
   it("send_selection drops queued payload after startup timeout", function()
@@ -975,7 +998,7 @@ describe("codex.init public api", function()
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
     assert.equals("../../tmp/example.lua", env.formatter.mention_paths[1])
-    assert.equals("/mention ../../tmp/example.lua\n", env.provider.send_calls[1].text)
+    assert.equals("\27[200~/mention ../../tmp/example.lua\27[201~", env.provider.send_calls[1].text)
     assert.equals(1, #env.provider.focus_calls)
   end)
 

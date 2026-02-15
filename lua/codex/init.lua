@@ -35,6 +35,8 @@ local state = {
 ---@field has_attempted boolean
 
 local process_pending_send_item
+local BRACKETED_PASTE_START = "\27[200~"
+local BRACKETED_PASTE_END = "\27[201~"
 
 ---@return table
 local function get_deps()
@@ -161,6 +163,12 @@ end
 ---@return integer
 local function now_ms(deps)
   return deps.vim.uv.now()
+end
+
+---@param text string
+---@return string
+local function encode_bracketed_paste(text)
+  return BRACKETED_PASTE_START .. text .. BRACKETED_PASTE_END
 end
 
 ---@param session codex.Session|nil
@@ -512,7 +520,7 @@ function M.send_selection(opts)
   end
 
   local payload = deps.formatter.format_selection(spec)
-  return dispatch_send(payload, {
+  return dispatch_send(encode_bracketed_paste(payload), {
     open_focus = true,
     post_focus = true,
   })
@@ -537,7 +545,7 @@ function M.add_file(path)
 
   resolved_path = deps.path.to_relative(deps.vim, resolved_path)
   local payload = deps.formatter.format_mention(resolved_path)
-  return dispatch_send(payload, {
+  return dispatch_send(encode_bracketed_paste(payload), {
     open_focus = true,
     post_focus = true,
   })

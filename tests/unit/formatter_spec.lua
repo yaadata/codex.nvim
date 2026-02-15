@@ -12,7 +12,7 @@ describe("codex.context.formatter", function()
       })
 
       assert.equals(
-        "# Selection from /tmp/example.lua (lines 10-12)\n\n```lua\nlocal a = 1\nlocal b = 2\nreturn a + b\n```\n",
+        "# Selection from /tmp/example.lua (lines 10-12)\n\n```lua\nlocal a = 1\nlocal b = 2\nreturn a + b\n```",
         result
       )
     end)
@@ -26,7 +26,7 @@ describe("codex.context.formatter", function()
         lines = { "hello" },
       })
 
-      assert.equals("# Selection from a.txt (lines 1-1)\n\n```text\nhello\n```\n", result)
+      assert.equals("# Selection from a.txt (lines 1-1)\n\n```text\nhello\n```", result)
     end)
 
     it("uses text fence when filetype is empty", function()
@@ -63,7 +63,7 @@ describe("codex.context.formatter", function()
       })
 
       assert.is_not_nil(result:find("`````markdown", 1, true))
-      assert.is_not_nil(result:find("\n`````\n", 1, true))
+      assert.is_not_nil(result:find("\n`````$", 1))
     end)
 
     it("accepts string content", function()
@@ -76,7 +76,7 @@ describe("codex.context.formatter", function()
       })
 
       assert.equals(
-        "# Selection from plain.txt (lines 5-6)\n\n```text\nline a\nline b\n```\n",
+        "# Selection from plain.txt (lines 5-6)\n\n```text\nline a\nline b\n```",
         result
       )
     end)
@@ -85,21 +85,21 @@ describe("codex.context.formatter", function()
   describe("format_mention", function()
     it("formats mention with spaces in path", function()
       assert.equals(
-        '/mention "/tmp/dir with space/file.lua"\n',
+        '/mention "/tmp/dir with space/file.lua"',
         formatter.format_mention("/tmp/dir with space/file.lua")
       )
     end)
 
     it("escapes double-quotes and backslashes for shell-significant paths", function()
       assert.equals(
-        '/mention "C:\\\\work\\\\my \\"file\\".lua"\n',
+        '/mention "C:\\\\work\\\\my \\"file\\".lua"',
         formatter.format_mention('C:\\work\\my "file".lua')
       )
     end)
 
-    it("always includes trailing newline", function()
+    it("does not include trailing newline", function()
       local result = formatter.format_mention("file.lua")
-      assert.equals("\n", result:sub(-1))
+      assert.equals("/mention file.lua", result)
     end)
   end)
 end)

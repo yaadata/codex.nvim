@@ -41,12 +41,26 @@ What each step does:
 - `just pre-commit-install` installs pre-commit hooks into `.git/hooks/` so that
   formatting, linting, and unit tests run automatically before each commit.
 
+## Running Commands with Mise (Recommended)
+
+To avoid "command not found" errors for tools like `selene`, `stylua`, and
+`mdformat`, run project commands through mise:
+
+```sh
+mise exec -- just test-unit
+mise exec -- just fmt-check
+mise exec -- just lint
+```
+
+This ensures commands use the tool versions pinned in `mise.toml`, even when
+those tools are not globally installed on your system.
+
 ## Running Tests
 
 ### Full Suite
 
 ```sh
-just test
+mise exec -- just test
 ```
 
 Runs `bootstrap-test-deps`, then `test-unit`, then `test-contract` in sequence.
@@ -54,7 +68,7 @@ Runs `bootstrap-test-deps`, then `test-unit`, then `test-contract` in sequence.
 ### Unit Tests
 
 ```sh
-just test-unit
+mise exec -- just test-unit
 ```
 
 Loops over every `tests/unit/*_spec.lua` file and runs each one individually via
@@ -64,7 +78,7 @@ failing spec file does not prevent others from running.
 ### Contract Tests
 
 ```sh
-just test-contract
+mise exec -- just test-contract
 ```
 
 Runs `tests/contract/provider_contract_spec.lua` which verifies that every
@@ -87,8 +101,8 @@ This minimal config:
 ### Formatting (stylua)
 
 ```sh
-just fmt         # format in place
-just fmt-check   # check only (used in CI and pre-commit)
+mise exec -- just fmt         # format in place
+mise exec -- just fmt-check   # check only (used in CI and pre-commit)
 ```
 
 Stylua configuration (`.stylua.toml`):
@@ -105,8 +119,8 @@ Stylua configuration (`.stylua.toml`):
 ### Markdown Formatting (mdformat)
 
 ```sh
-just fmt         # format in place (includes Lua and Markdown)
-just fmt-check   # check only (used in CI and pre-commit)
+mise exec -- just fmt         # format in place (includes Lua and Markdown)
+mise exec -- just fmt-check   # check only (used in CI and pre-commit)
 ```
 
 mdformat is installed via the `pipx` backend with the
@@ -119,7 +133,7 @@ Targets: `docs/` and `README.md`.
 ### Linting (selene)
 
 ```sh
-just lint
+mise exec -- just lint
 ```
 
 Selene configuration (`selene.toml` + `codex.yml`):
@@ -152,7 +166,7 @@ The following hooks run before every commit (`.pre-commit-config.yaml`):
 Run all hooks manually against the full repo:
 
 ```sh
-just pre-commit-run
+mise exec -- just pre-commit-run
 ```
 
 Do not bypass hooks with `--no-verify`. If a hook fails, fix the issue and
