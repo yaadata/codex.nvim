@@ -7,6 +7,7 @@ local default_deps = {
   logger = require("codex.logger"),
   providers = require("codex.providers"),
   session_store = require("codex.state.session_store"),
+  send_queue = require("codex.runtime.send_queue"),
   commands = require("codex.nvim.commands"),
   keymaps = require("codex.nvim.keymaps"),
   formatter = require("codex.context.formatter"),
@@ -19,9 +20,7 @@ local state = {
   config = nil,
   initialized = false,
   deps = nil,
-  pending_sends = {},
-  flush_scheduled = false,
-  flush_active = false,
+  send_queue = nil,
 }
 
 ---@class codex.PendingSend
@@ -33,6 +32,9 @@ local state = {
 ---@field created_at integer
 ---@field opened_in_dispatch boolean
 ---@field reopen_attempted boolean
+---@field has_attempted boolean
+
+local process_pending_send_item
 
 ---@return table
 local function get_deps()
@@ -57,9 +59,13 @@ function M.setup(opts)
   config_opts._deps = nil
 
   state.config = deps.config.apply(config_opts)
-  state.pending_sends = {}
-  state.flush_scheduled = false
-  state.flush_active = false
+  state.send_queue = deps.send_queue.new({
+    vim = deps.vim,
+    retry_interval_ms = state.config.terminal.startup_retry_interval_ms,
+    process = function(item)
+      return process_pending_send_item(item)
+    end,
+  })
   deps.logger.set_level(state.config.log_level)
 
   deps.commands.register()
@@ -236,34 +242,14 @@ local function send_item_now(item, session, provider)
   return true
 end
 
-local flush_pending_sends
-
----@param delay_ms integer
----@return nil
-local function schedule_send_flush(delay_ms)
-  if state.flush_scheduled then
-    return
-  end
-
-  local deps = get_deps()
-  state.flush_scheduled = true
-  local run = function()
-    state.flush_scheduled = false
-    flush_pending_sends()
-  end
-
-  if type(deps.vim.defer_fn) == "function" then
-    deps.vim.defer_fn(run, delay_ms)
-    return
-  end
-  deps.vim.schedule(run)
-end
-
 ---@param item codex.PendingSend
----@return boolean sent
----@return boolean keep_retrying
-local function flush_pending_send_item(item)
+---@return "sent"|"retry"|"drop" outcome
+---@return string|nil err
+process_pending_send_item = function(item)
   local deps = get_deps()
+  local first_attempt = not item.has_attempted
+  item.has_attempted = true
+
   local session = deps.session_store.get_active()
   local provider = get_provider()
 
@@ -271,6 +257,9 @@ local function flush_pending_send_item(item)
     open_session(state.config.args, item.open_focus)
     session = deps.session_store.get_active()
     provider = get_provider()
+    if first_attempt then
+      item.opened_in_dispatch = true
+    end
   end
 
   if
@@ -290,43 +279,17 @@ local function flush_pending_send_item(item)
     local elapsed_ms = now_ms(deps) - item.created_at
     if elapsed_ms >= state.config.terminal.startup_timeout_ms then
       log_send_timeout(item)
-      return false, false
+      return "drop"
     end
-    return false, true
+    return "retry"
   end
 
   local ok, err = send_item_now(item, session, provider)
   if not ok then
     log_send_failure(item, err)
-    return false, false
+    return "drop", err
   end
-  return true, false
-end
-
-flush_pending_sends = function()
-  if state.flush_active then
-    return
-  end
-  state.flush_active = true
-
-  while true do
-    local item = state.pending_sends[1]
-    if not item then
-      break
-    end
-
-    local sent, keep_retrying = flush_pending_send_item(item)
-    if sent or not keep_retrying then
-      table.remove(state.pending_sends, 1)
-    else
-      break
-    end
-  end
-
-  state.flush_active = false
-  if #state.pending_sends > 0 then
-    schedule_send_flush(state.config.terminal.startup_retry_interval_ms)
-  end
+  return "sent"
 end
 
 ---@class codex.DispatchSendOpts
@@ -351,29 +314,9 @@ local function dispatch_send(text, opts)
     created_at = now_ms(deps),
     opened_in_dispatch = false,
     reopen_attempted = false,
+    has_attempted = false,
   }
-  local session = deps.session_store.get_active()
-  local provider = get_provider()
-
-  if not session or not session.alive then
-    open_session(state.config.args, item.open_focus)
-    session = deps.session_store.get_active()
-    provider = get_provider()
-    item.opened_in_dispatch = true
-  end
-
-  if session_is_ready(session, provider) then
-    local ok, err = send_item_now(item, session, provider)
-    if not ok then
-      log_send_failure(item, err)
-      return false, err
-    end
-    return true
-  end
-
-  table.insert(state.pending_sends, item)
-  flush_pending_sends()
-  return true
+  return state.send_queue:submit(item)
 end
 
 ---@param focus? boolean
@@ -391,14 +334,18 @@ function M.close()
   local deps = get_deps()
   local session = deps.session_store.get_active()
   if not session then
-    state.pending_sends = {}
+    if state.send_queue then
+      state.send_queue:reset()
+    end
     return
   end
 
   local provider = get_provider()
   provider.close(session.handle)
   deps.session_store.remove(session.id)
-  state.pending_sends = {}
+  if state.send_queue then
+    state.send_queue:reset()
+  end
 end
 
 ---@return nil

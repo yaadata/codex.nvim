@@ -26,6 +26,8 @@ lua/codex/init.lua        (public API, session lifecycle, DI container)
         │        ├── formatter.lua  (selection + mention payload formatting)
         │        ├── path.lua       (CWD-relative path normalization)
         │        └── selection.lua  (visual selection extraction)
+        ├──► runtime/
+        │        └── send_queue.lua (FIFO queue + retry timer for startup readiness)
         └──► state/
                  └── session_store.lua  (session registry, alive/dead tracking)
 ```
@@ -69,6 +71,9 @@ codex.nvim/
 │   │   │                            # on error.
 │   │   └── selection.lua            # Extracts visual selection from the current buffer.
 │   │                                # Resolves range via command args or visual marks.
+│   ├── runtime/
+│   │   └── send_queue.lua           # Startup-readiness send queue. Owns retry scheduling
+│   │                                # and FIFO flushing for deferred payload dispatch.
 │   └── state/
 │       └── session_store.lua        # In-memory session registry. Tracks sessions by ID
 │                                    # with alive/dead lifecycle, active session pointer,
@@ -162,10 +167,12 @@ local default_deps = {
   logger = require("codex.logger"),
   providers = require("codex.providers"),
   session_store = require("codex.state.session_store"),
+  send_queue = require("codex.runtime.send_queue"),
   commands = require("codex.nvim.commands"),
   keymaps = require("codex.nvim.keymaps"),
   formatter = require("codex.context.formatter"),
   selection = require("codex.context.selection"),
+  path = require("codex.context.path"),
   vim = vim,
 }
 ```
@@ -200,8 +207,10 @@ APIs that need an active session (`send`, `send_command`, `focus`,
 `:CodexAdd`) ensure the terminal is opened with focus before payload dispatch.
 If the provider handle is not yet ready, payloads are queued and retried on a
 timer (`terminal.startup_retry_interval_ms`) until ready or timeout
-(`terminal.startup_timeout_ms`). Providers apply a startup grace delay via
-`terminal.startup_grace_ms` before reporting readiness.
+(`terminal.startup_timeout_ms`). Queueing/scheduling is implemented in
+`runtime/send_queue.lua`, while `init.lua` owns session/open/reopen decisions.
+Providers apply a startup grace delay via `terminal.startup_grace_ms` before
+reporting readiness.
 
 ## Component Interaction
 
