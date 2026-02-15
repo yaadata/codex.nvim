@@ -9,15 +9,16 @@ repos:
           - --strict
           - --verbose
           - --scopes
-          - core,config,context,providers,state,project,nvim,codex
-          - feat
-          - fix
+          - codex,config,context,core,nvim,project,providers,state
+          - chore
+          - ci
           - docs
           - enhance
-          - chore
-          - test
+          - feat
+          - fix
           - refactor
           - release
+          - test
   - repo: local
     hooks:
       - id: codex-fmt-check

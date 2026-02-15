@@ -291,7 +291,7 @@ Use [conventional commits](https://www.conventionalcommits.org/):
 <type>(<scope>): <subject>
 ```
 
-**Types:** `feat`, `fix`, `docs`, `enhance`, `chore`, `test`, `refactor`,
+**Types:** `feat`, `fix`, `docs`, `enhance`, `chore`, `ci`, `test`, `refactor`,
 `release`
 
 **Scopes:** `core`, `config`, `context`, `providers`, `state`, `project`,
