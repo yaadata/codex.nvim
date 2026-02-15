@@ -9,8 +9,10 @@ bootstrap-test-deps:
 
 test: bootstrap-test-deps test-unit test-contract
 
-test-unit:
-	for f in tests/unit/*_spec.lua; do CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c "PlenaryBustedFile $f" -c 'qa'; done
+test-unit jobs="4":
+	find tests/unit -name '*_spec.lua' -print0 | \
+	xargs -0 -n1 -P "{{jobs}}" bash -cu \
+	'CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c "PlenaryBustedFile $1" -c "qa"' _
 
 test-contract:
 	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/contract/provider_contract_spec.lua' -c 'qa'
