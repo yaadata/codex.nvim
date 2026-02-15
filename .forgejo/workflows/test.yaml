@@ -18,14 +18,18 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Install Essentials
-        run: |
-          apt-get update && apt-get install -y nodejs npm wget git tar xz-utils
-
       - name: Checkout code
         uses: https://code.forgejo.org/actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Ensure required tools
+        shell: bash
+        run: |
+          bash ./.forgejo/scripts/ensure-tools.sh \
+            wget:wget \
+            git:git \
+            tar:tar
 
       - name: Install Neovim
         run: |
@@ -78,14 +82,25 @@ jobs:
     name: Contract Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Install Essentials
-        run: |
-          apt-get update && apt-get install -y nodejs npm wget git tar xz-utils
-
       - name: Checkout code
         uses: https://code.forgejo.org/actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Ensure required tools
+        shell: bash
+        run: |
+          bash ./.forgejo/scripts/ensure-tools.sh \
+            node:nodejs \
+            npm:npm \
+            wget:wget \
+            git:git \
+            tar:tar
+
+      - name: Verify Node.js
+        run: |
+          node --version
+          npm --version
 
       - name: Install Neovim
         run: |

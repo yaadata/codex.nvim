@@ -11,14 +11,18 @@ jobs:
     if: startsWith(github.event.head_commit.message, 'RELEASE:') || startsWith(github.event.head_commit.message, 'release:')
     runs-on: ubuntu-latest
     steps:
-      - name: Install Essentials
-        run: |
-          apt-get update && apt-get install -y nodejs npm wget curl
-
       - name: Checkout code
         uses: https://code.forgejo.org/actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Ensure required tools
+        shell: bash
+        run: |
+          bash ./.forgejo/scripts/ensure-tools.sh \
+            git:git \
+            curl:curl \
+            python3:python3
 
       - name: Extract tag from commit message
         id: extract_tag
