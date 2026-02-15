@@ -74,6 +74,14 @@ function M.register()
     nargs = 0,
   })
 
+  vim.api.nvim_create_user_command("CodexClearInput", function()
+    local codex = require("codex")
+    codex.clear_input()
+  end, {
+    desc = "Clear the active Codex terminal input line",
+    nargs = 0,
+  })
+
   ---@param opts codex.UserCommandOpts
   vim.api.nvim_create_user_command("CodexSend", function(opts)
     local codex = require("codex")

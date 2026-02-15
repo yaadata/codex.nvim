@@ -44,6 +44,7 @@
 
 ---@class codex.TerminalKeymapConfig
 ---@field toggle string|false
+---@field clear_input string|false
 ---@field close string|false
 ---@field nav codex.NavKeymapConfig|false
 

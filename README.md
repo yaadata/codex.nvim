@@ -56,6 +56,7 @@ require("codex").setup({
     },
     keymaps = {
       toggle = "<C-c>", -- terminal-mode toggle for Codex window
+      clear_input = "<M-BS>", -- clear the current terminal input line
       close = false, -- set a string (e.g. "<C-x>") to close Codex session
       nav = {
         left = "<C-h>", -- split windows only; set false to disable
@@ -90,6 +91,7 @@ require("codex").setup({
 - `:Codex!` force-opens and focuses the Codex terminal
 - `:CodexFocus` focuses the terminal (opens it if needed)
 - `:CodexClose` closes the active Codex terminal session
+- `:CodexClearInput` clears the active Codex terminal input line
 - `:CodexSend` sends selected lines with relative file path and line range
   - when a command range is provided, it takes precedence over visual marks
   - selection is linewise; visual columns are ignored (charwise/blockwise still
@@ -175,6 +177,7 @@ require("codex").setup({
   terminal = {
     keymaps = {
       toggle = "<C-c>",
+      clear_input = "<M-BS>",
       close = "<C-x>",
       nav = {
         left = "<A-h>",
@@ -187,6 +190,7 @@ require("codex").setup({
 })
 ```
 
+`terminal.keymaps.clear_input` clears the current terminal input line.
 `terminal.keymaps.close` triggers an intentional Codex session close.
 `terminal.auto_close` controls whether provider windows auto-close only after
 the terminal process exits. `terminal.keymaps.nav` is applied only for split
@@ -198,6 +202,7 @@ navigation keymaps, or set individual directions to `false`.
 - `require("codex").send_selection()`
 - `require("codex").add_file(path)`
 - `require("codex").close()`
+- `require("codex").clear_input()`
 - `require("codex").send_command(slash_cmd)`
 - `require("codex").resume(opts)`
 - `require("codex").set_model()`

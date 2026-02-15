@@ -32,6 +32,7 @@ M.defaults = {
     },
     keymaps = {
       toggle = "<C-c>",
+      clear_input = "<M-BS>",
       close = false,
       nav = {
         left = "<C-h>",
@@ -68,10 +69,11 @@ local valid_providers = { auto = true, snacks = true, native = true }
 local valid_windows = { vsplit = true, hsplit = true, float = true }
 local valid_terminal_keymap_actions = {
   toggle = true,
+  clear_input = true,
   close = true,
   nav = true,
 }
-local valid_terminal_keymap_action_list = "toggle, close, nav"
+local valid_terminal_keymap_action_list = "toggle, clear_input, close, nav"
 local valid_nav_keymap_actions = { left = true, down = true, up = true, right = true }
 local valid_nav_keymap_action_list = "left, down, up, right"
 local valid_keymap_actions = {

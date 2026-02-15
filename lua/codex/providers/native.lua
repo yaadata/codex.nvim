@@ -153,6 +153,7 @@ end
 local function set_terminal_keymaps(bufnr, keymaps, window_type)
   local maps = vim.tbl_deep_extend("force", {
     toggle = "<C-c>",
+    clear_input = "<M-BS>",
     close = false,
     nav = {
       left = "<C-h>",
@@ -170,6 +171,17 @@ local function set_terminal_keymaps(bufnr, keymaps, window_type)
       silent = true,
       nowait = true,
       desc = "Codex: Toggle terminal",
+    })
+  end
+
+  if maps.clear_input then
+    vim.keymap.set("t", maps.clear_input, function()
+      require("codex").clear_input()
+    end, {
+      buffer = bufnr,
+      silent = true,
+      nowait = true,
+      desc = "Codex: Clear input",
     })
   end
 

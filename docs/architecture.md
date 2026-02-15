@@ -294,7 +294,7 @@ Key types:
 | `codex.VsplitConfig`         | class | Vertical split options (`side`, `size_pct`)                   |
 | `codex.HsplitConfig`         | class | Horizontal split options (`side`, `size_pct`)                 |
 | `codex.FloatConfig`          | class | Floating window options (size, border, title, title_pos)      |
-| `codex.TerminalKeymapConfig` | class | Terminal-local keymaps (`toggle`, `close`)                    |
+| `codex.TerminalKeymapConfig` | class | Terminal-local keymaps (`toggle`, `clear_input`, `close`)     |
 | `codex.KeymapConfig`         | class | Keymap action table (`string` or `false` per action)          |
 | `codex.ProviderName`         | alias | Union of valid provider name strings                          |
 | `codex.LogLevel`             | alias | Union of log level strings                                    |
@@ -325,4 +325,4 @@ own internal handle structure; the core never inspects handle contents.
    `tests/contract/provider_contract_spec.lua` so the contract tests cover it.
 7. If the provider accepts options, add a default entry under
    `terminal.provider_opts` in `config.lua` and honor shared
-   `terminal.keymaps` semantics for terminal-local toggle/close mappings.
+   `terminal.keymaps` semantics for terminal-local toggle/clear/close mappings.

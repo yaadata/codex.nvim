@@ -30,6 +30,7 @@ describe("codex.nvim command registration", function()
       assert.is_not_nil(registered.Codex)
       assert.is_not_nil(registered.CodexFocus)
       assert.is_not_nil(registered.CodexClose)
+      assert.is_not_nil(registered.CodexClearInput)
       assert.is_not_nil(registered.CodexSend)
       assert.is_not_nil(registered.CodexAdd)
       assert.is_not_nil(registered.CodexResume)
@@ -55,6 +56,12 @@ describe("codex.nvim command registration", function()
 
       assert.equals("Close the active Codex terminal session", registered.CodexClose.opts.desc)
       assert.equals(0, registered.CodexClose.opts.nargs)
+
+      assert.equals(
+        "Clear the active Codex terminal input line",
+        registered.CodexClearInput.opts.desc
+      )
+      assert.equals(0, registered.CodexClearInput.opts.nargs)
 
       assert.equals(
         "Send visual selection to Codex with file path and line range",
@@ -171,6 +178,23 @@ describe("codex.nvim command registration", function()
       registered.CodexClose.callback()
 
       assert.equals(1, close_calls)
+    end)
+  end)
+
+  it("dispatches :CodexClearInput to clear_input", function()
+    with_stubbed_command_registration(function(registered)
+      local clear_input_calls = 0
+
+      package.loaded["codex"] = {
+        clear_input = function()
+          clear_input_calls = clear_input_calls + 1
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      registered.CodexClearInput.callback()
+
+      assert.equals(1, clear_input_calls)
     end)
   end)
 

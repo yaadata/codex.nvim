@@ -112,7 +112,7 @@ describe("codex.providers.snacks", function()
       assert.equals("TermClose", autocmds[1].event)
       assert.equals(42, autocmds[1].spec.buffer)
       assert.is_true(autocmds[1].spec.once)
-      assert.equals(1, #keymap_set_calls)
+      assert.equals(2, #keymap_set_calls)
       assert.equals("t", keymap_set_calls[1].mode)
       assert.equals("<C-c>", keymap_set_calls[1].lhs)
       assert.is_function(keymap_set_calls[1].rhs)
@@ -120,6 +120,9 @@ describe("codex.providers.snacks", function()
       assert.is_true(keymap_set_calls[1].opts.silent)
       assert.is_true(keymap_set_calls[1].opts.nowait)
       assert.equals("Codex: Toggle terminal", keymap_set_calls[1].opts.desc)
+      assert.equals("t", keymap_set_calls[2].mode)
+      assert.equals("<M-BS>", keymap_set_calls[2].lhs)
+      assert.equals("Codex: Clear input", keymap_set_calls[2].opts.desc)
 
       autocmds[1].spec.callback()
       assert.equals(1, #exited)
@@ -144,15 +147,15 @@ describe("codex.providers.snacks", function()
         },
       }, true, nil)
 
-      assert.equals(5, #keymap_set_calls)
-      assert.equals("<C-h>", keymap_set_calls[2].lhs)
-      assert.equals("<C-\\><C-n><C-w>h", keymap_set_calls[2].rhs)
-      assert.equals("<C-j>", keymap_set_calls[3].lhs)
-      assert.equals("<C-\\><C-n><C-w>j", keymap_set_calls[3].rhs)
-      assert.equals("<C-k>", keymap_set_calls[4].lhs)
-      assert.equals("<C-\\><C-n><C-w>k", keymap_set_calls[4].rhs)
-      assert.equals("<C-l>", keymap_set_calls[5].lhs)
-      assert.equals("<C-\\><C-n><C-w>l", keymap_set_calls[5].rhs)
+      assert.equals(6, #keymap_set_calls)
+      assert.equals("<C-h>", keymap_set_calls[3].lhs)
+      assert.equals("<C-\\><C-n><C-w>h", keymap_set_calls[3].rhs)
+      assert.equals("<C-j>", keymap_set_calls[4].lhs)
+      assert.equals("<C-\\><C-n><C-w>j", keymap_set_calls[4].rhs)
+      assert.equals("<C-k>", keymap_set_calls[5].lhs)
+      assert.equals("<C-\\><C-n><C-w>k", keymap_set_calls[5].rhs)
+      assert.equals("<C-l>", keymap_set_calls[6].lhs)
+      assert.equals("<C-\\><C-n><C-w>l", keymap_set_calls[6].rhs)
     end)
   end)
 
@@ -176,8 +179,9 @@ describe("codex.providers.snacks", function()
         },
       }, true, nil)
 
-      assert.equals(1, #keymap_set_calls)
+      assert.equals(2, #keymap_set_calls)
       assert.equals("<C-c>", keymap_set_calls[1].lhs)
+      assert.equals("<M-BS>", keymap_set_calls[2].lhs)
 
       local forbidden = { ["<C-h>"] = true, ["<C-j>"] = true, ["<C-k>"] = true, ["<C-l>"] = true }
       for _, map in ipairs(keymap_set_calls) do
@@ -206,13 +210,16 @@ describe("codex.providers.snacks", function()
         },
       }, true, nil)
 
-      assert.equals(2, #keymap_set_calls)
+      assert.equals(3, #keymap_set_calls)
       assert.equals("t", keymap_set_calls[1].mode)
       assert.equals("<C-t>", keymap_set_calls[1].lhs)
       assert.equals("Codex: Toggle terminal", keymap_set_calls[1].opts.desc)
       assert.equals("t", keymap_set_calls[2].mode)
-      assert.equals("<C-x>", keymap_set_calls[2].lhs)
-      assert.equals("Codex: Close terminal", keymap_set_calls[2].opts.desc)
+      assert.equals("<M-BS>", keymap_set_calls[2].lhs)
+      assert.equals("Codex: Clear input", keymap_set_calls[2].opts.desc)
+      assert.equals("t", keymap_set_calls[3].mode)
+      assert.equals("<C-x>", keymap_set_calls[3].lhs)
+      assert.equals("Codex: Close terminal", keymap_set_calls[3].opts.desc)
     end)
   end)
 
@@ -242,11 +249,11 @@ describe("codex.providers.snacks", function()
         },
       }, true, nil)
 
-      assert.equals(5, #keymap_set_calls)
-      assert.equals("<A-h>", keymap_set_calls[2].lhs)
-      assert.equals("<A-j>", keymap_set_calls[3].lhs)
-      assert.equals("<A-k>", keymap_set_calls[4].lhs)
-      assert.equals("<A-l>", keymap_set_calls[5].lhs)
+      assert.equals(6, #keymap_set_calls)
+      assert.equals("<A-h>", keymap_set_calls[3].lhs)
+      assert.equals("<A-j>", keymap_set_calls[4].lhs)
+      assert.equals("<A-k>", keymap_set_calls[5].lhs)
+      assert.equals("<A-l>", keymap_set_calls[6].lhs)
     end)
   end)
 
@@ -271,8 +278,9 @@ describe("codex.providers.snacks", function()
         },
       }, true, nil)
 
-      assert.equals(1, #keymap_set_calls)
+      assert.equals(2, #keymap_set_calls)
       assert.equals("<C-c>", keymap_set_calls[1].lhs)
+      assert.equals("<M-BS>", keymap_set_calls[2].lhs)
     end)
   end)
 
@@ -302,13 +310,54 @@ describe("codex.providers.snacks", function()
         },
       }, true, nil)
 
-      local close_map = keymap_set_calls[2]
+      local close_map = keymap_set_calls[3]
       close_map.rhs()
 
       assert.equals(1, #scheduled)
       assert.is_function(scheduled[1])
 
       vim.schedule = original_schedule
+    end)
+  end)
+
+  it("clear input keymap calls codex.clear_input directly", function()
+    with_stubbed_vim_api(function(_, keymap_set_calls)
+      package.loaded["snacks"] = {
+        terminal = function()
+          return { buf = 42 }
+        end,
+      }
+
+      local scheduled = {}
+      local original_schedule = vim.schedule
+      vim.schedule = function(cb)
+        table.insert(scheduled, cb)
+      end
+      local clear_input_calls = 0
+      package.loaded["codex"] = {
+        clear_input = function()
+          clear_input_calls = clear_input_calls + 1
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open(
+        "codex",
+        {},
+        {},
+        { terminal = { startup = { grace_ms = 0 }, provider_opts = {} } },
+        true,
+        nil
+      )
+
+      local clear_map = keymap_set_calls[2]
+      clear_map.rhs()
+
+      assert.equals(1, clear_input_calls)
+      assert.equals(0, #scheduled)
+
+      vim.schedule = original_schedule
+      package.loaded["codex"] = nil
     end)
   end)
 
@@ -331,7 +380,7 @@ describe("codex.providers.snacks", function()
       )
 
       assert.equals(0, #autocmds)
-      assert.equals(1, #keymap_set_calls)
+      assert.equals(2, #keymap_set_calls)
     end)
   end)
 

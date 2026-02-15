@@ -30,6 +30,7 @@ describe("codex.config", function()
       assert.equals(50, config.defaults.terminal.startup.retry_interval_ms)
       assert.equals(400, config.defaults.terminal.startup.grace_ms)
       assert.equals("<C-c>", config.defaults.terminal.keymaps.toggle)
+      assert.equals("<M-BS>", config.defaults.terminal.keymaps.clear_input)
       assert.is_false(config.defaults.terminal.keymaps.close)
       assert.equals("<C-h>", config.defaults.terminal.keymaps.nav.left)
       assert.equals("<C-j>", config.defaults.terminal.keymaps.nav.down)
@@ -78,6 +79,7 @@ describe("codex.config", function()
       assert.equals("bottom", cfg.terminal.hsplit.side)
       assert.equals(50, cfg.terminal.hsplit.size_pct)
       assert.equals("<C-c>", cfg.terminal.keymaps.toggle)
+      assert.equals("<M-BS>", cfg.terminal.keymaps.clear_input)
       assert.equals("<C-d>", cfg.terminal.keymaps.close)
       assert.equals("<C-h>", cfg.terminal.keymaps.nav.left)
       assert.equals("<C-j>", cfg.terminal.keymaps.nav.down)
@@ -252,15 +254,18 @@ describe("codex.config", function()
     end)
 
     it("rejects unknown terminal keymap actions", function()
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              hide = "<C-x>",
+      assert.has_error(
+        function()
+          config.apply({
+            terminal = {
+              keymaps = {
+                hide = "<C-x>",
+              },
             },
-          },
-        })
-      end, 'codex: invalid terminal.keymaps action "hide", expected one of: toggle, close, nav')
+          })
+        end,
+        'codex: invalid terminal.keymaps action "hide", expected one of: toggle, clear_input, close, nav'
+      )
     end)
 
     it("rejects unknown terminal nav keymap actions", function()

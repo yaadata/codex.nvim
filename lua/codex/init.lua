@@ -401,6 +401,22 @@ function M.send(text)
   })
 end
 
+---@return boolean ok
+---@return string|nil err
+function M.clear_input()
+  ensure_setup()
+  local deps = get_deps()
+  local session = deps.session_store.get_active()
+  local provider = get_provider()
+
+  if not session_is_alive(session, provider) then
+    return false, "no active Codex session"
+  end
+
+  local clear_sequence = deps.vim.api.nvim_replace_termcodes("<C-c>", true, false, true)
+  return provider.send(session.handle, clear_sequence)
+end
+
 ---@param slash_cmd string Slash command name with or without a leading `/`.
 ---@return codex.SendResult ok True when command payload is sent.
 ---@return string|nil err

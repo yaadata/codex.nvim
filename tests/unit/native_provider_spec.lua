@@ -328,15 +328,20 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(5, #state.keymap_set_calls)
-      local map = state.keymap_set_calls[1]
-      assert.equals("t", map.mode)
-      assert.equals("<C-c>", map.lhs)
-      assert.is_function(map.rhs)
-      assert.equals(2, map.opts.buffer)
-      assert.is_true(map.opts.silent)
-      assert.is_true(map.opts.nowait)
-      assert.equals("Codex: Toggle terminal", map.opts.desc)
+      assert.equals(6, #state.keymap_set_calls)
+      local toggle_map = state.keymap_set_calls[1]
+      local clear_map = state.keymap_set_calls[2]
+      assert.equals("t", toggle_map.mode)
+      assert.equals("<C-c>", toggle_map.lhs)
+      assert.is_function(toggle_map.rhs)
+      assert.equals(2, toggle_map.opts.buffer)
+      assert.is_true(toggle_map.opts.silent)
+      assert.is_true(toggle_map.opts.nowait)
+      assert.equals("Codex: Toggle terminal", toggle_map.opts.desc)
+      assert.equals("t", clear_map.mode)
+      assert.equals("<M-BS>", clear_map.lhs)
+      assert.is_function(clear_map.rhs)
+      assert.equals("Codex: Clear input", clear_map.opts.desc)
     end)
   end)
 
@@ -354,12 +359,16 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(6, #state.keymap_set_calls)
+      assert.equals(7, #state.keymap_set_calls)
       local toggle_map = state.keymap_set_calls[1]
-      local close_map = state.keymap_set_calls[2]
+      local clear_map = state.keymap_set_calls[2]
+      local close_map = state.keymap_set_calls[3]
       assert.equals("t", toggle_map.mode)
       assert.equals("<C-t>", toggle_map.lhs)
       assert.equals("Codex: Toggle terminal", toggle_map.opts.desc)
+      assert.equals("t", clear_map.mode)
+      assert.equals("<M-BS>", clear_map.lhs)
+      assert.equals("Codex: Clear input", clear_map.opts.desc)
       assert.equals("t", close_map.mode)
       assert.equals("<C-x>", close_map.lhs)
       assert.equals("Codex: Close terminal", close_map.opts.desc)
@@ -386,13 +395,41 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      local close_map = state.keymap_set_calls[2]
+      local close_map = state.keymap_set_calls[3]
       close_map.rhs()
 
       assert.equals(1, #scheduled)
       assert.is_function(scheduled[1])
 
       vim.schedule = original_schedule
+    end)
+  end)
+
+  it("clear input keymap calls codex.clear_input directly", function()
+    with_stubbed_native_env(function(state)
+      local scheduled = {}
+      local original_schedule = vim.schedule
+      vim.schedule = function(cb)
+        table.insert(scheduled, cb)
+      end
+      local clear_input_calls = 0
+      package.loaded["codex"] = {
+        clear_input = function()
+          clear_input_calls = clear_input_calls + 1
+        end,
+      }
+
+      local provider = require("codex.providers.native")
+      provider.open("codex", {}, {}, make_config(), false)
+
+      local clear_map = state.keymap_set_calls[2]
+      clear_map.rhs()
+
+      assert.equals(1, clear_input_calls)
+      assert.equals(0, #scheduled)
+
+      vim.schedule = original_schedule
+      package.loaded["codex"] = nil
     end)
   end)
 
@@ -407,15 +444,15 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(5, #state.keymap_set_calls)
-      assert.equals("<C-h>", state.keymap_set_calls[2].lhs)
-      assert.equals("<C-\\><C-n><C-w>h", state.keymap_set_calls[2].rhs)
-      assert.equals("<C-j>", state.keymap_set_calls[3].lhs)
-      assert.equals("<C-\\><C-n><C-w>j", state.keymap_set_calls[3].rhs)
-      assert.equals("<C-k>", state.keymap_set_calls[4].lhs)
-      assert.equals("<C-\\><C-n><C-w>k", state.keymap_set_calls[4].rhs)
-      assert.equals("<C-l>", state.keymap_set_calls[5].lhs)
-      assert.equals("<C-\\><C-n><C-w>l", state.keymap_set_calls[5].rhs)
+      assert.equals(6, #state.keymap_set_calls)
+      assert.equals("<C-h>", state.keymap_set_calls[3].lhs)
+      assert.equals("<C-\\><C-n><C-w>h", state.keymap_set_calls[3].rhs)
+      assert.equals("<C-j>", state.keymap_set_calls[4].lhs)
+      assert.equals("<C-\\><C-n><C-w>j", state.keymap_set_calls[4].rhs)
+      assert.equals("<C-k>", state.keymap_set_calls[5].lhs)
+      assert.equals("<C-\\><C-n><C-w>k", state.keymap_set_calls[5].rhs)
+      assert.equals("<C-l>", state.keymap_set_calls[6].lhs)
+      assert.equals("<C-\\><C-n><C-w>l", state.keymap_set_calls[6].rhs)
     end)
   end)
 
@@ -430,7 +467,7 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(5, #state.keymap_set_calls)
+      assert.equals(6, #state.keymap_set_calls)
     end)
   end)
 
@@ -445,8 +482,9 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(1, #state.keymap_set_calls)
+      assert.equals(2, #state.keymap_set_calls)
       assert.equals("<C-c>", state.keymap_set_calls[1].lhs)
+      assert.equals("<M-BS>", state.keymap_set_calls[2].lhs)
 
       local forbidden = { ["<C-h>"] = true, ["<C-j>"] = true, ["<C-k>"] = true, ["<C-l>"] = true }
       for _, map in ipairs(state.keymap_set_calls) do
@@ -473,11 +511,11 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(5, #state.keymap_set_calls)
-      assert.equals("<A-h>", state.keymap_set_calls[2].lhs)
-      assert.equals("<A-j>", state.keymap_set_calls[3].lhs)
-      assert.equals("<A-k>", state.keymap_set_calls[4].lhs)
-      assert.equals("<A-l>", state.keymap_set_calls[5].lhs)
+      assert.equals(6, #state.keymap_set_calls)
+      assert.equals("<A-h>", state.keymap_set_calls[3].lhs)
+      assert.equals("<A-j>", state.keymap_set_calls[4].lhs)
+      assert.equals("<A-k>", state.keymap_set_calls[5].lhs)
+      assert.equals("<A-l>", state.keymap_set_calls[6].lhs)
     end)
   end)
 
@@ -494,8 +532,9 @@ describe("codex.providers.native", function()
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(1, #state.keymap_set_calls)
+      assert.equals(2, #state.keymap_set_calls)
       assert.equals("<C-c>", state.keymap_set_calls[1].lhs)
+      assert.equals("<M-BS>", state.keymap_set_calls[2].lhs)
     end)
   end)
 

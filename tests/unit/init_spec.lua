@@ -246,6 +246,7 @@ end
 local function make_fake_vim()
   local augroups = {}
   local autocmds = {}
+  local replace_termcodes_calls = {}
   local scheduled = {}
   local deferred = {}
   local runtime = { now = 0 }
@@ -277,6 +278,15 @@ local function make_fake_vim()
       end,
       nvim_create_autocmd = function(event, spec)
         table.insert(autocmds, { event = event, spec = spec })
+      end,
+      nvim_replace_termcodes = function(str, from_part, do_lt, special)
+        table.insert(replace_termcodes_calls, {
+          str = str,
+          from_part = from_part,
+          do_lt = do_lt,
+          special = special,
+        })
+        return "<termcoded:" .. str .. ">"
       end,
     },
     fn = {
@@ -314,6 +324,7 @@ local function make_fake_vim()
     deepcopy = vim.deepcopy,
     _augroups = augroups,
     _autocmds = autocmds,
+    _replace_termcodes_calls = replace_termcodes_calls,
     _scheduled = scheduled,
     _deferred = deferred,
     _runtime = runtime,
@@ -404,6 +415,13 @@ describe("codex.init public api", function()
     local codex = require("codex")
     assert.has_error(function()
       codex.open()
+    end, "codex.nvim: call require('codex').setup() first")
+  end)
+
+  it("requires setup before clear_input", function()
+    local codex = require("codex")
+    assert.has_error(function()
+      codex.clear_input()
     end, "codex.nvim: call require('codex').setup() first")
   end)
 
@@ -559,6 +577,65 @@ describe("codex.init public api", function()
     assert.equals(1, #env.provider.toggle_calls)
     assert.same(active_handle, env.provider.toggle_calls[1].handle)
     assert.same(replacement_handle, env.store.get_active().handle)
+  end)
+
+  it("clear_input sends a translated Ctrl-C sequence to the active session", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    local active_handle = env.store.get_active().handle
+
+    local ok, err = env.codex.clear_input()
+
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.equals(1, #env.fake_vim._replace_termcodes_calls)
+    assert.same({
+      str = "<C-c>",
+      from_part = true,
+      do_lt = false,
+      special = true,
+    }, env.fake_vim._replace_termcodes_calls[1])
+    assert.equals(1, #env.provider.send_calls)
+    assert.same(active_handle, env.provider.send_calls[1].handle)
+    assert.equals("<termcoded:<C-c>>", env.provider.send_calls[1].text)
+  end)
+
+  it("clear_input returns false when there is no active session", function()
+    local env = setup_with_deps()
+
+    local ok, err = env.codex.clear_input()
+
+    assert.is_false(ok)
+    assert.equals("no active Codex session", err)
+    assert.equals(0, #env.provider.send_calls)
+    assert.equals(0, #env.fake_vim._replace_termcodes_calls)
+  end)
+
+  it("clear_input returns false when the active session handle is stale", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.store.get_active().handle.alive = false
+
+    local ok, err = env.codex.clear_input()
+
+    assert.is_false(ok)
+    assert.equals("no active Codex session", err)
+    assert.equals(0, #env.provider.send_calls)
+    assert.equals(0, #env.fake_vim._replace_termcodes_calls)
+  end)
+
+  it("clear_input returns provider send errors", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.send_ok = false
+    env.provider.send_err = "boom"
+
+    local ok, err = env.codex.clear_input()
+
+    assert.is_false(ok)
+    assert.equals("boom", err)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-c>>", env.provider.send_calls[1].text)
   end)
 
   it("send_command opens with focus when no active session", function()
