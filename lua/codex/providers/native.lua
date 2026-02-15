@@ -221,11 +221,12 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local prev_win = vim.api.nvim_get_current_win()
   local bufnr, winid = create_window(term_config)
 
+  local startup = term_config.startup or {}
   local handle = {
     bufnr = bufnr,
     winid = winid,
     jobid = nil,
-    ready_at_ms = now_ms() + (term_config.startup_grace_ms or 0),
+    ready_at_ms = now_ms() + (startup.grace_ms or 0),
   }
   local termopen_opts = {
     cwd = cwd,

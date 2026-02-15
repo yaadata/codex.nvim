@@ -603,8 +603,7 @@ describe("codex.init public api", function()
   it("send_command queues when terminal is starting and flushes later", function()
     local env = setup_with_deps({
       terminal = {
-        startup_timeout_ms = 200,
-        startup_retry_interval_ms = 50,
+        startup = { timeout_ms = 200, retry_interval_ms = 50 },
       },
     })
     env.provider.is_alive_fn = function(handle)
@@ -633,8 +632,7 @@ describe("codex.init public api", function()
   it("send_command waits for provider readiness even when process is alive", function()
     local env = setup_with_deps({
       terminal = {
-        startup_timeout_ms = 300,
-        startup_retry_interval_ms = 50,
+        startup = { timeout_ms = 300, retry_interval_ms = 50 },
       },
     })
     env.provider.is_alive_fn = function(handle)
@@ -826,8 +824,7 @@ describe("codex.init public api", function()
   it("send_selection waits for startup readiness before sending", function()
     local env = setup_with_deps({
       terminal = {
-        startup_timeout_ms = 200,
-        startup_retry_interval_ms = 50,
+        startup = { timeout_ms = 200, retry_interval_ms = 50 },
       },
     })
     env.provider.is_alive_fn = function(handle)
@@ -850,8 +847,7 @@ describe("codex.init public api", function()
   it("send_selection drops queued payload after startup timeout", function()
     local env = setup_with_deps({
       terminal = {
-        startup_timeout_ms = 120,
-        startup_retry_interval_ms = 50,
+        startup = { timeout_ms = 120, retry_interval_ms = 50 },
       },
     })
     env.provider.is_alive_fn = function()
@@ -909,8 +905,7 @@ describe("codex.init public api", function()
   it("queued payloads flush in FIFO order once startup readiness is reached", function()
     local env = setup_with_deps({
       terminal = {
-        startup_timeout_ms = 200,
-        startup_retry_interval_ms = 50,
+        startup = { timeout_ms = 200, retry_interval_ms = 50 },
       },
     })
     env.provider.is_alive_fn = function(handle)

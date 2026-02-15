@@ -19,6 +19,11 @@ local function make_config(overrides)
         title_pos = "center",
       },
       auto_close = false,
+      startup = {
+        timeout_ms = 2000,
+        retry_interval_ms = 50,
+        grace_ms = 400,
+      },
       keymaps = {
         toggle = "<C-c>",
         close = false,
@@ -691,6 +696,22 @@ describe("codex.providers.native", function()
       assert.equals(state.open_win_calls[1].winid, handle.winid)
       assert.equals(handle.winid, state.current_win)
       assert.equals(1, state.startinsert_calls)
+    end)
+  end)
+
+  it("handles missing terminal.startup without error", function()
+    with_stubbed_native_env(function()
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      cfg.terminal.startup = nil
+
+      local handle = provider.open("codex", {}, {}, cfg, false)
+      assert.is_not_nil(handle)
+      assert.is_number(handle.ready_at_ms)
+
+      local uv = vim.uv or vim.loop
+      local expected = (uv and type(uv.now) == "function") and uv.now() or 0
+      assert.equals(expected, handle.ready_at_ms)
     end)
   end)
 

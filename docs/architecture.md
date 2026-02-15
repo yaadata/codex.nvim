@@ -206,10 +206,10 @@ APIs that need an active session (`send`, `send_command`, `focus`,
 `send` API opens without focus, while command-facing flows (`:CodexSend`,
 `:CodexAdd`) ensure the terminal is opened with focus before payload dispatch.
 If the provider handle is not yet ready, payloads are queued and retried on a
-timer (`terminal.startup_retry_interval_ms`) until ready or timeout
-(`terminal.startup_timeout_ms`). Queueing/scheduling is implemented in
+timer (`terminal.startup.retry_interval_ms`) until ready or timeout
+(`terminal.startup.timeout_ms`). Queueing/scheduling is implemented in
 `runtime/send_queue.lua`, while `init.lua` owns session/open/reopen decisions.
-Providers apply a startup grace delay via `terminal.startup_grace_ms` before
+Providers apply a startup grace delay via `terminal.startup.grace_ms` before
 reporting readiness.
 
 ## Component Interaction

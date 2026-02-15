@@ -31,6 +31,11 @@
 ---@field title string
 ---@field title_pos "left"|"center"|"right"
 
+---@class codex.StartupConfig
+---@field timeout_ms number
+---@field retry_interval_ms number
+---@field grace_ms number
+
 ---@class codex.NavKeymapConfig
 ---@field left string|false
 ---@field down string|false
@@ -64,9 +69,7 @@
 ---@field hsplit codex.HsplitConfig
 ---@field float codex.FloatConfig
 ---@field auto_close boolean
----@field startup_timeout_ms number
----@field startup_retry_interval_ms number
----@field startup_grace_ms number
+---@field startup codex.StartupConfig
 ---@field keymaps codex.TerminalKeymapConfig
 ---@field provider_opts table<string, table>
 

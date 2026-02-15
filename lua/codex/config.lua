@@ -25,9 +25,11 @@ M.defaults = {
       title_pos = "center",
     },
     auto_close = false,
-    startup_timeout_ms = 2000,
-    startup_retry_interval_ms = 50,
-    startup_grace_ms = 400,
+    startup = {
+      timeout_ms = 2000,
+      retry_interval_ms = 50,
+      grace_ms = 400,
+    },
     keymaps = {
       toggle = "<C-c>",
       close = false,
@@ -90,6 +92,18 @@ local valid_keymap_actions = {
 local valid_keymap_action_list =
   "toggle, open, focus, close, send, add, resume, model, status, permissions, compact, review, diff"
 
+---@param source table
+---@param known table
+---@param prefix string
+---@param unknown string[]
+local function collect_unknown_keys(source, known, prefix, unknown)
+  for key in pairs(source) do
+    if known[key] == nil then
+      table.insert(unknown, prefix .. "." .. key)
+    end
+  end
+end
+
 ---@param config codex.Config
 ---@return true
 function M.validate(config)
@@ -102,6 +116,26 @@ function M.validate(config)
     log_level = { config.log_level, "string" },
     keymaps_force = { config.keymaps_force, "boolean" },
   })
+
+  local unknown = {}
+  collect_unknown_keys(config.terminal, M.defaults.terminal, "terminal", unknown)
+
+  local nested_terminal_tables = {
+    { key = "vsplit", defaults = M.defaults.terminal.vsplit },
+    { key = "hsplit", defaults = M.defaults.terminal.hsplit },
+    { key = "float", defaults = M.defaults.terminal.float },
+    { key = "startup", defaults = M.defaults.terminal.startup },
+  }
+  for _, entry in ipairs(nested_terminal_tables) do
+    local value = config.terminal[entry.key]
+    if type(value) == "table" then
+      collect_unknown_keys(value, entry.defaults, "terminal." .. entry.key, unknown)
+    end
+  end
+  if #unknown > 0 then
+    table.sort(unknown)
+    error("codex: unknown terminal config key(s): " .. table.concat(unknown, ", "))
+  end
 
   for key, value in pairs(config.env) do
     if type(key) ~= "string" then
@@ -209,9 +243,10 @@ function M.validate(config)
     ["terminal.float.border"] = { config.terminal.float.border, "string" },
     ["terminal.float.title"] = { config.terminal.float.title, "string" },
     ["terminal.float.title_pos"] = { config.terminal.float.title_pos, "string" },
-    ["terminal.startup_timeout_ms"] = { config.terminal.startup_timeout_ms, "number" },
-    ["terminal.startup_retry_interval_ms"] = { config.terminal.startup_retry_interval_ms, "number" },
-    ["terminal.startup_grace_ms"] = { config.terminal.startup_grace_ms, "number" },
+    ["terminal.startup"] = { config.terminal.startup, "table" },
+    ["terminal.startup.timeout_ms"] = { config.terminal.startup.timeout_ms, "number" },
+    ["terminal.startup.retry_interval_ms"] = { config.terminal.startup.retry_interval_ms, "number" },
+    ["terminal.startup.grace_ms"] = { config.terminal.startup.grace_ms, "number" },
   })
 
   if config.terminal.vsplit.side ~= "left" and config.terminal.vsplit.side ~= "right" then
@@ -246,16 +281,16 @@ function M.validate(config)
     error("codex: terminal.float.title_pos must be 'left', 'center', or 'right'")
   end
 
-  if config.terminal.startup_timeout_ms < 1 then
-    error("codex: terminal.startup_timeout_ms must be >= 1")
+  if config.terminal.startup.timeout_ms < 1 then
+    error("codex: terminal.startup.timeout_ms must be >= 1")
   end
 
-  if config.terminal.startup_retry_interval_ms < 1 then
-    error("codex: terminal.startup_retry_interval_ms must be >= 1")
+  if config.terminal.startup.retry_interval_ms < 1 then
+    error("codex: terminal.startup.retry_interval_ms must be >= 1")
   end
 
-  if config.terminal.startup_grace_ms < 0 then
-    error("codex: terminal.startup_grace_ms must be >= 0")
+  if config.terminal.startup.grace_ms < 0 then
+    error("codex: terminal.startup.grace_ms must be >= 0")
   end
 
   return true

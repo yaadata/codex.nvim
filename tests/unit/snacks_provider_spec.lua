@@ -101,7 +101,7 @@ describe("codex.providers.snacks", function()
         "codex",
         {},
         {},
-        { terminal = { provider_opts = {} } },
+        { terminal = { startup = { grace_ms = 0 }, provider_opts = {} } },
         true,
         function(cb_handle)
           table.insert(exited, cb_handle)
@@ -139,6 +139,7 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           window = "vsplit",
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, true, nil)
@@ -170,6 +171,7 @@ describe("codex.providers.snacks", function()
           float = {
             border = "rounded",
           },
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, true, nil)
@@ -199,6 +201,7 @@ describe("codex.providers.snacks", function()
             toggle = "<C-t>",
             close = "<C-x>",
           },
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, true, nil)
@@ -234,6 +237,7 @@ describe("codex.providers.snacks", function()
               right = "<A-l>",
             },
           },
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, true, nil)
@@ -262,6 +266,7 @@ describe("codex.providers.snacks", function()
           keymaps = {
             nav = false,
           },
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, true, nil)
@@ -292,6 +297,7 @@ describe("codex.providers.snacks", function()
             toggle = "<C-t>",
             close = "<C-x>",
           },
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, true, nil)
@@ -315,7 +321,14 @@ describe("codex.providers.snacks", function()
       }
 
       local provider = require("codex.providers.snacks")
-      provider.open("codex", {}, {}, { terminal = { provider_opts = {} } }, true, nil)
+      provider.open(
+        "codex",
+        {},
+        {},
+        { terminal = { startup = { grace_ms = 0 }, provider_opts = {} } },
+        true,
+        nil
+      )
 
       assert.equals(0, #autocmds)
       assert.equals(1, #keymap_set_calls)
@@ -331,7 +344,14 @@ describe("codex.providers.snacks", function()
       }
 
       local provider = require("codex.providers.snacks")
-      provider.open("codex", {}, {}, { terminal = { provider_opts = {} } }, true, nil)
+      provider.open(
+        "codex",
+        {},
+        {},
+        { terminal = { startup = { grace_ms = 0 }, provider_opts = {} } },
+        true,
+        nil
+      )
 
       assert.equals(0, #keymap_set_calls)
     end)
@@ -445,7 +465,7 @@ describe("codex.providers.snacks", function()
         "codex",
         {},
         {},
-        { terminal = { provider_opts = {} } }
+        { terminal = { startup = { grace_ms = 0 }, provider_opts = {} } }
       )
 
       assert.equals(0, stale_toggle_calls)
@@ -469,6 +489,7 @@ describe("codex.providers.snacks", function()
       provider.open("codex", { "--foo", "bar" }, { CODEX_TEST = "1" }, {
         cwd = "/tmp/work",
         terminal = {
+          startup = { grace_ms = 0 },
           provider_opts = {
             snacks = {
               win = { position = "float" },
@@ -500,6 +521,7 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           auto_close = true,
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, false, nil)
@@ -526,6 +548,7 @@ describe("codex.providers.snacks", function()
             side = "left",
             size_pct = 40,
           },
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, false, nil)
@@ -553,6 +576,7 @@ describe("codex.providers.snacks", function()
             side = "bottom",
             size_pct = 30,
           },
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, false, nil)
@@ -579,12 +603,37 @@ describe("codex.providers.snacks", function()
           float = {
             border = "rounded",
           },
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, false, nil)
 
       assert.equals("float", captured_opts.win.position)
       assert.equals("rounded", captured_opts.win.border)
+    end)
+  end)
+
+  it("handles missing terminal.startup without error", function()
+    with_stubbed_vim_api(function()
+      package.loaded["snacks"] = {
+        terminal = function()
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      local handle = provider.open("codex", {}, {}, {
+        terminal = {
+          provider_opts = {},
+        },
+      }, false, nil)
+
+      assert.is_not_nil(handle)
+      assert.is_number(handle.ready_at_ms)
+
+      local uv = vim.uv or vim.loop
+      local expected = (uv and type(uv.now) == "function") and uv.now() or 0
+      assert.equals(expected, handle.ready_at_ms)
     end)
   end)
 
@@ -602,6 +651,7 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           window = "vsplit",
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, false, nil)
@@ -625,6 +675,7 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           window = "hsplit",
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, false, nil)
@@ -648,6 +699,7 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           window = "float",
+          startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, false, nil)

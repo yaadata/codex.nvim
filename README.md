@@ -49,9 +49,11 @@ require("codex").setup({
       title_pos = "center", -- left | center | right
     },
     auto_close = false, -- close terminal buffer automatically when process exits
-    startup_timeout_ms = 2000, -- max time to wait for startup readiness before dropping queued sends
-    startup_retry_interval_ms = 50, -- retry interval while waiting for startup readiness
-    startup_grace_ms = 400, -- minimum delay after terminal open before first send
+    startup = {
+      timeout_ms = 2000, -- max time to wait for startup readiness before dropping queued sends
+      retry_interval_ms = 50, -- retry interval while waiting for startup readiness
+      grace_ms = 400, -- minimum delay after terminal open before first send
+    },
     keymaps = {
       toggle = "<C-c>", -- terminal-mode toggle for Codex window
       close = false, -- set a string (e.g. "<C-x>") to close Codex session
@@ -93,7 +95,7 @@ require("codex").setup({
   - selection is linewise; visual columns are ignored (charwise/blockwise still
     send full lines)
   - if the terminal is still starting, payloads are queued and retried until
-    ready (or until `terminal.startup_timeout_ms` elapses)
+    ready (or until `terminal.startup.timeout_ms` elapses)
   - after sending, codex.nvim focuses the Codex terminal in insert mode
 - `:CodexAdd [path]` sends `/mention <path>` (or current buffer path when
   omitted)
@@ -101,7 +103,7 @@ require("codex").setup({
   - paths are auto-quoted/escaped when they contain whitespace or
     shell-significant characters
   - if the terminal is still starting, payloads are queued and retried until
-    ready (or until `terminal.startup_timeout_ms` elapses)
+    ready (or until `terminal.startup.timeout_ms` elapses)
   - after sending, codex.nvim focuses the Codex terminal in insert mode
 - `:CodexResume[!]` resumes a session
   - with an active Codex session, sends `/resume` in-process

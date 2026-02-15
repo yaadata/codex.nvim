@@ -61,7 +61,7 @@ function M.setup(opts)
   state.config = deps.config.apply(config_opts)
   state.send_queue = deps.send_queue.new({
     vim = deps.vim,
-    retry_interval_ms = state.config.terminal.startup_retry_interval_ms,
+    retry_interval_ms = state.config.terminal.startup.retry_interval_ms,
     process = function(item)
       return process_pending_send_item(item)
     end,
@@ -277,7 +277,7 @@ process_pending_send_item = function(item)
 
   if not session_is_alive(session, provider) or not session_is_ready(session, provider) then
     local elapsed_ms = now_ms(deps) - item.created_at
-    if elapsed_ms >= state.config.terminal.startup_timeout_ms then
+    if elapsed_ms >= state.config.terminal.startup.timeout_ms then
       log_send_timeout(item)
       return "drop"
     end

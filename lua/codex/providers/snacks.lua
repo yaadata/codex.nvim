@@ -168,10 +168,11 @@ function M.open(cmd, args, env, config, focus, on_exit)
     terminal:show()
   end
 
+  local startup = config.terminal.startup or {}
   local handle = {
     terminal = terminal,
     provider = "snacks",
-    ready_at_ms = now_ms() + (config.terminal.startup_grace_ms or 0),
+    ready_at_ms = now_ms() + (startup.grace_ms or 0),
   }
 
   if type(terminal.buf) == "number" then
