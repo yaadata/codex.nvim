@@ -15,7 +15,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = '0.1.1',
+  version = '0.2.0',
   config = function()
     require("codex").setup({})
   end,
