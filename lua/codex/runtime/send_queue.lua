@@ -14,6 +14,7 @@ Queue.__index = Queue
 ---@field _flush_scheduled boolean
 ---@field _flush_active boolean
 
+--- Schedule a deferred flush of the queue if one is not already pending.
 ---@param self codex.SendQueue
 ---@return nil
 local function schedule_flush(self)
@@ -35,6 +36,7 @@ local function schedule_flush(self)
   self._vim.schedule(run)
 end
 
+--- Drain queued items by calling the process callback; stop on retry and reschedule.
 ---@return nil
 function Queue:_flush()
   if self._flush_active then
@@ -62,6 +64,7 @@ function Queue:_flush()
   end
 end
 
+--- Attempt to send an item immediately; queue it for retry if the processor requests it.
 ---@param item table
 ---@return boolean ok
 ---@return string|nil err
@@ -80,6 +83,7 @@ function Queue:submit(item)
   return true
 end
 
+--- Clear all queued items and reset flush state.
 ---@return nil
 function Queue:reset()
   self._items = {}
@@ -89,6 +93,7 @@ end
 
 local M = {}
 
+--- Create a new send queue with the given options.
 ---@param opts codex.SendQueueOpts
 ---@return codex.SendQueue
 function M.new(opts)
