@@ -2,11 +2,13 @@ local log = require("codex.logger")
 
 local M = {}
 
+--- Return true; the native provider is always available.
 ---@return boolean
 function M.is_available()
   return true
 end
 
+--- Return the current monotonic time in milliseconds.
 ---@return integer
 local function now_ms()
   local uv = vim.uv or vim.loop
@@ -16,6 +18,7 @@ local function now_ms()
   return uv.now()
 end
 
+--- Join the command and its arguments into a single shell string.
 ---@param cmd string
 ---@param args string[]
 ---@return string
@@ -27,6 +30,7 @@ local function build_cmd(cmd, args)
   return table.concat(parts, " ")
 end
 
+--- Find the first window displaying a given buffer.
 ---@param bufnr integer
 ---@return integer|nil winid
 local function find_win_for_buf(bufnr)
@@ -38,12 +42,14 @@ local function find_win_for_buf(bufnr)
   return nil
 end
 
+--- Ensure a size value is at least 1.
 ---@param size number
 ---@return integer
 local function clamp_size(size)
   return math.max(1, size)
 end
 
+--- Compute a pixel size from a percentage of a total, clamped to at least 1.
 ---@param total number
 ---@param pct number
 ---@return integer
@@ -51,6 +57,7 @@ local function pct_size(total, pct)
   return clamp_size(math.floor(total * pct / 100))
 end
 
+--- Open a vertical split on the specified side and return the new window id.
 ---@param side "left"|"right"
 ---@return integer winid
 local function open_vsplit(side)
@@ -62,6 +69,7 @@ local function open_vsplit(side)
   return vim.api.nvim_get_current_win()
 end
 
+--- Open a horizontal split on the specified side and return the new window id.
 ---@param side "top"|"bottom"
 ---@return integer winid
 local function open_hsplit(side)
@@ -73,6 +81,7 @@ local function open_hsplit(side)
   return vim.api.nvim_get_current_win()
 end
 
+--- Open a vsplit, hsplit, or float window and place the buffer inside it.
 ---@param term_config codex.TerminalConfig
 ---@param bufnr integer
 ---@return integer winid
@@ -116,6 +125,7 @@ local function open_window_for_buf(term_config, bufnr)
   error("codex: unsupported terminal.window in native provider: " .. tostring(term_config.window))
 end
 
+--- Create a new scratch buffer and open a window for it.
 ---@param term_config codex.TerminalConfig
 ---@return integer bufnr
 ---@return integer winid
@@ -125,6 +135,7 @@ local function create_window(term_config)
   return bufnr, winid
 end
 
+--- Re-open a window for an existing terminal buffer that has no visible window.
 ---@param term_config codex.TerminalConfig
 ---@param bufnr integer
 ---@return integer winid
@@ -132,6 +143,7 @@ local function reshow_window(term_config, bufnr)
   return open_window_for_buf(term_config, bufnr)
 end
 
+--- Close the window and delete the buffer attached to a handle.
 ---@param handle codex.ProviderHandle
 ---@return nil
 local function cleanup_window_and_buffer(handle)
@@ -146,6 +158,7 @@ local function cleanup_window_and_buffer(handle)
   handle.bufnr = nil
 end
 
+--- Register buffer-local terminal-mode keymaps for toggle, close, and navigation.
 ---@param bufnr integer
 ---@param keymaps codex.TerminalKeymapConfig|nil
 ---@param window_type codex.WindowType|nil
@@ -219,6 +232,7 @@ local function set_terminal_keymaps(bufnr, keymaps, window_type)
   end
 end
 
+--- Spawn a terminal process in a new window and return its handle.
 ---@param cmd string
 ---@param args string[]
 ---@param env table<string, string>
@@ -273,6 +287,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   return handle
 end
 
+--- Stop the terminal job and clean up its window and buffer.
 ---@param handle codex.ProviderHandle|nil
 ---@return boolean ok
 ---@return string|nil err
@@ -291,6 +306,7 @@ function M.close(handle)
   return true
 end
 
+--- Send text to the terminal job channel.
 ---@param handle codex.ProviderHandle|nil
 ---@param text string
 ---@return boolean ok
@@ -304,6 +320,7 @@ function M.send(handle, text)
   return true
 end
 
+--- Focus the terminal window and enter insert mode.
 ---@param handle codex.ProviderHandle|nil
 ---@return boolean ok
 ---@return string|nil err
@@ -330,6 +347,7 @@ function M.focus(handle)
   return false, "terminal window not found"
 end
 
+--- Toggle the terminal: hide, focus, re-show, or open a new one.
 ---@param handle codex.ProviderHandle|nil
 ---@param cmd string
 ---@param args string[]
@@ -366,6 +384,7 @@ function M.toggle(handle, cmd, args, env, config)
   return handle
 end
 
+--- Return true if the terminal buffer is valid and the job is running.
 ---@param handle codex.ProviderHandle|nil
 ---@return boolean
 function M.is_alive(handle)
@@ -375,6 +394,7 @@ function M.is_alive(handle)
   return vim.api.nvim_buf_is_valid(handle.bufnr) and handle.jobid ~= nil
 end
 
+--- Return true if the terminal is alive and the startup grace period has elapsed.
 ---@param handle codex.ProviderHandle|nil
 ---@return boolean
 function M.is_ready(handle)
@@ -389,6 +409,7 @@ function M.is_ready(handle)
   return now_ms() >= handle.ready_at_ms
 end
 
+--- Return the buffer number from a handle, or nil.
 ---@param handle codex.ProviderHandle|nil
 ---@return integer|nil bufnr
 function M.get_bufnr(handle)
