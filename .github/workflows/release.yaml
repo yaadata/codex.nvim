@@ -44,14 +44,18 @@ jobs:
           echo "Creating release for tag: $TAG"
 
       - name: Check if tag exists
+        id: check_tag
         run: |
           TAG="${{ steps.extract_tag.outputs.tag }}"
           if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q .; then
-            echo "Error: tag ${TAG} already exists"
-            exit 1
+            echo "Tag ${TAG} already exists, skipping tag creation"
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create and push tag
+        if: steps.check_tag.outputs.tag_exists != 'true'
         run: |
           TAG="${{ steps.extract_tag.outputs.tag }}"
           git config user.name "github-actions[bot]"
@@ -89,7 +93,25 @@ jobs:
           echo "$NOTES" > release_notes.md
           echo "Generated release notes"
 
+      - name: Check if release exists
+        id: check_release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.extract_tag.outputs.tag }}"
+          STATUS="$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}")"
+          if [ "$STATUS" = "200" ]; then
+            echo "Release for ${TAG} already exists, skipping"
+            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub release
+        if: steps.check_release.outputs.release_exists != 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |

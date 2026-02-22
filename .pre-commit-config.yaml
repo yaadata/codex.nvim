@@ -9,9 +9,8 @@ repos:
           - --strict
           - --verbose
           - --scopes
-          - codex,config,context,core,nvim,project,providers,state
+          - codex,config,context,core,nvim,project,providers,state,ci
           - chore
-          - ci
           - docs
           - enhance
           - feat
