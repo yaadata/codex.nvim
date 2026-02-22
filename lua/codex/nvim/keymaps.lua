@@ -8,6 +8,7 @@ local CTRL_V = string.char(22)
 ---@type codex.RegisteredKeymap[]
 local registered = {}
 
+--- Return true if a mapping already exists for the given mode and lhs.
 ---@param vim_api table
 ---@param mode string
 ---@param lhs string
@@ -23,6 +24,7 @@ local function mapping_exists(vim_api, mode, lhs)
   return existing ~= nil and existing ~= false
 end
 
+--- Record a mapping so it can be removed later by unregister.
 ---@param mode string
 ---@param lhs string
 ---@return nil
@@ -30,6 +32,7 @@ local function remember_mapping(mode, lhs)
   table.insert(registered, { mode = mode, lhs = lhs })
 end
 
+--- Remove all previously registered keymaps and clear the tracking list.
 ---@param vim_api table
 ---@return nil
 function M.unregister(vim_api)
@@ -40,6 +43,7 @@ function M.unregister(vim_api)
   registered = {}
 end
 
+--- Create a single keymap unless disabled or already taken (and not forced).
 ---@param vim_api table
 ---@param mode string
 ---@param lhs string|false
@@ -58,6 +62,7 @@ local function set_mapping(vim_api, mode, lhs, rhs, desc, force)
   remember_mapping(mode, lhs)
 end
 
+--- Register all global Codex keymaps from the user config.
 ---@param config codex.Config
 ---@param vim_api? table
 ---@return nil
