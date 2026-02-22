@@ -2,12 +2,14 @@ local log = require("codex.logger")
 
 local M = {}
 
+--- Return true if the snacks.nvim terminal module is loadable.
 ---@return boolean
 function M.is_available()
   local ok, snacks = pcall(require, "snacks")
   return ok and snacks ~= nil and snacks.terminal ~= nil
 end
 
+--- Return the current monotonic time in milliseconds.
 ---@return integer
 local function now_ms()
   local uv = vim.uv or vim.loop
@@ -17,6 +19,7 @@ local function now_ms()
   return uv.now()
 end
 
+--- Resolve the job channel id from a snacks terminal object.
 ---@param term table
 ---@return integer|nil
 local function resolve_jobid(term)
@@ -46,6 +49,7 @@ local function resolve_jobid(term)
   return nil
 end
 
+--- Join the command and its arguments into a single shell string.
 ---@param cmd string
 ---@param args string[]
 ---@return string
@@ -57,6 +61,7 @@ local function build_cmd(cmd, args)
   return table.concat(parts, " ")
 end
 
+--- Register buffer-local terminal-mode keymaps for toggle, close, and navigation.
 ---@param bufnr integer
 ---@param keymaps codex.TerminalKeymapConfig|nil
 ---@param window_type codex.WindowType|nil
@@ -130,6 +135,7 @@ local function set_terminal_keymaps(bufnr, keymaps, window_type)
   end
 end
 
+--- Open a terminal via snacks.terminal and return its handle.
 ---@param cmd string
 ---@param args string[]
 ---@param env table<string, string>
@@ -205,6 +211,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   return handle
 end
 
+--- Close the snacks terminal session.
 ---@param handle codex.ProviderHandle|nil
 ---@return boolean ok
 ---@return string|nil err
@@ -220,6 +227,7 @@ function M.close(handle)
   return true
 end
 
+--- Send text to the snacks terminal job channel.
 ---@param handle codex.ProviderHandle|nil
 ---@param text string
 ---@return boolean ok
@@ -239,6 +247,7 @@ function M.send(handle, text)
   return false, "terminal has no job"
 end
 
+--- Show the snacks terminal and enter insert mode.
 ---@param handle codex.ProviderHandle|nil
 ---@return boolean ok
 ---@return string|nil err
@@ -256,6 +265,7 @@ function M.focus(handle)
   return false, "cannot focus terminal"
 end
 
+--- Toggle the snacks terminal visibility, opening a new one if needed.
 ---@param handle codex.ProviderHandle|nil
 ---@param cmd string
 ---@param args string[]
@@ -275,6 +285,7 @@ function M.toggle(handle, cmd, args, env, config)
   return handle
 end
 
+--- Return true if the snacks terminal has an active job channel.
 ---@param handle codex.ProviderHandle|nil
 ---@return boolean
 function M.is_alive(handle)
@@ -286,6 +297,7 @@ function M.is_alive(handle)
   return resolve_jobid(term) ~= nil
 end
 
+--- Return true if the terminal is alive and the startup grace period has elapsed.
 ---@param handle codex.ProviderHandle|nil
 ---@return boolean
 function M.is_ready(handle)
@@ -300,6 +312,7 @@ function M.is_ready(handle)
   return now_ms() >= handle.ready_at_ms
 end
 
+--- Return the buffer number from a snacks terminal handle, or nil.
 ---@param handle codex.ProviderHandle|nil
 ---@return integer|nil bufnr
 function M.get_bufnr(handle)
