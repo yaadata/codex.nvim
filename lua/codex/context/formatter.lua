@@ -7,6 +7,7 @@ local M = {}
 ---@field filetype string
 ---@field lines string[]|string
 
+--- Return the length of the longest consecutive backtick run in a string.
 ---@param text string
 ---@return integer
 local function longest_backtick_run(text)
@@ -19,6 +20,7 @@ local function longest_backtick_run(text)
   return longest
 end
 
+--- Convert a string, table of lines, or nil into a single string.
 ---@param lines string[]|string|nil
 ---@return string
 local function normalize_lines(lines)
@@ -33,12 +35,14 @@ local function normalize_lines(lines)
   return ""
 end
 
+--- Check whether a file path contains shell-significant characters.
 ---@param path string
 ---@return boolean
 local function needs_quoting(path)
   return path:find("[%s\"'`$;&|<>!()%[%]{}*?\\]") ~= nil
 end
 
+--- Wrap a path in double quotes, escaping backslashes and double-quote characters.
 ---@param path string
 ---@return string
 local function quote_path(path)
@@ -46,6 +50,7 @@ local function quote_path(path)
   return '"' .. escaped .. '"'
 end
 
+--- Format a code selection as a fenced Markdown block with file metadata.
 ---@param spec? codex.SelectionSpec
 ---@return string payload
 function M.format_selection(spec)
@@ -73,8 +78,8 @@ function M.format_selection(spec)
   )
 end
 
+--- Format a `/mention` payload; paths are quoted and escaped when needed.
 ---@param filepath? string
----Formats a `/mention` payload. Paths are quoted and escaped when needed.
 ---@return string payload
 function M.format_mention(filepath)
   local path = filepath or ""
