@@ -9,6 +9,7 @@ local provider_modules = {
 
 local loaded = {}
 
+--- Lazy-load and cache a provider module by name.
 ---@param name codex.ProviderName|"native"|"snacks"
 ---@return codex.Provider|nil
 local function load_provider(name)
@@ -31,6 +32,7 @@ local function load_provider(name)
   return mod
 end
 
+--- Resolve a provider name to a loaded provider module, auto-detecting if needed.
 ---@param provider_name codex.ProviderName
 ---@return codex.Provider provider
 ---@return string resolved_name
@@ -59,6 +61,7 @@ function M.resolve(provider_name)
   return provider, provider_name
 end
 
+--- Clear the cached provider modules so they are re-loaded on next resolve.
 ---@return nil
 function M.reset()
   loaded = {}
