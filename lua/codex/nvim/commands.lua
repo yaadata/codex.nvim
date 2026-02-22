@@ -1,6 +1,7 @@
 local M = {}
 local CTRL_V = string.char(22)
 
+--- Return the two line numbers in ascending order.
 ---@param line1 integer
 ---@param line2 integer
 ---@return integer
@@ -12,6 +13,7 @@ local function normalize_lines(line1, line2)
   return line2, line1
 end
 
+--- Detect the visual mode when the command range matches the visual marks.
 ---@param opts codex.UserCommandOpts
 ---@return string|nil
 local function resolve_visual_mode(opts)
@@ -42,6 +44,7 @@ local function resolve_visual_mode(opts)
   return nil
 end
 
+--- Register all :Codex* user commands.
 ---@return nil
 function M.register()
   ---@param opts codex.UserCommandOpts
