@@ -13,7 +13,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 > [!CAUTION]
 > You are reading the `master` branch README. Install and configuration details
 > may differ from tagged releases. The current latest release tag is
-> [`v0.2.1`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.2.1). For
+> [`v0.2.2`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.2.2). For
 > version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -22,7 +22,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = '0.2.1',
+  version = '0.2.2',
   config = function()
     require("codex").setup({})
   end,
