@@ -6,6 +6,7 @@ local sessions = {}
 local active_id = nil
 local counter = 0
 
+--- Create a new session from the given spec, store it, and set it as active.
 ---@param spec codex.SessionSpec
 ---@return string id
 function M.create(spec)
@@ -25,12 +26,14 @@ function M.create(spec)
   return id
 end
 
+--- Look up a session by its id.
 ---@param id string
 ---@return codex.Session|nil
 function M.get(id)
   return sessions[id]
 end
 
+--- Return the currently active session, or nil if none is active.
 ---@return codex.Session|nil
 function M.get_active()
   if active_id then
@@ -39,12 +42,14 @@ function M.get_active()
   return nil
 end
 
+--- Set the active session id; pass nil to clear the active session.
 ---@param id string|nil
 ---@return nil
 function M.set_active(id)
   active_id = id
 end
 
+--- Mark a session as no longer alive and clear it from active if it was active.
 ---@param id string
 ---@return nil
 function M.mark_dead(id)
@@ -56,6 +61,7 @@ function M.mark_dead(id)
   end
 end
 
+--- Remove a session from the store entirely and clear it from active if needed.
 ---@param id string
 ---@return nil
 function M.remove(id)
@@ -65,6 +71,7 @@ function M.remove(id)
   end
 end
 
+--- Return a list of all stored sessions.
 ---@return codex.Session[]
 function M.list()
   ---@type codex.Session[]
@@ -75,6 +82,7 @@ function M.list()
   return result
 end
 
+--- Clear all sessions, the active id, and reset the id counter.
 ---@return nil
 function M.reset()
   sessions = {}
