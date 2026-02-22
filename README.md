@@ -59,7 +59,7 @@ require("codex").setup({
     startup = {
       timeout_ms = 2000, -- max time to wait for startup readiness before dropping queued sends
       retry_interval_ms = 50, -- retry interval while waiting for startup readiness
-      grace_ms = 400, -- minimum delay after terminal open before first send
+      grace_ms = 700, -- minimum delay after terminal open before first send
     },
     keymaps = {
       toggle = "<C-c>", -- terminal-mode toggle for Codex window

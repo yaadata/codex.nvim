@@ -22,7 +22,7 @@ local function make_config(overrides)
       startup = {
         timeout_ms = 2000,
         retry_interval_ms = 50,
-        grace_ms = 400,
+        grace_ms = 700,
       },
       keymaps = {
         toggle = "<C-c>",
