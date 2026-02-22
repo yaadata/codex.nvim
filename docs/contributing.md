@@ -305,11 +305,11 @@ Use [conventional commits](https://www.conventionalcommits.org/):
 <type>(<scope>): <subject>
 ```
 
-**Types:** `feat`, `fix`, `docs`, `enhance`, `chore`, `ci`, `test`, `refactor`,
-`release`
+**Types:** `chore`, `docs`, `enhance`, `feat`, `fix`, `refactor`, `release`,
+`test`
 
-**Scopes:** `core`, `config`, `context`, `providers`, `state`, `project`,
-`nvim`, `codex`
+**Scopes:** `ci`, `codex`, `config`, `context`, `core`, `nvim`, `project`,
+`providers`, `state`
 
 These conventions are enforced by a `commit-msg` hook via
 [conventional-pre-commit](https://github.com/compilerla/conventional-pre-commit).
