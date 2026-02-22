@@ -1,5 +1,6 @@
 local M = {}
 
+--- Convert an absolute file path to a cwd-relative path via fnamemodify.
 ---@param vim_api table|nil
 ---@param filepath string
 ---@return string
