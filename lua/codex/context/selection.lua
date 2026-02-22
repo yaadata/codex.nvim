@@ -13,18 +13,21 @@ local CTRL_V = string.char(22)
 ---@field bufnr? integer
 ---@field visual_mode? string
 
+--- Check whether a value is an integer >= 1.
 ---@param value any
 ---@return boolean
 local function is_positive_integer(value)
   return type(value) == "number" and value >= 1 and math.floor(value) == value
 end
 
+--- Check whether a value is an integer >= 0.
 ---@param value any
 ---@return boolean
 local function is_non_negative_integer(value)
   return type(value) == "number" and value >= 0 and math.floor(value) == value
 end
 
+--- Return the two line numbers in ascending order.
 ---@param line1 integer
 ---@param line2 integer
 ---@return integer start_line
@@ -36,6 +39,7 @@ local function normalize_lines(line1, line2)
   return line2, line1
 end
 
+--- Sort two (line, col) pairs so the earlier position comes first.
 ---@param start_line integer
 ---@param start_col integer
 ---@param end_line integer
@@ -57,6 +61,7 @@ local function normalize_marks(start_line, start_col, end_line, end_col)
   return end_line, end_col, start_line, start_col
 end
 
+--- Return the substring of a line from a 0-based column to the end.
 ---@param line string
 ---@param start_col integer
 ---@return string
@@ -68,6 +73,7 @@ local function slice_from_col(line, start_col)
   return line:sub(start_idx)
 end
 
+--- Return the substring of a line from the start up to a 0-based column.
 ---@param line string
 ---@param end_col integer
 ---@return string
@@ -79,6 +85,7 @@ local function slice_to_col(line, end_col)
   return line:sub(1, end_idx)
 end
 
+--- Return the substring of a line between two 0-based columns (inclusive).
 ---@param line string
 ---@param start_col integer
 ---@param end_col integer
@@ -116,6 +123,7 @@ local function resolve_range(marks, opts)
   return start_line, end_line
 end
 
+--- Extract the visual mode string from opts if it is a recognised mode.
 ---@param opts codex.SelectionOpts|nil
 ---@return "v"|"V"|string|nil
 local function resolve_visual_mode(opts)
@@ -126,6 +134,7 @@ local function resolve_visual_mode(opts)
   return nil
 end
 
+--- Trim lines to the selected columns based on the visual mode.
 ---@param lines string[]
 ---@param visual_mode string|nil
 ---@param range table
@@ -153,6 +162,7 @@ local function shape_lines(lines, visual_mode, range)
   return lines
 end
 
+--- Capture the current visual selection as a SelectionSpec.
 ---@param vim_api table|nil
 ---@param opts? codex.SelectionOpts
 ---@return codex.SelectionSpec|nil spec
