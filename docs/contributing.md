@@ -327,6 +327,14 @@ docs(project): add LICENSE file
 test(core): add resume dual-mode behavior tests
 ```
 
+### Release Docs Checklist
+
+When cutting a new release tag:
+
+1. Update the warning banner in `README.md` to state the new latest tag.
+2. Verify the release reference points to
+   `https://codeberg.org/yaadata/codex.nvim/releases`.
+
 ## Adding a New Command
 
 1. **API function** -- Add the public method in `lua/codex/init.lua` with
