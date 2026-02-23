@@ -202,82 +202,20 @@ failures downstream.
 ### Auto-Open
 
 APIs that need an active session (`send`, `send_command`, `focus`,
-`send_selection`, `add_file`) automatically open one when needed. The lower-level
-`send` API opens without focus, while command-facing flows (`:CodexSend`,
-`:CodexAdd`) ensure the terminal is opened with focus before payload dispatch.
-If the provider handle is not yet ready, payloads are queued and retried on a
-timer (`terminal.startup.retry_interval_ms`) until ready or timeout
-(`terminal.startup.timeout_ms`). Queueing/scheduling is implemented in
+`send_selection`, `add_file`) automatically open one when needed. The
+lower-level `send` API opens without focus, while command-facing flows
+(`:CodexSend`, `:CodexAdd`) ensure the terminal is opened with focus before
+payload dispatch. If the provider handle is not yet ready, payloads are queued
+and retried on a timer (`terminal.startup.retry_interval_ms`) until ready or
+timeout (`terminal.startup.timeout_ms`). Queueing/scheduling is implemented in
 `runtime/send_queue.lua`, while `init.lua` owns session/open/reopen decisions.
 Providers apply a startup grace delay via `terminal.startup.grace_ms` before
 reporting readiness.
 
 ## Component Interaction
 
-### `setup()` Registration Flow
-
-```
-User calls require("codex").setup(opts)
-    │
-    ▼
-init.lua setup()
-    ├── build deps (default_deps + opts._deps)
-    ├── apply config defaults + validation
-    ├── commands.register()
-    ├── keymaps.register(config)
-    │     ├── unregister stale Codex keymaps from previous setup
-    │     ├── skip keymaps when keymaps=false
-    │     ├── skip mapping collisions unless keymaps_force=true
-    │     └── register n/x mappings for Codex actions
-    └── register VimLeavePre cleanup autocmd
-```
-
-### `:Codex` Toggle Flow
-
-```
-User runs :Codex
-    │
-    ▼
-commands.lua     →  codex.toggle() (or codex.open(true) for :Codex!)
-    │
-    ▼
-init.lua toggle()
-    ├── ensure_setup()
-    ├── session_store.get_active()
-    ├── providers.resolve(config.terminal.provider)
-    │
-    ├── [active + provider.is_alive(handle)] → provider.toggle(handle, cmd, args, env, config)
-    │                       └── if new_handle returned, update session.handle
-    │
-    └── [no active session] → open_session(args, focus=true)
-                                ├── provider.open(cmd, args, env, config, focus, on_exit_cb)
-                                └── session_store.create({ handle, cmd, cwd, provider_name })
-```
-
-### `:CodexSend` with Visual Selection
-
-```
-User visually selects lines, runs :'<,'>CodexSend
-    │
-    ▼
-commands.lua     →  codex.send_selection({ line1, line2 })
-    │
-    ▼
-init.lua send_selection()
-    ├── ensure_setup()
-    ├── selection.get_visual_selection(vim, opts)
-    │       ├── resolve_range(vim_api, bufnr, opts)  -- command range or visual marks
-    │       ├── nvim_buf_get_lines(bufnr, start-1, end, false)
-    │       └── return SelectionSpec { relative filepath, start_line, end_line, filetype, lines }
-    │
-    ├── formatter.format_selection(spec)
-    │       └── build fenced code block with adaptive backtick fencing
-    │
-    └── dispatch_send(payload)
-            ├── [active + ready] → provider.send(session.handle, text)
-            ├── [no active session] → open_session(args, focus=true)
-            └── [not ready yet] → queue + retry loop (defer_fn) until ready/timeout
-```
+Component-level command and setup flow diagrams are maintained in
+[`docs/command-interactions.md`](./command-interactions.md).
 
 ## Type System
 
@@ -324,5 +262,5 @@ own internal handle structure; the core never inspects handle contents.
 6. Add an entry to `provider_modules` in
    `tests/contract/provider_contract_spec.lua` so the contract tests cover it.
 7. If the provider accepts options, add a default entry under
-   `terminal.provider_opts` in `config.lua` and honor shared
-   `terminal.keymaps` semantics for terminal-local toggle/clear/close mappings.
+   `terminal.provider_opts` in `config.lua` and honor shared `terminal.keymaps`
+   semantics for terminal-local toggle/clear/close mappings.

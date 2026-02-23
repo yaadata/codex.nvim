@@ -361,3 +361,6 @@ When cutting a new release tag:
    to the Lua API section in `README.md`.
 6. **Types** -- If the command introduces new option types or result types, add
    them to `lua/codex/types.lua`.
+7. **Architecture docs** -- Update `docs/command-interactions.md` for any
+   command registration or behavior changes, and keep the
+   `docs/architecture.md` component-interaction link accurate.
