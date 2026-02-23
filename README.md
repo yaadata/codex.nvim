@@ -214,18 +214,31 @@ navigation keymaps, or set individual directions to `false`.
 
 ## Lua API
 
-- `require("codex").send_selection()`
-- `require("codex").add_file(path)`
-- `require("codex").close()`
-- `require("codex").clear_input()`
-- `require("codex").send_command(slash_cmd)`
-- `require("codex").resume(opts)`
-- `require("codex").set_model()`
-- `require("codex").show_status()`
-- `require("codex").show_permissions()`
-- `require("codex").compact()`
-- `require("codex").review(instructions)`
-- `require("codex").show_diff()`
+- `require("codex").open(focus)` opens the Codex terminal (`focus` defaults to
+  `true`).
+- `require("codex").close()` closes the active session and resets the send
+  queue.
+- `require("codex").toggle()` toggles terminal visibility for the active
+  session, or opens one if none exists.
+- `require("codex").focus()` focuses the active session, opening one if needed.
+- `require("codex").send(text)` sends raw text through the resilient send path.
+- `require("codex").clear_input()` sends terminal `<C-c>` to clear current
+  prompt input.
+- `require("codex").send_command(slash_cmd)` sends a slash command (with or
+  without leading `/`).
+- `require("codex").set_model()` sends `/model`.
+- `require("codex").show_status()` sends `/status`.
+- `require("codex").show_permissions()` sends `/permissions`.
+- `require("codex").compact()` sends `/compact`.
+- `require("codex").review(instructions)` sends `/review` (or
+  `/review <instructions>`).
+- `require("codex").show_diff()` sends `/diff`.
+- `require("codex").resume(opts)` resumes in-process when active, otherwise
+  launches `codex resume` (`opts.last` adds `--last` on launch).
+- `require("codex").send_selection(opts)` sends a range/visual selection with
+  file path and line metadata.
+- `require("codex").add_file(path)` sends `/mention <path>` (or current buffer
+  path when omitted).
 
 ## Providers
 
