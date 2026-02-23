@@ -5,15 +5,16 @@
 codex.nvim is a Neovim plugin that orchestrates an embedded terminal session for
 the Codex CLI. The architecture centres on a **pluggable provider** abstraction:
 all terminal management (opening, closing, sending text, focus, toggling) is
-delegated to a provider that satisfies a 9-method interface contract, while the
-core module (`init.lua`) owns session lifecycle, dependency wiring, and the
-public Lua API.
+delegated to a provider that satisfies a 9-method interface contract. The core
+module (`init.lua`) acts as a thin **facade** -- it owns dependency wiring and
+the public Lua API, while delegating session lifecycle, send dispatch, and
+mention orchestration to dedicated modules.
 
 ```
 plugin/codex.lua          (entry point, version guard, load guard)
         │
         ▼
-lua/codex/init.lua        (public API, session lifecycle, DI container)
+lua/codex/init.lua        (public API facade, DI container, setup wiring)
         │
         ├──► config.lua           (defaults, validation, deep merge)
         ├──► logger.lua           (level-gated vim.notify wrapper)
@@ -24,12 +25,16 @@ lua/codex/init.lua        (public API, session lifecycle, DI container)
         │        └── snacks.lua
         ├──► context/
         │        ├── formatter.lua  (selection + mention payload formatting)
+        │        ├── mention.lua    (mention orchestration, prompt capture/restore)
         │        ├── path.lua       (CWD-relative path normalization)
         │        └── selection.lua  (visual selection extraction)
         ├──► runtime/
-        │        └── send_queue.lua (FIFO queue + retry timer for startup readiness)
+        │        ├── send_dispatch.lua  (send pipeline, queue/retry orchestration)
+        │        ├── send_queue.lua     (FIFO queue + retry timer for startup readiness)
+        │        └── terminal_io.lua    (terminal I/O utilities + constants)
         └──► state/
-                 └── session_store.lua  (session registry, alive/dead tracking)
+                 ├── session_lifecycle.lua  (session open/close/toggle/focus operations)
+                 └── session_store.lua      (session registry, alive/dead tracking)
 ```
 
 ## Directory Layout
@@ -40,9 +45,9 @@ codex.nvim/
 │   └── codex.lua                    # Entry point. Guards Neovim >= 0.11.0 and
 │                                    # prevents double-loading via vim.g.loaded_codex.
 ├── lua/codex/
-│   ├── init.lua                     # Public API surface (setup, open, close, toggle,
+│   ├── init.lua                     # Public API facade (setup, open, close, toggle,
 │   │                                # send, send_selection, mention_file, mention_directory, resume, etc.).
-│   │                                # Owns the DI container and session lifecycle.
+│   │                                # Owns the DI container, setup wiring, and thin delegates.
 │   ├── config.lua                   # Default config table, vim.validate-based
 │   │                                # validation, and deep-merge with user options.
 │   ├── types.lua                    # EmmyLua annotations only (no runtime code).
@@ -66,15 +71,28 @@ codex.nvim/
 │   │   ├── formatter.lua            # Formats selection payloads (fenced code blocks with
 │   │   │                            # adaptive backtick fencing) and /mention payloads
 │   │   │                            # (auto-quoting paths with special characters).
+│   │   ├── mention.lua              # Mention orchestration: captures terminal prompt input,
+│   │   │                            # dispatches /mention payloads, auto-submits, and restores
+│   │   │                            # previously typed text. Uses create(opts) constructor.
 │   │   ├── path.lua                 # Normalizes file paths to CWD-relative form via
 │   │   │                            # fnamemodify(":."). Falls back to the original path
 │   │   │                            # on error.
 │   │   └── selection.lua            # Extracts visual selection from the current buffer.
 │   │                                # Resolves range via command args or visual marks.
 │   ├── runtime/
-│   │   └── send_queue.lua           # Startup-readiness send queue. Owns retry scheduling
-│   │                                # and FIFO flushing for deferred payload dispatch.
+│   │   ├── send_dispatch.lua        # Send pipeline with startup/retry orchestration.
+│   │   │                            # Builds PendingSend items, submits to send_queue,
+│   │   │                            # handles session readiness checks and timeout logic.
+│   │   │                            # Uses create(opts) constructor.
+│   │   ├── send_queue.lua           # Startup-readiness send queue. Owns retry scheduling
+│   │   │                            # and FIFO flushing for deferred payload dispatch.
+│   │   └── terminal_io.lua          # Pure/near-pure terminal I/O utilities: bracketed paste
+│   │                                # encoding, termcode expansion, prompt line parsing,
+│   │                                # ANSI stripping, and shared constants.
 │   └── state/
+│       ├── session_lifecycle.lua    # Session lifecycle operations: open, close, toggle,
+│       │                            # focus, alive/ready checks, post-send refocus.
+│       │                            # All functions take (deps, config) explicitly.
 │       └── session_store.lua        # In-memory session registry. Tracks sessions by ID
 │                                    # with alive/dead lifecycle, active session pointer,
 │                                    # and monotonic counter for ID generation.
@@ -98,9 +116,11 @@ codex.nvim/
 
 ## Key Design Patterns
 
-### Module Pattern
+### Module Patterns
 
-Every Lua module follows the standard Neovim module pattern:
+#### Stateless modules
+
+Most modules follow the standard Neovim module pattern:
 
 ```lua
 local M = {}
@@ -115,7 +135,36 @@ return M
 ```
 
 Functions on `M` are the public API; bare `local function` declarations are
-private. This convention is consistent across every file in `lua/codex/`.
+private. Examples: `terminal_io.lua`, `session_lifecycle.lua`, `config.lua`.
+
+#### Constructor modules
+
+Modules that need runtime accessors (closures over `get_deps`, `get_config`,
+etc.) use a `create(opts)` constructor that returns a table of bound functions:
+
+```lua
+local M = {}
+
+function M.create(opts)
+  local get_deps = opts.get_deps
+
+  local function private_helper() ... end
+
+  local function public_method()
+    local deps = get_deps()
+    ...
+  end
+
+  return { public_method = public_method }
+end
+
+return M
+```
+
+`init.lua` calls `create()` during `setup()` and stores the returned instance
+in `state`. This pattern avoids circular dependencies -- extracted modules never
+`require("codex")` back. Examples: `send_dispatch.lua`, `mention.lua`,
+`send_queue.lua`.
 
 ### Provider Abstraction
 
@@ -154,8 +203,13 @@ tracks:
 
 The store exposes `create`, `get`, `get_active`, `mark_dead`, `remove`, `list`,
 and `reset`. Only one session is "active" at a time. When a provider fires its
-`on_exit` callback, `init.lua` walks the session list to find the matching
-handle and calls `mark_dead`.
+`on_exit` callback, `session_lifecycle.mark_session_dead_by_handle()` walks the
+session list to find the matching handle and calls `mark_dead`.
+
+`state/session_lifecycle.lua` builds on the session store with higher-level
+operations: `open_session`, `close_session`, `toggle_session`, `focus_session`,
+and alive/ready checks. All functions take `(deps, config)` explicitly, making
+them stateless and testable without the full `init.lua` setup.
 
 ### Dependency Injection
 
@@ -182,6 +236,18 @@ override the corresponding defaults. The `_deps` key is then stripped before
 config validation. This enables full isolation in unit tests: every collaborator
 (including `vim` itself) can be replaced with a mock.
 
+After resolving deps and config, `setup()` wires the constructor modules:
+
+1. `send_dispatch.create()` -- receives `get_deps`, `get_config`,
+   `get_send_queue`, and an `open_session` closure.
+2. `send_queue.new()` -- receives the send dispatch's
+   `process_pending_send_item` as its process callback.
+3. `mention.create()` -- receives `get_deps`, `get_config`, and a
+   `dispatch_send` closure that delegates to the send dispatch instance.
+
+This wiring order allows `send_dispatch` to reference the send queue (via
+closure) even though the queue is created after the dispatch instance.
+
 ### Error Handling
 
 The codebase uses two error-reporting strategies:
@@ -202,15 +268,16 @@ failures downstream.
 ### Auto-Open
 
 APIs that need an active session (`send`, `send_command`, `focus`,
-`send_selection`, `mention_file`, `mention_directory`) automatically open one when needed. The
-lower-level `send` API opens without focus, while command-facing flows
-(`:CodexSend`, `:CodexAdd`) ensure the terminal is opened with focus before
-payload dispatch. If the provider handle is not yet ready, payloads are queued
-and retried on a timer (`terminal.startup.retry_interval_ms`) until ready or
-timeout (`terminal.startup.timeout_ms`). Queueing/scheduling is implemented in
-`runtime/send_queue.lua`, while `init.lua` owns session/open/reopen decisions.
-Providers apply a startup grace delay via `terminal.startup.grace_ms` before
-reporting readiness.
+`send_selection`, `mention_file`, `mention_directory`) automatically open one
+when needed. The lower-level `send` API opens without focus, while
+command-facing flows (`:CodexSend`, `:CodexMentionFile`) ensure the terminal is
+opened with focus before payload dispatch. If the provider handle is not yet
+ready, payloads are queued and retried on a timer
+(`terminal.startup.retry_interval_ms`) until ready or timeout
+(`terminal.startup.timeout_ms`). Queueing/scheduling is implemented in
+`runtime/send_queue.lua`, while `runtime/send_dispatch.lua` owns
+session/open/reopen decisions. Providers apply a startup grace delay via
+`terminal.startup.grace_ms` before reporting readiness.
 
 ## Component Interaction
 
@@ -243,6 +310,8 @@ Key types:
 | `codex.SelectionSpec`        | class | Visual selection data (defined in `formatter.lua`)            |
 | `codex.SelectionOpts`        | class | Options for selection extraction (defined in `selection.lua`) |
 | `codex.UserCommandOpts`      | class | Neovim user command callback argument shape                   |
+| `codex.PendingSend`          | class | Queued send item (defined in `send_dispatch.lua`)             |
+| `codex.DispatchSendOpts`     | class | Options for dispatch_send (defined in `send_dispatch.lua`)    |
 | `codex.ResumeOpts`           | class | Options for the resume API (defined in `init.lua`)            |
 | `codex.SendResult`           | alias | Boolean result alias (defined in `init.lua`)                  |
 

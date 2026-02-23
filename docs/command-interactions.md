@@ -3,8 +3,9 @@
 ## Overview
 
 This document is the canonical reference for how `:Codex*` commands map from
-`lua/codex/nvim/commands.lua` into the public API in `lua/codex/init.lua` and
-then into provider/session/runtime collaborators.
+`lua/codex/nvim/commands.lua` into the public API in `lua/codex/init.lua` (the
+facade) and then into `session_lifecycle`, `send_dispatch`, `mention`, and
+provider collaborators.
 
 ## Command Mapping
 
@@ -36,6 +37,9 @@ User calls require("codex").setup(opts)
 init.lua setup()
     |- build deps (default_deps + opts._deps)
     |- apply config defaults + validation
+    |- send_dispatch.create({ get_deps, get_config, get_send_queue, open_session })
+    |- send_queue.new({ process = send_dispatch.process_pending_send_item })
+    |- mention.create({ get_deps, get_config, dispatch_send })
     |- commands.register()
     |- keymaps.register(config)
     |    |- unregister stale Codex keymaps from previous setup
@@ -56,16 +60,15 @@ User runs :Codex (or :Codex!)
 commands.lua -> codex.toggle() (or codex.open(true) for :Codex!)
     |
     v
-init.lua
-    |- toggle():
-    |    |- ensure_setup()
+init.lua -> session_lifecycle
+    |- toggle_session(deps, config):
     |    |- session_store.get_active()
     |    |- providers.resolve(config.terminal.provider)
     |    |- [active + provider.is_alive(handle)]
     |    |    \- provider.toggle(handle, cmd, args, env, config)
     |    |        \- if new_handle returned, update session.handle
-    |    \- [no active session] open_session(args, focus=true)
-    \- open(true): open_session(args, focus=true)
+    |    \- [no active session] open_session(deps, config, args, focus=true)
+    \- open_session(deps, config, args, focus=true):
          |- provider.open(cmd, args, env, config, focus, on_exit_cb)
          \- session_store.create({ handle, cmd, cwd, provider_name })
 ```
@@ -79,11 +82,12 @@ User runs :CodexFocus
 commands.lua -> codex.focus()
     |
     v
-init.lua focus()
+init.lua focus() -> session_lifecycle
     |- ensure_setup()
-    |- session_store.get_active() + get_provider()
-    |- [active + alive] -> provider.focus(session.handle)
-    \- [no active/alive session] -> codex.open(true)
+    |- focus_session(deps, config)
+    |    |- session_store.get_active() + get_provider()
+    |    \- [active + alive] -> provider.focus(session.handle), return true
+    \- [not focused] -> codex.open(true)
 ```
 
 ### `:CodexClose`
@@ -95,7 +99,7 @@ User runs :CodexClose
 commands.lua -> codex.close()
     |
     v
-init.lua close()
+init.lua close() -> session_lifecycle.close_session(deps, config, send_queue)
     |- session_store.get_active()
     |- [no active session] -> send_queue.reset() and return
     \- [active session]
@@ -115,9 +119,9 @@ commands.lua -> codex.clear_input()
     v
 init.lua clear_input()
     |- ensure_setup()
-    |- session_store.get_active() + get_provider()
+    |- session_lifecycle.get_active_session_and_provider(deps, config)
     |- [no alive session] -> return false, "no active Codex session"
-    \- [alive session] -> provider.send(handle, encode_termcode("<C-c>"))
+    \- [alive session] -> provider.send(handle, terminal_io.encode_termcode(deps, "<C-c>"))
 ```
 
 ### `:CodexSend` (Range or Visual Selection)
@@ -140,9 +144,9 @@ init.lua send_selection()
     |    \- return SelectionSpec { path, start_line, end_line, filetype, lines }
     |- formatter.format_selection(spec)
     |    \- build fenced code block with adaptive backtick fencing
-    \- dispatch_send(encode_bracketed_paste(payload), { open_focus=true, post_focus=true })
+    \- send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), ...)
          |- [active + ready] -> provider.send(session.handle, text)
-         |- [no active session] -> open_session(args, focus=true)
+         |- [no active session] -> session_lifecycle.open_session(...)
          \- [not ready yet] -> queue + retry loop until ready/timeout
 ```
 
@@ -155,17 +159,17 @@ User runs :CodexMentionFile [path] (or :CodexMentionDirectory [path])
 commands.lua -> codex.mention_file(path_or_nil) (or codex.mention_directory(path_or_nil))
     |
     v
-init.lua mention_file(path) / mention_directory(path)
+init.lua mention_file(path) / mention_directory(path) -> mention module
     |- ensure_setup()
     |- resolve path (arg or current buffer path via %:p / %:p:h)
     |- [missing path] -> log + return false, "current buffer has no file/directory path"
     |- path.to_relative(...)
-    \- dispatch_mention(relative_path)
+    \- mention.dispatch(relative_path)
          |- formatter.format_mention(relative_path)
          |- [active + alive] provider.focus(handle) before prompt capture
          |- capture_terminal_prompt_input() (best effort)
          |- mention_payload = clear_line_sequence + mention_text
-         \- dispatch_send(mention_payload, { open_focus=true, pre_focus=true, command_path="/mention", on_sent=... })
+         \- send_dispatch.dispatch_send(mention_payload, { open_focus=true, pre_focus=true, command_path="/mention", on_sent=... })
               |- on_sent: submit_with_enter_key("/mention")
               \- on_sent: restore captured prompt input via delayed dispatch_send(...)
 ```
@@ -181,12 +185,12 @@ commands.lua -> codex.resume({ last = opts.bang })
     v
 init.lua resume(opts)
     |- ensure_setup()
-    |- session_store.get_active() + get_provider()
+    |- session_lifecycle.get_active_session_and_provider(deps, config)
     |- [active + alive session] -> send_command("resume") (in-process /resume)
     \- [no active/alive session]
          |- args = { "resume" }
          |- if opts.last then args += "--last"
-         \- open_session(args, focus=true)
+         \- session_lifecycle.open_session(deps, config, args, focus=true)
 ```
 
 ### Slash Command Wrappers
@@ -195,7 +199,7 @@ These commands all route through `send_command()`, which normalizes the slash
 command, builds `"/<command>\n"`, and calls:
 
 ```text
-dispatch_send(payload, {
+send_dispatch.dispatch_send(payload, {
   open_focus = true,
   pre_focus = true,
   command_path = "/<command>",

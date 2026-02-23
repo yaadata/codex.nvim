@@ -176,6 +176,8 @@ commit again.
 
 ### Module Structure
 
+Stateless modules use the standard pattern:
+
 ```lua
 local M = {}
 
@@ -184,6 +186,20 @@ local function helper() end
 
 -- Public API (functions on M)
 function M.public_method() end
+
+return M
+```
+
+Modules that need runtime accessors use a `create(opts)` constructor:
+
+```lua
+local M = {}
+
+function M.create(opts)
+  local get_deps = opts.get_deps
+  local function bound_method() ... end
+  return { bound_method = bound_method }
+end
 
 return M
 ```
@@ -348,9 +364,12 @@ When cutting a new release tag:
 
 ## Adding a New Command
 
-1. **API function** -- Add the public method in `lua/codex/init.lua` with a
-   one-line LuaDoc summary (description first), `---@param`/`---@return`
-   annotations, and an `ensure_setup()` guard.
+1. **API function** -- Add the public method in `lua/codex/init.lua` as a thin
+   delegate with a one-line LuaDoc summary (description first),
+   `---@param`/`---@return` annotations, and an `ensure_setup()` guard. Place
+   the implementation logic in the appropriate extracted module
+   (`session_lifecycle`, `send_dispatch`, or `mention`) if it fits an existing
+   concern; otherwise keep it in `init.lua`.
 2. **User command** -- Register the `:Codex*` command in
    `lua/codex/nvim/commands.lua`, delegating to the API function.
 3. **Unit tests** -- Add test cases in `tests/unit/init_spec.lua` covering the
