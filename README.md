@@ -37,6 +37,7 @@ require("codex").setup({
   args = {},
   env = {},
   auto_start = false,
+  log_level = "warn",
   terminal = {
     provider = "auto", -- auto | snacks | native
     window = "vsplit", -- vsplit | hsplit | float
@@ -113,11 +114,14 @@ require("codex").setup({
   - paths are normalized to be relative to the current working directory
   - paths are auto-quoted/escaped when they contain whitespace or
     shell-significant characters
-  - payload is inserted via bracketed paste and is not auto-submitted
+  - command is auto-submitted immediately
+  - codex.nvim clears the current prompt line, inserts `/mention`, submits it,
+    then re-applies previously typed prompt text (best effort)
+  - if prompt text cannot be captured from the terminal buffer, mention still
+    submits and prior input is not restored
   - if the terminal is still starting, payloads are queued and retried until
     ready (or until `terminal.startup.timeout_ms` elapses)
-  - after sending, codex.nvim focuses the Codex terminal in insert mode; press
-    Enter to submit
+  - after sending, codex.nvim focuses the Codex terminal in insert mode
 - `:CodexResume[!]` resumes a session
   - with an active Codex session, sends `/resume` in-process
   - without an active session, launches `codex resume` (or `codex resume --last`

@@ -200,6 +200,17 @@ Use EmmyLua annotations for all public functions and types:
 function M.example(name, count) end
 ```
 
+Document every function (public and private) with a one-line summary placed
+before `---@param`/`---@return` tags:
+
+```lua
+---Returns whether the active session is alive.
+---@param session codex.Session|nil
+---@param provider codex.Provider
+---@return boolean
+local function session_is_alive(session, provider) end
+```
+
 Define shared types with `---@class` and `---@alias` in `lua/codex/types.lua`.
 Module-local types (like `codex.SelectionSpec`) can be defined in the module
 that owns them.
@@ -337,8 +348,9 @@ When cutting a new release tag:
 
 ## Adding a New Command
 
-1. **API function** -- Add the public method in `lua/codex/init.lua` with
-   `---@param`/`---@return` annotations and an `ensure_setup()` guard.
+1. **API function** -- Add the public method in `lua/codex/init.lua` with a
+   one-line LuaDoc summary (description first), `---@param`/`---@return`
+   annotations, and an `ensure_setup()` guard.
 2. **User command** -- Register the `:Codex*` command in
    `lua/codex/nvim/commands.lua`, delegating to the API function.
 3. **Unit tests** -- Add test cases in `tests/unit/init_spec.lua` covering the
