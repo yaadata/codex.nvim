@@ -11,7 +11,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 - `codex` available on your `PATH` (or configure `cmd`)
 
 > [!CAUTION]
-> You are reading the `master` branch README. Install and configuration details
+> You are reading the `main` branch README. Install and configuration details
 > may differ from tagged releases. The current latest release tag is
 > [`v0.2.2`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.2.2). For
 > version-accurate instructions, read the README for your target tag from
