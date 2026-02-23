@@ -80,9 +80,9 @@ require("codex").setup({
     focus = "<leader>of",
     close = "<leader>ox",
     send = "<leader>os",
-    add = "<leader>oa",
+    mention_file = "<leader>om",
+    mention_dir = "<leader>oM",
     resume = "<leader>or",
-    model = "<leader>om",
     status = "<leader>oi",
     permissions = "<leader>op",
     compact = "<leader>oc",
@@ -101,7 +101,8 @@ require("codex").setup({
 - `:CodexClose` closes the active Codex terminal session
 - `:CodexClearInput` clears the active Codex terminal input line
 - `:CodexSend` sends selected lines with path and range context.
-- `:CodexAdd [path]` sends `/mention` for a path (or current buffer path).
+- `:CodexMentionFile [path]` sends `/mention` for a file (or current buffer path).
+- `:CodexMentionDirectory [path]` sends `/mention` for a directory (or current buffer's directory).
 - `:CodexResume[!]` resumes in-process or launches `codex resume` (`!` uses
   `--last` when launching).
 - `:CodexModel` sends `/model`
@@ -126,9 +127,9 @@ require("codex").setup({
     focus = "<leader>of",
     close = "<leader>ox",
     send = "<leader>os",
-    add = "<leader>oa",
+    mention_file = "<leader>om",
+    mention_dir = "<leader>oM",
     resume = "<leader>or",
-    model = "<leader>om",
     status = "<leader>oi",
     permissions = "<leader>op",
     compact = "<leader>oc",
@@ -210,7 +211,8 @@ navigation keymaps, or set individual directions to `false`.
 - `require("codex").show_diff()` send `/diff`.
 - `require("codex").resume(opts)` resume (`opts.last` supports `--last`).
 - `require("codex").send_selection(opts)` send visual/range selection.
-- `require("codex").add_file(path)` send `/mention` for a file path.
+- `require("codex").mention_file(path)` send `/mention` for a file path.
+- `require("codex").mention_directory(path)` send `/mention` for a directory path.
 - `require("codex").is_running()` check whether active session is alive.
 - `require("codex").get_config()` return resolved config snapshot.
 

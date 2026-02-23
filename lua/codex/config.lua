@@ -53,9 +53,9 @@ M.defaults = {
     focus = "<leader>of",
     close = "<leader>ox",
     send = "<leader>os",
-    add = "<leader>oa",
+    mention_file = "<leader>om",
+    mention_dir = "<leader>oM",
     resume = "<leader>or",
-    model = "<leader>om",
     status = "<leader>oi",
     permissions = "<leader>op",
     compact = "<leader>oc",
@@ -82,9 +82,9 @@ local valid_keymap_actions = {
   focus = true,
   close = true,
   send = true,
-  add = true,
+  mention_file = true,
+  mention_dir = true,
   resume = true,
-  model = true,
   status = true,
   permissions = true,
   compact = true,
@@ -92,7 +92,7 @@ local valid_keymap_actions = {
   diff = true,
 }
 local valid_keymap_action_list =
-  "toggle, open, focus, close, send, add, resume, model, status, permissions, compact, review, diff"
+  "toggle, open, focus, close, send, mention_file, mention_dir, resume, status, permissions, compact, review, diff"
 
 ---@param source table
 ---@param known table

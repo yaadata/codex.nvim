@@ -41,7 +41,7 @@ codex.nvim/
 │                                    # prevents double-loading via vim.g.loaded_codex.
 ├── lua/codex/
 │   ├── init.lua                     # Public API surface (setup, open, close, toggle,
-│   │                                # send, send_selection, add_file, resume, etc.).
+│   │                                # send, send_selection, mention_file, mention_directory, resume, etc.).
 │   │                                # Owns the DI container and session lifecycle.
 │   ├── config.lua                   # Default config table, vim.validate-based
 │   │                                # validation, and deep-merge with user options.
@@ -202,7 +202,7 @@ failures downstream.
 ### Auto-Open
 
 APIs that need an active session (`send`, `send_command`, `focus`,
-`send_selection`, `add_file`) automatically open one when needed. The
+`send_selection`, `mention_file`, `mention_directory`) automatically open one when needed. The
 lower-level `send` API opens without focus, while command-facing flows
 (`:CodexSend`, `:CodexAdd`) ensure the terminal is opened with focus before
 payload dispatch. If the provider handle is not yet ready, payloads are queued

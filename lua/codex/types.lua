@@ -54,9 +54,9 @@
 ---@field focus string|false
 ---@field close string|false
 ---@field send string|false
----@field add string|false
+---@field mention_file string|false
+---@field mention_dir string|false
 ---@field resume string|false
----@field model string|false
 ---@field status string|false
 ---@field permissions string|false
 ---@field compact string|false

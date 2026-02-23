@@ -338,6 +338,9 @@ local function make_fake_vim()
         if expr == "%:p" then
           return "/test/current-buffer.lua"
         end
+        if expr == "%:p:h" then
+          return "/test"
+        end
         return ""
       end,
       fnamemodify = function(filepath, modifier)
@@ -347,6 +350,15 @@ local function make_fake_vim()
         end
         if filepath == "/test/current-buffer.lua" then
           return "../current-buffer.lua"
+        end
+        if filepath == "/test" then
+          return ".."
+        end
+        if filepath == "/tmp/" then
+          return "../../tmp/"
+        end
+        if filepath == "/tmp" then
+          return "../../tmp"
         end
         return filepath
       end,
@@ -1052,10 +1064,10 @@ describe("codex.init public api", function()
     assert.same({ line1 = 3, line2 = 5 }, env.selection.calls[1].opts)
   end)
 
-  it("add_file sends /mention with explicit path", function()
+  it("mention_file sends /mention with explicit path", function()
     local env = setup_with_deps()
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
     local mention_payload_expected =
       "<termcoded:<C-e>><termcoded:<C-u>>/mention ../../tmp/example.lua"
 
@@ -1103,7 +1115,7 @@ describe("codex.init public api", function()
     assert.equals("second", env.provider.send_calls[2].text)
   end)
 
-  it("add_file waits for startup readiness before sending", function()
+  it("mention_file waits for startup readiness before sending", function()
     local env = setup_with_deps({
       terminal = {
         startup = { timeout_ms = 200, retry_interval_ms = 50 },
@@ -1113,7 +1125,7 @@ describe("codex.init public api", function()
       return handle and env.fake_vim._runtime.now >= 100
     end
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
     local mention_payload_expected =
       "<termcoded:<C-e>><termcoded:<C-u>>/mention ../../tmp/example.lua"
 
@@ -1141,10 +1153,10 @@ describe("codex.init public api", function()
     assert.equals(1, #env.provider.send_calls)
   end)
 
-  it("add_file resolves current buffer path when argument is nil", function()
+  it("mention_file resolves current buffer path when argument is nil", function()
     local env = setup_with_deps()
 
-    local ok = env.codex.add_file(nil)
+    local ok = env.codex.mention_file(nil)
     local mention_payload_expected =
       "<termcoded:<C-e>><termcoded:<C-u>>/mention ../current-buffer.lua"
 
@@ -1163,7 +1175,7 @@ describe("codex.init public api", function()
     assert.equals(1, #env.provider.send_calls)
   end)
 
-  it("add_file restores previously typed prompt text after submit", function()
+  it("mention_file restores previously typed prompt text after submit", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1171,7 +1183,7 @@ describe("codex.init public api", function()
     end
     env.fake_vim._set_buf_lines(77, { "> asdfadsfadsf" })
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     assert.equals(1, #env.provider.send_calls)
@@ -1186,7 +1198,7 @@ describe("codex.init public api", function()
     assert.equals("asdfadsfadsf", env.provider.send_calls[2].text)
   end)
 
-  it("add_file skips ghost prompt text when cursor is at input start", function()
+  it("mention_file skips ghost prompt text when cursor is at input start", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1195,7 +1207,7 @@ describe("codex.init public api", function()
     env.fake_vim._set_buf_lines(77, { "> Run /review on my current changes" })
     env.fake_vim._set_buf_cursor(77, 1701, 1, 2)
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     assert.equals(1, #env.provider.send_calls)
@@ -1207,13 +1219,13 @@ describe("codex.init public api", function()
     assert.equals(1, #env.provider.send_calls)
   end)
 
-  it("add_file falls back to channel submit when feedkeys throws", function()
+  it("mention_file falls back to channel submit when feedkeys throws", function()
     local env = setup_with_deps()
     env.fake_vim.api.nvim_feedkeys = function()
       error("feedkeys boom")
     end
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     assert.equals(1, #env.provider.send_calls)
@@ -1225,7 +1237,7 @@ describe("codex.init public api", function()
     assert.matches("feedkeys submit failed, falling back to channel send", env.logger.warns[1])
   end)
 
-  it("add_file logs submit failure when session dies before deferred submit", function()
+  it("mention_file logs submit failure when session dies before deferred submit", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1233,7 +1245,7 @@ describe("codex.init public api", function()
     end
     env.fake_vim._set_buf_lines(77, { "> keep me" })
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
     env.store.get_active().handle.alive = false
 
     assert.is_true(ok)
@@ -1246,13 +1258,13 @@ describe("codex.init public api", function()
     assert.matches("failed to submit /mention: no active Codex session", env.logger.errors[1])
   end)
 
-  it("add_file propagates on_sent callback errors through command failure logging", function()
+  it("mention_file propagates on_sent callback errors through command failure logging", function()
     local env = setup_with_deps()
     env.fake_vim.defer_fn = function()
       error("defer callback boom")
     end
 
-    local ok, err = env.codex.add_file("/tmp/example.lua")
+    local ok, err = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_false(ok)
     assert.matches("defer callback boom", err)
@@ -1261,7 +1273,7 @@ describe("codex.init public api", function()
     assert.equals(0, #env.fake_vim._deferred)
   end)
 
-  it("add_file logs restore dispatch failure without crashing", function()
+  it("mention_file logs restore dispatch failure without crashing", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1275,7 +1287,7 @@ describe("codex.init public api", function()
       return true
     end
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     run_deferred(env.fake_vim, 1)
@@ -1293,7 +1305,7 @@ describe("codex.init public api", function()
     assert.is_true(saw_restore_log)
   end)
 
-  it("add_file captures prompt text from a non-last line within lookback window", function()
+  it("mention_file captures prompt text from a non-last line within lookback window", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1314,7 +1326,7 @@ describe("codex.init public api", function()
       "line 12",
     })
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     run_deferred(env.fake_vim, 1)
@@ -1324,7 +1336,7 @@ describe("codex.init public api", function()
     assert.equals("within-lookback", env.provider.send_calls[2].text)
   end)
 
-  it("add_file does not capture prompt text beyond lookback window", function()
+  it("mention_file does not capture prompt text beyond lookback window", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1353,7 +1365,7 @@ describe("codex.init public api", function()
       "line 20",
     })
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     run_deferred(env.fake_vim, 1)
@@ -1361,7 +1373,7 @@ describe("codex.init public api", function()
     assert.equals(0, #env.fake_vim._deferred)
   end)
 
-  it("add_file captures prompt text when cursor is on a different line", function()
+  it("mention_file captures prompt text when cursor is on a different line", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1373,7 +1385,7 @@ describe("codex.init public api", function()
     })
     env.fake_vim._set_buf_cursor(77, 1702, 2, 0)
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     run_deferred(env.fake_vim, 1)
@@ -1382,7 +1394,7 @@ describe("codex.init public api", function()
     assert.equals("draft-from-line-one", env.provider.send_calls[2].text)
   end)
 
-  it("add_file skips restore when active terminal buffer is empty", function()
+  it("mention_file skips restore when active terminal buffer is empty", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1390,7 +1402,7 @@ describe("codex.init public api", function()
     end
     env.fake_vim._set_buf_lines(77, {})
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     assert.equals(1, #env.provider.send_calls)
@@ -1399,7 +1411,7 @@ describe("codex.init public api", function()
     assert.equals(0, #env.fake_vim._deferred)
   end)
 
-  it("add_file parses normalized prompt tails and strips ANSI escapes", function()
+  it("mention_file parses normalized prompt tails and strips ANSI escapes", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1409,7 +1421,7 @@ describe("codex.init public api", function()
       "\27[32m> old\27[0m\r\27[33m> final-colored-draft\27[0m",
     })
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     run_deferred(env.fake_vim, 1)
@@ -1418,7 +1430,7 @@ describe("codex.init public api", function()
     assert.equals("final-colored-draft", env.provider.send_calls[2].text)
   end)
 
-  it("add_file rejects prompt tokens that contain word characters", function()
+  it("mention_file rejects prompt tokens that contain word characters", function()
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -1426,7 +1438,7 @@ describe("codex.init public api", function()
     end
     env.fake_vim._set_buf_lines(77, { "gpt-5 > should-not-restore" })
 
-    local ok = env.codex.add_file("/tmp/example.lua")
+    local ok = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_true(ok)
     run_deferred(env.fake_vim, 1)
@@ -1434,7 +1446,7 @@ describe("codex.init public api", function()
     assert.equals(0, #env.fake_vim._deferred)
   end)
 
-  it("add_file captures indented prompt input and skips empty prompt input", function()
+  it("mention_file captures indented prompt input and skips empty prompt input", function()
     local capture_env = setup_with_deps()
     capture_env.codex.open(false)
     capture_env.provider.get_bufnr_fn = function()
@@ -1442,7 +1454,7 @@ describe("codex.init public api", function()
     end
     capture_env.fake_vim._set_buf_lines(77, { "   › indented-draft" })
 
-    local ok_capture = capture_env.codex.add_file("/tmp/example.lua")
+    local ok_capture = capture_env.codex.mention_file("/tmp/example.lua")
     assert.is_true(ok_capture)
     run_deferred(capture_env.fake_vim, 1)
     run_deferred(capture_env.fake_vim, 1)
@@ -1455,14 +1467,14 @@ describe("codex.init public api", function()
     end
     skip_env.fake_vim._set_buf_lines(77, { "> " })
 
-    local ok_skip = skip_env.codex.add_file("/tmp/example.lua")
+    local ok_skip = skip_env.codex.mention_file("/tmp/example.lua")
     assert.is_true(ok_skip)
     run_deferred(skip_env.fake_vim, 1)
     assert.equals(1, #skip_env.provider.send_calls)
     assert.equals(0, #skip_env.fake_vim._deferred)
   end)
 
-  it("add_file returns provider send errors with command context", function()
+  it("mention_file returns provider send errors with command context", function()
     local env = setup_with_deps()
     env.provider.send_fn = function(_, text)
       if text:match("/mention ") then
@@ -1471,7 +1483,7 @@ describe("codex.init public api", function()
       return true
     end
 
-    local ok, err = env.codex.add_file("/tmp/example.lua")
+    local ok, err = env.codex.mention_file("/tmp/example.lua")
 
     assert.is_false(ok)
     assert.equals("boom", err)
@@ -1482,7 +1494,7 @@ describe("codex.init public api", function()
     assert.equals(0, #env.fake_vim._input_calls)
   end)
 
-  it("add_file returns error when path is unavailable", function()
+  it("mention_file returns error when path is unavailable", function()
     local env = setup_with_deps({
       _deps = {
         vim = vim.tbl_deep_extend("force", make_fake_vim(), {
@@ -1495,15 +1507,113 @@ describe("codex.init public api", function()
       },
     })
 
-    local ok, err = env.codex.add_file(nil)
+    local ok, err = env.codex.mention_file(nil)
 
     assert.is_false(ok)
     assert.equals("current buffer has no file path", err)
     assert.equals(0, #env.provider.send_calls)
+    assert.matches("failed to mention file: current buffer has no file path", env.logger.errors[1])
+  end)
+
+  it("mention_directory sends /mention with explicit directory path", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.mention_directory("/tmp/")
+    local mention_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/mention ../../tmp/"
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.is_true(env.provider.open_calls[1].focus)
+    assert.equals("../../tmp/", env.formatter.mention_paths[1])
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals(mention_payload_expected, env.provider.send_calls[1].text)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(3, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("<CR>", env.fake_vim._replace_termcodes_calls[3].str)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
+    assert.equals("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
+  end)
+
+  it("mention_directory resolves current buffer directory when argument is nil", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.mention_directory(nil)
+    local mention_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/mention .."
+
+    assert.is_true(ok)
+    assert.equals("..", env.formatter.mention_paths[1])
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals(mention_payload_expected, env.provider.send_calls[1].text)
+  end)
+
+  it("mention_directory returns error when path is unavailable", function()
+    local env = setup_with_deps({
+      _deps = {
+        vim = vim.tbl_deep_extend("force", make_fake_vim(), {
+          fn = {
+            expand = function(expr)
+              if expr == "%:p" then
+                return "" -- unnamed buffer
+              end
+              if expr == "%:p:h" then
+                return "/fake/cwd" -- Neovim returns cwd for unnamed buffers
+              end
+              return ""
+            end,
+          },
+        }),
+      },
+    })
+
+    local ok, err = env.codex.mention_directory(nil)
+
+    assert.is_false(ok)
+    assert.equals("current buffer has no directory path", err)
+    assert.equals(0, #env.provider.send_calls)
     assert.matches(
-      "failed to add file context: current buffer has no file path",
+      "failed to mention directory: current buffer has no directory path",
       env.logger.errors[1]
     )
+  end)
+
+  it("mention_directory restores previously typed prompt text after submit", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> asdfadsfadsf" })
+
+    local ok = env.codex.mention_directory("/tmp/")
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals(1, #env.fake_vim._deferred)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
+    assert.equals(1, #env.fake_vim._deferred)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(2, #env.provider.send_calls)
+    assert.equals("asdfadsfadsf", env.provider.send_calls[2].text)
+  end)
+
+  it("mention_directory returns provider send errors with command context", function()
+    local env = setup_with_deps()
+    env.provider.send_fn = function(_, text)
+      if text:match("/mention ") then
+        return false, "boom"
+      end
+      return true
+    end
+
+    local ok, err = env.codex.mention_directory("/tmp/")
+
+    assert.is_false(ok)
+    assert.equals("boom", err)
+    assert.matches("failed to send command /mention: boom", env.logger.errors[1])
   end)
 
   it("close removes session and is_running reflects alive state", function()

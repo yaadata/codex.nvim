@@ -320,7 +320,7 @@ describe("codex.config", function()
             },
           })
         end,
-        'codex: invalid keymaps action "launch", expected one of: toggle, open, focus, close, send, add, resume, model, status, permissions, compact, review, diff'
+        'codex: invalid keymaps action "launch", expected one of: toggle, open, focus, close, send, mention_file, mention_dir, resume, status, permissions, compact, review, diff'
       )
     end)
 

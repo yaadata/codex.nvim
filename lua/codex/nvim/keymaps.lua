@@ -81,9 +81,23 @@ function M.register(config, vim_api)
   set_mapping(vim_api, "n", maps.open, "<Cmd>Codex!<CR>", "Codex: Open and focus", force)
   set_mapping(vim_api, "n", maps.focus, "<Cmd>CodexFocus<CR>", "Codex: Focus terminal", force)
   set_mapping(vim_api, "n", maps.close, "<Cmd>CodexClose<CR>", "Codex: Close session", force)
-  set_mapping(vim_api, "n", maps.add, "<Cmd>CodexAdd<CR>", "Codex: Add current file", force)
+  set_mapping(
+    vim_api,
+    "n",
+    maps.mention_file,
+    "<Cmd>CodexMentionFile<CR>",
+    "Codex: Mention current file",
+    force
+  )
+  set_mapping(
+    vim_api,
+    "n",
+    maps.mention_dir,
+    "<Cmd>CodexMentionDirectory<CR>",
+    "Codex: Mention current directory",
+    force
+  )
   set_mapping(vim_api, "n", maps.resume, "<Cmd>CodexResume<CR>", "Codex: Resume session", force)
-  set_mapping(vim_api, "n", maps.model, "<Cmd>CodexModel<CR>", "Codex: Set model", force)
   set_mapping(vim_api, "n", maps.status, "<Cmd>CodexStatus<CR>", "Codex: Show status", force)
   set_mapping(
     vim_api,

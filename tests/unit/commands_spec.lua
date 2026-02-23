@@ -32,7 +32,8 @@ describe("codex.nvim command registration", function()
       assert.is_not_nil(registered.CodexClose)
       assert.is_not_nil(registered.CodexClearInput)
       assert.is_not_nil(registered.CodexSend)
-      assert.is_not_nil(registered.CodexAdd)
+      assert.is_not_nil(registered.CodexMentionFile)
+      assert.is_not_nil(registered.CodexMentionDirectory)
       assert.is_not_nil(registered.CodexResume)
       assert.is_not_nil(registered.CodexModel)
       assert.is_not_nil(registered.CodexStatus)
@@ -70,9 +71,16 @@ describe("codex.nvim command registration", function()
       assert.equals(0, registered.CodexSend.opts.nargs)
       assert.is_true(registered.CodexSend.opts.range)
 
-      assert.equals("Add file context to Codex via /mention", registered.CodexAdd.opts.desc)
-      assert.equals("?", registered.CodexAdd.opts.nargs)
-      assert.equals("file", registered.CodexAdd.opts.complete)
+      assert.equals("Mention a file in Codex via /mention", registered.CodexMentionFile.opts.desc)
+      assert.equals("?", registered.CodexMentionFile.opts.nargs)
+      assert.equals("file", registered.CodexMentionFile.opts.complete)
+
+      assert.equals(
+        "Mention a directory in Codex via /mention",
+        registered.CodexMentionDirectory.opts.desc
+      )
+      assert.equals("?", registered.CodexMentionDirectory.opts.nargs)
+      assert.equals("dir", registered.CodexMentionDirectory.opts.complete)
 
       assert.equals(
         "Resume Codex session picker (use ! to launch with --last when needed)",
@@ -257,38 +265,76 @@ describe("codex.nvim command registration", function()
     end)
   end)
 
-  it("dispatches :CodexAdd with explicit argument", function()
+  it("dispatches :CodexMentionFile with explicit argument", function()
     with_stubbed_command_registration(function(registered)
       local paths = {}
 
       package.loaded["codex"] = {
-        add_file = function(path)
+        mention_file = function(path)
           table.insert(paths, path)
         end,
       }
 
       require("codex.nvim.commands").register()
-      registered.CodexAdd.callback({ args = "/tmp/test.lua" })
+      registered.CodexMentionFile.callback({ args = "/tmp/test.lua" })
 
       assert.equals(1, #paths)
       assert.equals("/tmp/test.lua", paths[1])
     end)
   end)
 
-  it("dispatches :CodexAdd without argument as nil", function()
+  it("dispatches :CodexMentionFile without argument as nil", function()
     with_stubbed_command_registration(function(registered)
       local called = false
       local received_path = "unset"
 
       package.loaded["codex"] = {
-        add_file = function(path)
+        mention_file = function(path)
           called = true
           received_path = path
         end,
       }
 
       require("codex.nvim.commands").register()
-      registered.CodexAdd.callback({ args = "" })
+      registered.CodexMentionFile.callback({ args = "" })
+
+      assert.is_true(called)
+      assert.is_nil(received_path)
+    end)
+  end)
+
+  it("dispatches :CodexMentionDirectory with explicit argument", function()
+    with_stubbed_command_registration(function(registered)
+      local paths = {}
+
+      package.loaded["codex"] = {
+        mention_directory = function(path)
+          table.insert(paths, path)
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      registered.CodexMentionDirectory.callback({ args = "/tmp/" })
+
+      assert.equals(1, #paths)
+      assert.equals("/tmp/", paths[1])
+    end)
+  end)
+
+  it("dispatches :CodexMentionDirectory without argument as nil", function()
+    with_stubbed_command_registration(function(registered)
+      local called = false
+      local received_path = "unset"
+
+      package.loaded["codex"] = {
+        mention_directory = function(path)
+          called = true
+          received_path = path
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      registered.CodexMentionDirectory.callback({ args = "" })
 
       assert.is_true(called)
       assert.is_nil(received_path)

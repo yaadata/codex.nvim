@@ -37,6 +37,7 @@ local state = {
 
 local process_pending_send_item
 local session_is_alive
+local dispatch_mention
 local BRACKETED_PASTE_START = "\27[200~"
 local BRACKETED_PASTE_END = "\27[201~"
 local SLASH_COMMAND_SUBMIT_SEQUENCE = "\n"
@@ -769,25 +770,12 @@ function M.send_selection(opts)
   })
 end
 
----Sends `/mention`, auto-submits it, then restores previously captured prompt input.
----@param path? string Explicit path to mention. When nil, uses current buffer path.
+---Sends `/mention` for an already-resolved relative path, auto-submits, and restores prompt input.
+---@param resolved_path string Relative path to mention.
 ---@return codex.SendResult ok True when mention payload is sent.
 ---@return string|nil err
-function M.add_file(path)
-  ensure_setup()
+dispatch_mention = function(resolved_path)
   local deps = get_deps()
-  local resolved_path = path
-  if resolved_path == nil then
-    resolved_path = deps.vim.fn.expand("%:p")
-  end
-
-  if not resolved_path or resolved_path == "" then
-    local err = "current buffer has no file path"
-    deps.logger.error("failed to add file context: %s", err)
-    return false, err
-  end
-
-  resolved_path = deps.path.to_relative(deps.vim, resolved_path)
   local mention = deps.formatter.format_mention(resolved_path)
 
   local session, provider = get_active_session_and_provider()
@@ -826,6 +814,56 @@ function M.add_file(path)
       end, SUBMIT_INPUT_DELAY_MS)
     end,
   })
+end
+
+---Sends `/mention` for a file, auto-submits it, then restores previously captured prompt input.
+---@param path? string Explicit file path to mention. When nil, uses current buffer path.
+---@return codex.SendResult ok True when mention payload is sent.
+---@return string|nil err
+function M.mention_file(path)
+  ensure_setup()
+  local deps = get_deps()
+  local resolved_path = path
+  if resolved_path == nil then
+    resolved_path = deps.vim.fn.expand("%:p")
+  end
+
+  if not resolved_path or resolved_path == "" then
+    local err = "current buffer has no file path"
+    deps.logger.error("failed to mention file: %s", err)
+    return false, err
+  end
+
+  resolved_path = deps.path.to_relative(deps.vim, resolved_path)
+  return dispatch_mention(resolved_path)
+end
+
+---Sends `/mention` for a directory, auto-submits it, then restores previously captured prompt input.
+---@param path? string Explicit directory path to mention. When nil, uses current buffer's directory.
+---@return codex.SendResult ok True when mention payload is sent.
+---@return string|nil err
+function M.mention_directory(path)
+  ensure_setup()
+  local deps = get_deps()
+  local resolved_path = path
+  if resolved_path == nil then
+    local buf_path = deps.vim.fn.expand("%:p")
+    if not buf_path or buf_path == "" then
+      local err = "current buffer has no directory path"
+      deps.logger.error("failed to mention directory: %s", err)
+      return false, err
+    end
+    resolved_path = deps.vim.fn.expand("%:p:h")
+  end
+
+  if not resolved_path or resolved_path == "" then
+    local err = "current buffer has no directory path"
+    deps.logger.error("failed to mention directory: %s", err)
+    return false, err
+  end
+
+  resolved_path = deps.path.to_relative(deps.vim, resolved_path)
+  return dispatch_mention(resolved_path)
 end
 
 ---Returns whether an active Codex session is currently alive.

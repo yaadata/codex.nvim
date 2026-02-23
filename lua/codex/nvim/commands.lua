@@ -104,17 +104,31 @@ function M.register()
   })
 
   ---@param opts codex.UserCommandOpts
-  vim.api.nvim_create_user_command("CodexAdd", function(opts)
+  vim.api.nvim_create_user_command("CodexMentionFile", function(opts)
     local codex = require("codex")
     local path = opts.args
     if path == "" then
       path = nil
     end
-    codex.add_file(path)
+    codex.mention_file(path)
   end, {
-    desc = "Add file context to Codex via /mention",
+    desc = "Mention a file in Codex via /mention",
     nargs = "?",
     complete = "file",
+  })
+
+  ---@param opts codex.UserCommandOpts
+  vim.api.nvim_create_user_command("CodexMentionDirectory", function(opts)
+    local codex = require("codex")
+    local path = opts.args
+    if path == "" then
+      path = nil
+    end
+    codex.mention_directory(path)
+  end, {
+    desc = "Mention a directory in Codex via /mention",
+    nargs = "?",
+    complete = "dir",
   })
 
   ---@param opts codex.UserCommandOpts
