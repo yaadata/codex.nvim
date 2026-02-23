@@ -100,39 +100,19 @@ require("codex").setup({
 - `:CodexFocus` focuses the terminal (opens it if needed)
 - `:CodexClose` closes the active Codex terminal session
 - `:CodexClearInput` clears the active Codex terminal input line
-- `:CodexSend` sends selected lines with relative file path and line range
-  - when a command range is provided, it takes precedence over visual marks
-  - selection is linewise; visual columns are ignored (charwise/blockwise still
-    send full lines)
-  - payload is inserted via bracketed paste and is not auto-submitted
-  - if the terminal is still starting, payloads are queued and retried until
-    ready (or until `terminal.startup.timeout_ms` elapses)
-  - after sending, codex.nvim focuses the Codex terminal in insert mode; press
-    Enter to submit
-- `:CodexAdd [path]` sends `/mention <path>` (or current buffer path when
-  omitted)
-  - paths are normalized to be relative to the current working directory
-  - paths are auto-quoted/escaped when they contain whitespace or
-    shell-significant characters
-  - command is auto-submitted immediately
-  - codex.nvim clears the current prompt line, inserts `/mention`, submits it,
-    then re-applies previously typed prompt text (best effort)
-  - if prompt text cannot be captured from the terminal buffer, mention still
-    submits and prior input is not restored
-  - if the terminal is still starting, payloads are queued and retried until
-    ready (or until `terminal.startup.timeout_ms` elapses)
-  - after sending, codex.nvim focuses the Codex terminal in insert mode
-- `:CodexResume[!]` resumes a session
-  - with an active Codex session, sends `/resume` in-process
-  - without an active session, launches `codex resume` (or `codex resume --last`
-    with `!`)
+- `:CodexSend` sends selected lines with path and range context.
+- `:CodexAdd [path]` sends `/mention` for a path (or current buffer path).
+- `:CodexResume[!]` resumes in-process or launches `codex resume` (`!` uses
+  `--last` when launching).
 - `:CodexModel` sends `/model`
 - `:CodexStatus` sends `/status`
 - `:CodexPermissions` sends `/permissions`
 - `:CodexCompact` sends `/compact`
-- `:CodexReview [instructions]` sends `/review` (or `/review <instructions>`
-  when provided)
+- `:CodexReview [instructions]` sends `/review`.
 - `:CodexDiff` sends `/diff`
+
+For detailed command behavior and component interactions, see
+[`docs/command-interactions.md`](docs/command-interactions.md).
 
 ## Keymaps
 
@@ -214,31 +194,28 @@ navigation keymaps, or set individual directions to `false`.
 
 ## Lua API
 
-- `require("codex").open(focus)` opens the Codex terminal (`focus` defaults to
-  `true`).
-- `require("codex").close()` closes the active session and resets the send
-  queue.
-- `require("codex").toggle()` toggles terminal visibility for the active
-  session, or opens one if none exists.
-- `require("codex").focus()` focuses the active session, opening one if needed.
-- `require("codex").send(text)` sends raw text through the resilient send path.
-- `require("codex").clear_input()` sends terminal `<C-c>` to clear current
-  prompt input.
-- `require("codex").send_command(slash_cmd)` sends a slash command (with or
-  without leading `/`).
-- `require("codex").set_model()` sends `/model`.
-- `require("codex").show_status()` sends `/status`.
-- `require("codex").show_permissions()` sends `/permissions`.
-- `require("codex").compact()` sends `/compact`.
-- `require("codex").review(instructions)` sends `/review` (or
-  `/review <instructions>`).
-- `require("codex").show_diff()` sends `/diff`.
-- `require("codex").resume(opts)` resumes in-process when active, otherwise
-  launches `codex resume` (`opts.last` adds `--last` on launch).
-- `require("codex").send_selection(opts)` sends a range/visual selection with
-  file path and line metadata.
-- `require("codex").add_file(path)` sends `/mention <path>` (or current buffer
-  path when omitted).
+- `require("codex").setup(opts)` initialize plugin config, commands, and keymaps.
+- `require("codex").open(focus)` open terminal session.
+- `require("codex").close()` close active session.
+- `require("codex").toggle()` toggle terminal visibility.
+- `require("codex").focus()` focus active session.
+- `require("codex").send(text)` send raw text.
+- `require("codex").clear_input()` clear current prompt input.
+- `require("codex").send_command(slash_cmd)` send slash command text.
+- `require("codex").set_model()` send `/model`.
+- `require("codex").show_status()` send `/status`.
+- `require("codex").show_permissions()` send `/permissions`.
+- `require("codex").compact()` send `/compact`.
+- `require("codex").review(instructions)` send `/review`.
+- `require("codex").show_diff()` send `/diff`.
+- `require("codex").resume(opts)` resume (`opts.last` supports `--last`).
+- `require("codex").send_selection(opts)` send visual/range selection.
+- `require("codex").add_file(path)` send `/mention` for a file path.
+- `require("codex").is_running()` check whether active session is alive.
+- `require("codex").get_config()` return resolved config snapshot.
+
+For command and component interaction details, see
+[`docs/command-interactions.md`](docs/command-interactions.md).
 
 ## Providers
 
