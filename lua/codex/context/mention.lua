@@ -216,6 +216,7 @@ function M.create(opts)
     end
 
     resolved_path = deps.path.to_relative(deps.vim, resolved_path)
+    resolved_path = deps.path.ensure_dir_trailing_separator(deps.vim, resolved_path)
     return dispatch_mention(resolved_path)
   end
 

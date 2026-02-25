@@ -101,8 +101,8 @@ require("codex").setup({
 - `:CodexClose` closes the active Codex terminal session
 - `:CodexClearInput` clears the active Codex terminal input line
 - `:CodexSend` sends selected lines with path and range context.
-- `:CodexMentionFile [path]` sends `/mention` for a file (or current buffer path).
-- `:CodexMentionDirectory [path]` sends `/mention` for a directory (or current buffer's directory).
+- `:CodexMentionFile [path]` sends `/mention` for a file path, normalized to cwd-relative.
+- `:CodexMentionDirectory [path]` sends `/mention` for a directory path, normalized to cwd-relative and forced to end with a path separator.
 - `:CodexResume[!]` resumes in-process or launches `codex resume` (`!` uses
   `--last` when launching).
 - `:CodexModel` sends `/model`

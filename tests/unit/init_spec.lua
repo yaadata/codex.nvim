@@ -1535,14 +1535,32 @@ describe("codex.init public api", function()
     assert.equals("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
   end)
 
+  it(
+    "mention_directory appends trailing separator when explicit directory path omits it",
+    function()
+      local env = setup_with_deps()
+
+      local ok = env.codex.mention_directory("/tmp")
+      local mention_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/mention ../../tmp/"
+
+      assert.is_true(ok)
+      assert.equals("../../tmp/", env.formatter.mention_paths[1])
+      assert.equals(1, #env.provider.send_calls)
+      assert.equals(mention_payload_expected, env.provider.send_calls[1].text)
+    end
+  )
+
   it("mention_directory resolves current buffer directory when argument is nil", function()
     local env = setup_with_deps()
+    env.fake_vim.uv.os_uname = function()
+      return { sysname = "Linux" }
+    end
 
     local ok = env.codex.mention_directory(nil)
-    local mention_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/mention .."
+    local mention_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/mention ../"
 
     assert.is_true(ok)
-    assert.equals("..", env.formatter.mention_paths[1])
+    assert.equals("../", env.formatter.mention_paths[1])
     assert.equals(1, #env.provider.send_calls)
     assert.equals(mention_payload_expected, env.provider.send_calls[1].text)
   end)

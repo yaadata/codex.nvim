@@ -9,24 +9,24 @@ provider collaborators.
 
 ## Command Mapping
 
-| User Command                    | Entry Function                   | Primary Path                                          |
-| ------------------------------- | -------------------------------- | ----------------------------------------------------- |
-| `:Codex`                        | `codex.toggle()`                 | Toggle active terminal or open a focused session      |
-| `:Codex!`                       | `codex.open(true)`               | Force-open and focus terminal                         |
-| `:CodexFocus`                   | `codex.focus()`                  | Focus active session or open one                      |
-| `:CodexClose`                   | `codex.close()`                  | Close active session and reset queue                  |
-| `:CodexClearInput`              | `codex.clear_input()`            | Send `<C-c>` to active session                        |
-| `:CodexSend`                    | `codex.send_selection(opts)`     | Collect selection, format, send via queue             |
-| `:CodexMentionFile [path]`      | `codex.mention_file(path)`       | Build `/mention` payload for file and submit          |
-| `:CodexMentionDirectory [path]` | `codex.mention_directory(path)`  | Build `/mention` payload for directory and submit     |
-| `:CodexResume`                  | `codex.resume({ last = false })` | In-process `/resume` or launch `codex resume`         |
-| `:CodexResume!`                 | `codex.resume({ last = true })`  | Launch `codex resume --last` when opening new process |
-| `:CodexModel`                   | `codex.set_model()`              | Slash command wrapper (`/model`)                      |
-| `:CodexStatus`                  | `codex.show_status()`            | Slash command wrapper (`/status`)                     |
-| `:CodexPermissions`             | `codex.show_permissions()`       | Slash command wrapper (`/permissions`)                |
-| `:CodexCompact`                 | `codex.compact()`                | Slash command wrapper (`/compact`)                    |
-| `:CodexReview [instructions]`   | `codex.review(instructions)`     | Slash command wrapper (`/review ...`)                 |
-| `:CodexDiff`                    | `codex.show_diff()`              | Slash command wrapper (`/diff`)                       |
+| User Command                    | Entry Function                   | Primary Path                                                                         |
+| ------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------ |
+| `:Codex`                        | `codex.toggle()`                 | Toggle active terminal or open a focused session                                     |
+| `:Codex!`                       | `codex.open(true)`               | Force-open and focus terminal                                                        |
+| `:CodexFocus`                   | `codex.focus()`                  | Focus active session or open one                                                     |
+| `:CodexClose`                   | `codex.close()`                  | Close active session and reset queue                                                 |
+| `:CodexClearInput`              | `codex.clear_input()`            | Send `<C-c>` to active session                                                       |
+| `:CodexSend`                    | `codex.send_selection(opts)`     | Collect selection, format, send via queue                                            |
+| `:CodexMentionFile [path]`      | `codex.mention_file(path)`       | Build `/mention` payload for relative file and submit                                |
+| `:CodexMentionDirectory [path]` | `codex.mention_directory(path)`  | Build `/mention` payload for relative directory (with trailing separator) and submit |
+| `:CodexResume`                  | `codex.resume({ last = false })` | In-process `/resume` or launch `codex resume`                                        |
+| `:CodexResume!`                 | `codex.resume({ last = true })`  | Launch `codex resume --last` when opening new process                                |
+| `:CodexModel`                   | `codex.set_model()`              | Slash command wrapper (`/model`)                                                     |
+| `:CodexStatus`                  | `codex.show_status()`            | Slash command wrapper (`/status`)                                                    |
+| `:CodexPermissions`             | `codex.show_permissions()`       | Slash command wrapper (`/permissions`)                                               |
+| `:CodexCompact`                 | `codex.compact()`                | Slash command wrapper (`/compact`)                                                   |
+| `:CodexReview [instructions]`   | `codex.review(instructions)`     | Slash command wrapper (`/review ...`)                                                |
+| `:CodexDiff`                    | `codex.show_diff()`              | Slash command wrapper (`/diff`)                                                      |
 
 ## Setup Registration Flow
 
@@ -164,6 +164,7 @@ init.lua mention_file(path) / mention_directory(path) -> mention module
     |- resolve path (arg or current buffer path via %:p / %:p:h)
     |- [missing path] -> log + return false, "current buffer has no file/directory path"
     |- path.to_relative(...)
+    |- [directory only] path.ensure_dir_trailing_separator(...)
     \- mention.dispatch(relative_path)
          |- formatter.format_mention(relative_path)
          |- [active + alive] provider.focus(handle) before prompt capture

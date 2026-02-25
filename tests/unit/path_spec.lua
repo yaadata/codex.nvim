@@ -31,4 +31,30 @@ describe("codex.context.path", function()
     local fake_vim = { fn = {} }
     assert.equals("", path.to_relative(fake_vim, ""))
   end)
+
+  describe("ensure_dir_trailing_separator", function()
+    it("adds forward slash for unix-style relative paths", function()
+      assert.equals("../", path.ensure_dir_trailing_separator(nil, ".."))
+    end)
+
+    it("keeps existing unix trailing slash", function()
+      assert.equals("../../tmp/", path.ensure_dir_trailing_separator(nil, "../../tmp/"))
+    end)
+
+    it("adds backslash for windows-style paths", function()
+      assert.equals("C:\\work\\repo\\", path.ensure_dir_trailing_separator(nil, "C:\\work\\repo"))
+    end)
+
+    it("falls back to host OS separator when style is ambiguous", function()
+      local fake_vim = {
+        uv = {
+          os_uname = function()
+            return { sysname = "Windows_NT" }
+          end,
+        },
+      }
+
+      assert.equals(".\\", path.ensure_dir_trailing_separator(fake_vim, "."))
+    end)
+  end)
 end)
