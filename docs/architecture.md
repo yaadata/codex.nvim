@@ -162,8 +162,8 @@ end
 return M
 ```
 
-`init.lua` calls `create()` during `setup()` and stores the returned instance
-in `state`. This pattern avoids circular dependencies -- extracted modules never
+`init.lua` calls `create()` during `setup()` and stores the returned instance in
+`state`. This pattern avoids circular dependencies -- extracted modules never
 `require("codex")` back. Examples: `send_dispatch.lua`, `mention.lua`,
 `send_queue.lua`.
 

@@ -13,7 +13,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 > [!CAUTION]
 > You are reading the `main` branch README. Install and configuration details
 > may differ from tagged releases. The current latest release tag is
-> [`v0.2.2`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.2.2). For
+> [`v0.3.0`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.3.0). For
 > version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -22,7 +22,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = '0.2.2',
+  version = '0.3.0',
   config = function()
     require("codex").setup({})
   end,
@@ -102,8 +102,10 @@ require("codex").setup({
 - `:CodexClearInput` clears the active Codex terminal input line
 - `:CodexSend` sends selected lines with path and range context.
 - `:CodexAddBuffer` sends current buffer path as ACP file reference (`@path`).
-- `:CodexMentionFile [path]` sends `/mention` for a file path, normalized to cwd-relative.
-- `:CodexMentionDirectory [path]` sends `/mention` for a directory path, normalized to cwd-relative and forced to end with a path separator.
+- `:CodexMentionFile [path]` sends `/mention` for a file path, normalized to
+  cwd-relative.
+- `:CodexMentionDirectory [path]` sends `/mention` for a directory path,
+  normalized to cwd-relative and forced to end with a path separator.
 - `:CodexResume[!]` resumes in-process or launches `codex resume` (`!` uses
   `--last` when launching).
 - `:CodexModel` sends `/model`
@@ -169,7 +171,8 @@ expands to the expected key.
 `keymaps.send` is mode-aware:
 
 - Normal mode sends current buffer as `@path` (`:CodexAddBuffer`).
-- Visual mode sends selection as ACP line reference plus fenced code block (`:CodexSend`).
+- Visual mode sends selection as ACP line reference plus fenced code block
+  (`:CodexSend`).
 
 Terminal-local keymaps inside the Codex terminal buffer are configured
 separately via `terminal.keymaps`:
@@ -201,7 +204,8 @@ navigation keymaps, or set individual directions to `false`.
 
 ## Lua API
 
-- `require("codex").setup(opts)` initialize plugin config, commands, and keymaps.
+- `require("codex").setup(opts)` initialize plugin config, commands, and
+  keymaps.
 - `require("codex").open(focus)` open terminal session.
 - `require("codex").close()` close active session.
 - `require("codex").toggle()` toggle terminal visibility.
@@ -219,7 +223,8 @@ navigation keymaps, or set individual directions to `false`.
 - `require("codex").send_buffer(opts)` send current buffer path as `@path`.
 - `require("codex").send_selection(opts)` send visual/range selection.
 - `require("codex").mention_file(path)` send `/mention` for a file path.
-- `require("codex").mention_directory(path)` send `/mention` for a directory path.
+- `require("codex").mention_directory(path)` send `/mention` for a directory
+  path.
 - `require("codex").is_running()` check whether active session is alive.
 - `require("codex").get_config()` return resolved config snapshot.
 

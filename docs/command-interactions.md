@@ -242,8 +242,8 @@ Current command-facing usage:
 ### Wrapper Slash Commands (Mention-Style Autosubmit)
 
 These wrappers (`set_model`, `show_status`, `show_permissions`, `compact`,
-`review`, `show_diff`, and active-session `resume`) use a mention-style pre-clear flow with an atomic
-send + submit path:
+`review`, `show_diff`, and active-session `resume`) use a mention-style
+pre-clear flow with an atomic send + submit path:
 
 ```text
 init.lua dispatch_wrapper_command(command)
@@ -267,10 +267,11 @@ Notes:
 
 - Existing prompt input is copied to the unnamed register (`"`), then cleared.
 - Successful non-empty save emits a WARN notification.
-- If an active session buffer cannot be introspected (`unavailable_buffer`) before clear, a WARN notification is emitted.
+- If an active session buffer cannot be introspected (`unavailable_buffer`)
+  before clear, a WARN notification is emitted.
 - Input is not restored after command submission.
-- Wrapper command submission is atomic per queue item, so rapid consecutive calls
-  keep FIFO command ordering.
+- Wrapper command submission is atomic per queue item, so rapid consecutive
+  calls keep FIFO command ordering.
 
 | User Command                  | API Method             | Wrapper Input               | Command Path             |
 | ----------------------------- | ---------------------- | --------------------------- | ------------------------ |

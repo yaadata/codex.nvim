@@ -304,10 +304,10 @@ codex.setup({
 })
 ```
 
-See `tests/unit/helpers/init_spec_helpers.lua` for the canonical examples of
-all mock factories: `make_provider`, `make_session_store`, `make_logger`,
-`make_formatter`, `make_selection`, `make_fake_vim`, and the
-`setup_with_deps` helper.
+See `tests/unit/helpers/init_spec_helpers.lua` for the canonical examples of all
+mock factories: `make_provider`, `make_session_store`, `make_logger`,
+`make_formatter`, `make_selection`, `make_fake_vim`, and the `setup_with_deps`
+helper.
 
 ### Contract Tests
 
@@ -384,5 +384,5 @@ When cutting a new release tag:
 6. **Types** -- If the command introduces new option types or result types, add
    them to `lua/codex/types.lua`.
 7. **Architecture docs** -- Update `docs/command-interactions.md` for any
-   command registration or behavior changes, and keep the
-   `docs/architecture.md` component-interaction link accurate.
+   command registration or behavior changes, and keep the `docs/architecture.md`
+   component-interaction link accurate.
