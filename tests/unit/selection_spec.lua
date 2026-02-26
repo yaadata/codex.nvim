@@ -22,11 +22,18 @@ local function make_fake_vim_api(overrides)
   local relative_path = overrides.relative_path or "lua/codex/init.lua"
   local visual_mode = overrides.visual_mode
   local fs_stat = overrides.fs_stat
+  local buf_valid = overrides.buf_valid
 
   return {
     api = {
       nvim_get_current_buf = function()
         return bufnr
+      end,
+      nvim_buf_is_valid = function()
+        if buf_valid == nil then
+          return true
+        end
+        return buf_valid
       end,
       nvim_buf_get_name = function()
         return filepath
@@ -66,6 +73,21 @@ local function make_fake_vim_api(overrides)
 end
 
 describe("codex.context.selection", function()
+  it("returns current buffer filepath as relative ACP path", function()
+    local filepath = selection.get_current_buffer_filepath(make_fake_vim_api())
+
+    assert.equals("lua/codex/init.lua", filepath)
+  end)
+
+  it("returns error when target buffer is invalid", function()
+    local filepath, err = selection.get_current_buffer_filepath(make_fake_vim_api({
+      buf_valid = false,
+    }))
+
+    assert.is_nil(filepath)
+    assert.equals("buffer does not exist", err)
+  end)
+
   it("extracts multi-line selection from visual marks", function()
     local spec = selection.get_visual_selection(make_fake_vim_api())
 

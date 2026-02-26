@@ -101,6 +101,7 @@ require("codex").setup({
 - `:CodexClose` closes the active Codex terminal session
 - `:CodexClearInput` clears the active Codex terminal input line
 - `:CodexSend` sends selected lines with path and range context.
+- `:CodexAddBuffer` sends current buffer path as ACP file reference (`@path`).
 - `:CodexMentionFile [path]` sends `/mention` for a file path, normalized to cwd-relative.
 - `:CodexMentionDirectory [path]` sends `/mention` for a directory path, normalized to cwd-relative and forced to end with a path separator.
 - `:CodexResume[!]` resumes in-process or launches `codex resume` (`!` uses
@@ -165,6 +166,11 @@ require("codex").setup({
 Set `vim.g.mapleader` before calling `require("codex").setup()` so `<leader>`
 expands to the expected key.
 
+`keymaps.send` is mode-aware:
+
+- Normal mode sends current buffer as `@path` (`:CodexAddBuffer`).
+- Visual mode sends selection as ACP line reference plus fenced code block (`:CodexSend`).
+
 Terminal-local keymaps inside the Codex terminal buffer are configured
 separately via `terminal.keymaps`:
 
@@ -210,6 +216,7 @@ navigation keymaps, or set individual directions to `false`.
 - `require("codex").review(instructions)` send `/review`.
 - `require("codex").show_diff()` send `/diff`.
 - `require("codex").resume(opts)` resume (`opts.last` supports `--last`).
+- `require("codex").send_buffer(opts)` send current buffer path as `@path`.
 - `require("codex").send_selection(opts)` send visual/range selection.
 - `require("codex").mention_file(path)` send `/mention` for a file path.
 - `require("codex").mention_directory(path)` send `/mention` for a directory path.

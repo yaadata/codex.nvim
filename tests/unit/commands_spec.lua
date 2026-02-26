@@ -32,6 +32,7 @@ describe("codex.nvim command registration", function()
       assert.is_not_nil(registered.CodexClose)
       assert.is_not_nil(registered.CodexClearInput)
       assert.is_not_nil(registered.CodexSend)
+      assert.is_not_nil(registered.CodexAddBuffer)
       assert.is_not_nil(registered.CodexMentionFile)
       assert.is_not_nil(registered.CodexMentionDirectory)
       assert.is_not_nil(registered.CodexResume)
@@ -70,6 +71,12 @@ describe("codex.nvim command registration", function()
       )
       assert.equals(0, registered.CodexSend.opts.nargs)
       assert.is_true(registered.CodexSend.opts.range)
+
+      assert.equals(
+        "Send current buffer path to Codex as ACP reference",
+        registered.CodexAddBuffer.opts.desc
+      )
+      assert.equals(0, registered.CodexAddBuffer.opts.nargs)
 
       assert.equals("Mention a file in Codex via /mention", registered.CodexMentionFile.opts.desc)
       assert.equals("?", registered.CodexMentionFile.opts.nargs)
@@ -262,6 +269,23 @@ describe("codex.nvim command registration", function()
 
       assert.equals(1, #calls)
       assert.same({ line1 = 2, line2 = 6, visual_mode = string.char(22) }, calls[1])
+    end)
+  end)
+
+  it("dispatches :CodexAddBuffer to send_buffer", function()
+    with_stubbed_command_registration(function(registered)
+      local calls = 0
+
+      package.loaded["codex"] = {
+        send_buffer = function()
+          calls = calls + 1
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      registered.CodexAddBuffer.callback()
+
+      assert.equals(1, calls)
     end)
   end)
 

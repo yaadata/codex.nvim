@@ -46,7 +46,7 @@ codex.nvim/
 │                                    # prevents double-loading via vim.g.loaded_codex.
 ├── lua/codex/
 │   ├── init.lua                     # Public API facade (setup, open, close, toggle,
-│   │                                # send, send_selection, mention_file, mention_directory, resume, etc.).
+│   │                                # send, send_buffer, send_selection, mention_file, mention_directory, resume, etc.).
 │   │                                # Owns the DI container, setup wiring, and thin delegates.
 │   ├── config.lua                   # Default config table, vim.validate-based
 │   │                                # validation, and deep-merge with user options.
@@ -69,7 +69,8 @@ codex.nvim/
 │   │   ├── snacks.lua               # Provider backed by snacks.nvim terminal integration.
 │   ├── context/
 │   │   ├── formatter.lua            # Formats selection payloads (ACP path refs + fenced
-│   │   │                            # code blocks with adaptive backtick fencing) and /mention payloads
+│   │   │                            # code blocks with adaptive backtick fencing), ACP buffer refs,
+│   │   │                            # and /mention payloads
 │   │   │                            # (auto-quoting paths with special characters).
 │   │   ├── mention.lua              # Mention orchestration: captures terminal prompt input,
 │   │   │                            # dispatches /mention payloads, auto-submits, and restores

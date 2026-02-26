@@ -16,6 +16,7 @@ provider collaborators.
 | `:CodexFocus`                   | `codex.focus()`                  | Focus active session or open one                                                      |
 | `:CodexClose`                   | `codex.close()`                  | Close active session and reset queue                                                  |
 | `:CodexClearInput`              | `codex.clear_input()`            | Send `<C-c>` to active session                                                        |
+| `:CodexAddBuffer`               | `codex.send_buffer(opts)`        | Collect current buffer path, format `@path`, send via queue                           |
 | `:CodexSend`                    | `codex.send_selection(opts)`     | Collect selection, format, send via queue                                             |
 | `:CodexMentionFile [path]`      | `codex.mention_file(path)`       | Build `/mention` payload for relative file and submit                                 |
 | `:CodexMentionDirectory [path]` | `codex.mention_directory(path)`  | Build `/mention` payload for relative directory (with trailing separator) and submit  |
@@ -144,6 +145,30 @@ init.lua send_selection()
     |    \- return SelectionSpec { path, start_line, end_line, filetype, lines }
     |- formatter.format_selection(spec)
     |    \- build ACP selection ref (`@path#Lstart` or `@path#Lstart-end`) + fenced code block
+    \- send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), ...)
+         |- [active + ready] -> provider.send(session.handle, text)
+         |- [no active session] -> session_lifecycle.open_session(...)
+         \- [not ready yet] -> queue + retry loop until ready/timeout
+```
+
+### `:CodexAddBuffer`
+
+```text
+User runs :CodexAddBuffer
+    |
+    v
+commands.lua -> codex.send_buffer()
+    |
+    v
+init.lua send_buffer()
+    |- ensure_setup()
+    |- selection.get_current_buffer_filepath(vim, opts)
+    |    |- [invalid buffer] -> return nil, "buffer does not exist"
+    |    |- [missing path] -> return nil, "current buffer has no file path"
+    |    |- [non-file path] -> return nil, "current buffer path is not a regular file"
+    |    \- return cwd-relative filepath
+    |- formatter.format_buffer_ref(path)
+    |    \- build ACP file ref (`@path`)
     \- send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), ...)
          |- [active + ready] -> provider.send(session.handle, text)
          |- [no active session] -> session_lifecycle.open_session(...)

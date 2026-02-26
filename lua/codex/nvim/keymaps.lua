@@ -112,7 +112,14 @@ function M.register(config, vim_api)
   set_mapping(vim_api, "n", maps.diff, "<Cmd>CodexDiff<CR>", "Codex: Show diff", force)
 
   if maps.send ~= false then
-    set_mapping(vim_api, "n", maps.send, "<Cmd>CodexSend<CR>", "Codex: Send current line", force)
+    set_mapping(
+      vim_api,
+      "n",
+      maps.send,
+      "<Cmd>CodexAddBuffer<CR>",
+      "Codex: Add current buffer",
+      force
+    )
     set_mapping(vim_api, "x", maps.send, function()
       local mode = vim_api.fn.visualmode and vim_api.fn.visualmode(1) or nil
       if mode ~= "v" and mode ~= "V" and mode ~= CTRL_V then

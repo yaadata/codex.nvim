@@ -211,6 +211,8 @@ local function make_formatter()
     selection_specs = {},
     mention_paths = {},
     selection_payload = "[selection]",
+    buffer_paths = {},
+    buffer_payload = "[@buffer]",
   }
 
   function formatter.format_selection(spec)
@@ -223,13 +225,20 @@ local function make_formatter()
     return "/mention " .. path
   end
 
+  function formatter.format_buffer_ref(path)
+    table.insert(formatter.buffer_paths, path)
+    return formatter.buffer_payload
+  end
+
   return formatter
 end
 
 local function make_selection()
   local selection = {
     calls = {},
+    buffer_calls = {},
     errors = {
+      BUFFER_NOT_FOUND = "buffer does not exist",
       NO_FILEPATH = "current buffer has no file path",
       INVALID_FILEPATH = "current buffer path is not a regular file",
       NO_SELECTION = "no visual selection range found",
@@ -242,6 +251,8 @@ local function make_selection()
       lines = { "line 1", "line 2" },
     },
     err = nil,
+    buffer_filepath = "test/current.lua",
+    buffer_err = nil,
   }
 
   function selection.get_visual_selection(vim_api, opts)
@@ -253,6 +264,17 @@ local function make_selection()
       return nil, selection.err
     end
     return selection.result
+  end
+
+  function selection.get_current_buffer_filepath(vim_api, opts)
+    table.insert(selection.buffer_calls, {
+      vim_api = vim_api,
+      opts = opts,
+    })
+    if selection.buffer_err then
+      return nil, selection.buffer_err
+    end
+    return selection.buffer_filepath
   end
 
   return selection

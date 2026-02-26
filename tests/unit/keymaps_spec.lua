@@ -95,6 +95,7 @@ describe("codex.nvim.keymaps", function()
     assert.is_not_nil(fake_vim._maps.n["<leader>ox"])
     assert.is_not_nil(fake_vim._maps.n["<leader>os"])
     assert.is_not_nil(fake_vim._maps.x["<leader>os"])
+    assert.equals("<Cmd>CodexAddBuffer<CR>", fake_vim._maps.n["<leader>os"].rhs)
     assert.is_function(fake_vim._maps.x["<leader>os"].rhs)
 
     fake_vim._maps.x["<leader>os"].rhs()

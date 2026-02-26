@@ -335,6 +335,45 @@ function M.resume(opts)
   return true
 end
 
+---Log selection/buffer extraction failures with warning or error severity.
+---@param deps table
+---@param subject "selection"|"buffer"
+---@param err string|nil
+---@return nil
+local function log_selection_failure(deps, subject, err)
+  local target = subject or "selection"
+  local selection_errors = deps.selection.errors or {}
+  if err == selection_errors.BUFFER_NOT_FOUND then
+    deps.logger.warn("failed to collect %s: %s", target, err or "unknown error")
+    return
+  end
+  if err == selection_errors.NO_FILEPATH or err == selection_errors.INVALID_FILEPATH then
+    deps.logger.warn("failed to collect %s: %s", target, err or "unknown error")
+    return
+  end
+  deps.logger.error("failed to collect %s: %s", target, err or "unknown error")
+end
+
+---Formats current buffer reference and sends it as bracketed paste.
+---@param opts? codex.SelectionOpts Buffer override via `opts.bufnr`.
+---@return codex.SendResult ok True when buffer payload is sent.
+---@return string|nil err
+function M.send_buffer(opts)
+  ensure_setup()
+  local deps = get_deps()
+  local filepath, err = deps.selection.get_current_buffer_filepath(deps.vim, opts)
+  if not filepath then
+    log_selection_failure(deps, "buffer", err)
+    return false, err
+  end
+
+  local payload = deps.formatter.format_buffer_ref(filepath)
+  return state.send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), {
+    open_focus = true,
+    post_focus = true,
+  })
+end
+
 ---Formats visual selection and sends it as bracketed paste.
 ---@param opts? codex.SelectionOpts Selection range override; falls back to visual marks when omitted.
 ---@return codex.SendResult ok True when selection payload is sent.
@@ -344,12 +383,7 @@ function M.send_selection(opts)
   local deps = get_deps()
   local spec, err = deps.selection.get_visual_selection(deps.vim, opts)
   if not spec then
-    local selection_errors = deps.selection.errors or {}
-    if err == selection_errors.NO_FILEPATH or err == selection_errors.INVALID_FILEPATH then
-      deps.logger.warn("failed to collect selection: %s", err or "unknown error")
-    else
-      deps.logger.error("failed to collect selection: %s", err or "unknown error")
-    end
+    log_selection_failure(deps, "selection", err)
     return false, err
   end
 

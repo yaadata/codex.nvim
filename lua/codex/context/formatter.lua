@@ -75,6 +75,13 @@ function M.format_selection(spec)
   return string.format("%s\n\n%s%s\n%s\n%s", location, fence, language, content, fence)
 end
 
+--- Format an ACP file reference for the current buffer.
+---@param filepath string
+---@return string payload
+function M.format_buffer_ref(filepath)
+  return string.format("@%s", filepath)
+end
+
 --- Format a `/mention` payload; paths are quoted and escaped when needed.
 ---@param filepath? string
 ---@return string payload

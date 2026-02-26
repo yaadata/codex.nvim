@@ -4,6 +4,7 @@ local path = require("codex.context.path")
 local CTRL_V = string.char(22)
 
 M.errors = {
+  BUFFER_NOT_FOUND = "buffer does not exist",
   NO_FILEPATH = "current buffer has no file path",
   INVALID_FILEPATH = "current buffer path is not a regular file",
   NO_SELECTION = "no visual selection range found",
@@ -16,6 +17,14 @@ M.errors = {
 ---@field end_col? integer
 ---@field bufnr? integer
 ---@field visual_mode? string
+
+--- Resolve the target buffer number from opts or current buffer.
+---@param vim_api table
+---@param opts codex.SelectionOpts|nil
+---@return integer bufnr
+local function resolve_bufnr(vim_api, opts)
+  return (opts and opts.bufnr) or vim_api.api.nvim_get_current_buf()
+end
 
 --- Check whether a value is an integer >= 1.
 ---@param value any
@@ -190,6 +199,37 @@ local function shape_lines(lines, visual_mode, range)
   return lines
 end
 
+---Resolve the current buffer file path as a cwd-relative path.
+---@param vim_api table|nil
+---@param opts? codex.SelectionOpts
+---@return string|nil filepath
+---@return string|nil err
+function M.get_current_buffer_filepath(vim_api, opts)
+  vim_api = vim_api or vim
+  opts = opts or {}
+
+  local bufnr = resolve_bufnr(vim_api, opts)
+  local is_valid_buf = vim_api.api.nvim_buf_is_valid
+  if type(is_valid_buf) == "function" and not is_valid_buf(bufnr) then
+    return nil, M.errors.BUFFER_NOT_FOUND
+  end
+
+  local ok, filepath = pcall(vim_api.api.nvim_buf_get_name, bufnr)
+  if not ok then
+    return nil, M.errors.BUFFER_NOT_FOUND
+  end
+
+  if not filepath or filepath == "" then
+    return nil, M.errors.NO_FILEPATH
+  end
+
+  if not is_regular_file(vim_api, filepath) then
+    return nil, M.errors.INVALID_FILEPATH
+  end
+
+  return path.to_relative(vim_api, filepath)
+end
+
 --- Capture the current visual selection as a SelectionSpec.
 ---@param vim_api table|nil
 ---@param opts? codex.SelectionOpts
@@ -199,14 +239,10 @@ function M.get_visual_selection(vim_api, opts)
   vim_api = vim_api or vim
   opts = opts or {}
 
-  local bufnr = opts.bufnr or vim_api.api.nvim_get_current_buf()
-  local filepath = vim_api.api.nvim_buf_get_name(bufnr)
-  if not filepath or filepath == "" then
-    return nil, M.errors.NO_FILEPATH
-  end
-
-  if not is_regular_file(vim_api, filepath) then
-    return nil, M.errors.INVALID_FILEPATH
+  local bufnr = resolve_bufnr(vim_api, opts)
+  local filepath, err = M.get_current_buffer_filepath(vim_api, { bufnr = bufnr })
+  if not filepath then
+    return nil, err
   end
 
   local start_mark = vim_api.api.nvim_buf_get_mark(bufnr, "<")
@@ -254,7 +290,7 @@ function M.get_visual_selection(vim_api, opts)
   local filetype = vim_api.bo[bufnr].filetype or ""
 
   return {
-    filepath = path.to_relative(vim_api, filepath),
+    filepath = filepath,
     start_line = start_line,
     end_line = end_line,
     filetype = filetype,
