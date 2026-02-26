@@ -2,8 +2,7 @@ local M = {}
 
 M.BRACKETED_PASTE_START = "\27[200~"
 M.BRACKETED_PASTE_END = "\27[201~"
-M.SLASH_COMMAND_SUBMIT_SEQUENCE = "\n"
-M.CODEX_ENTER_SEQUENCE = "\r\n"
+M.CODEX_ENTER_SEQUENCE = "\r"
 M.SUBMIT_INPUT_DELAY_MS = 40
 M.PROMPT_CAPTURE_LOOKBACK_LINES = 8
 -- Allow Codex CLI enough time to process submit and render a fresh prompt
@@ -68,6 +67,23 @@ function M.parse_prompt_input(line)
     return nil
   end
 
+  local first_char = trimmed:sub(1, 1)
+  if first_char == "" or first_char:find("[%w/]") then
+    return nil
+  end
+
+  -- Support compact prompt forms like `>draft` where no delimiter space exists.
+  if not trimmed:find("%s") then
+    local compact_input = trimmed:sub(2)
+    if compact_input ~= "" then
+      return {
+        input = compact_input,
+        input_start_col = leading_whitespace + 1,
+      }
+    end
+    return nil
+  end
+
   local prompt_end = trimmed:find("%s")
   if prompt_end == nil or prompt_end <= 1 then
     return nil
@@ -87,6 +103,43 @@ function M.parse_prompt_input(line)
     input = input,
     input_start_col = leading_whitespace + prompt_end,
   }
+end
+
+---Reports whether a terminal line has visible non-whitespace text.
+---@param line string
+---@return boolean
+function M.has_visible_text(line)
+  if type(line) ~= "string" then
+    return false
+  end
+  local normalized = M.normalize_terminal_line(line)
+  return normalized:match("%S") ~= nil
+end
+
+---Best-effort signal that line may contain prompt input but could not be parsed.
+---@param line string
+---@return boolean
+function M.has_unparsed_prompt_like_input(line)
+  if type(line) ~= "string" then
+    return false
+  end
+  local normalized = M.normalize_terminal_line(line)
+  local trimmed = normalized:gsub("^%s+", "")
+  if trimmed == "" then
+    return false
+  end
+  if M.parse_prompt_input(trimmed) ~= nil then
+    return false
+  end
+  local first_char = trimmed:sub(1, 1)
+  if first_char == "" or first_char:find("[%w/]") then
+    return false
+  end
+  -- Treat symbol-only prompt markers (e.g. "> " or ">> ") as empty input.
+  if trimmed:match("^[^%w/%s]+%s*$") then
+    return false
+  end
+  return trimmed:sub(2):match("%S") ~= nil
 end
 
 ---Adds a line number candidate once, if valid.

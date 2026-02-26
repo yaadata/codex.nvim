@@ -9,24 +9,24 @@ provider collaborators.
 
 ## Command Mapping
 
-| User Command                    | Entry Function                   | Primary Path                                                                         |
-| ------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------ |
-| `:Codex`                        | `codex.toggle()`                 | Toggle active terminal or open a focused session                                     |
-| `:Codex!`                       | `codex.open(true)`               | Force-open and focus terminal                                                        |
-| `:CodexFocus`                   | `codex.focus()`                  | Focus active session or open one                                                     |
-| `:CodexClose`                   | `codex.close()`                  | Close active session and reset queue                                                 |
-| `:CodexClearInput`              | `codex.clear_input()`            | Send `<C-c>` to active session                                                       |
-| `:CodexSend`                    | `codex.send_selection(opts)`     | Collect selection, format, send via queue                                            |
-| `:CodexMentionFile [path]`      | `codex.mention_file(path)`       | Build `/mention` payload for relative file and submit                                |
-| `:CodexMentionDirectory [path]` | `codex.mention_directory(path)`  | Build `/mention` payload for relative directory (with trailing separator) and submit |
-| `:CodexResume`                  | `codex.resume({ last = false })` | In-process `/resume` or launch `codex resume`                                        |
-| `:CodexResume!`                 | `codex.resume({ last = true })`  | Launch `codex resume --last` when opening new process                                |
-| `:CodexModel`                   | `codex.set_model()`              | Slash command wrapper (`/model`)                                                     |
-| `:CodexStatus`                  | `codex.show_status()`            | Slash command wrapper (`/status`)                                                    |
-| `:CodexPermissions`             | `codex.show_permissions()`       | Slash command wrapper (`/permissions`)                                               |
-| `:CodexCompact`                 | `codex.compact()`                | Slash command wrapper (`/compact`)                                                   |
-| `:CodexReview [instructions]`   | `codex.review(instructions)`     | Slash command wrapper (`/review ...`)                                                |
-| `:CodexDiff`                    | `codex.show_diff()`              | Slash command wrapper (`/diff`)                                                      |
+| User Command                    | Entry Function                   | Primary Path                                                                          |
+| ------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------- |
+| `:Codex`                        | `codex.toggle()`                 | Toggle active terminal or open a focused session                                      |
+| `:Codex!`                       | `codex.open(true)`               | Force-open and focus terminal                                                         |
+| `:CodexFocus`                   | `codex.focus()`                  | Focus active session or open one                                                      |
+| `:CodexClose`                   | `codex.close()`                  | Close active session and reset queue                                                  |
+| `:CodexClearInput`              | `codex.clear_input()`            | Send `<C-c>` to active session                                                        |
+| `:CodexSend`                    | `codex.send_selection(opts)`     | Collect selection, format, send via queue                                             |
+| `:CodexMentionFile [path]`      | `codex.mention_file(path)`       | Build `/mention` payload for relative file and submit                                 |
+| `:CodexMentionDirectory [path]` | `codex.mention_directory(path)`  | Build `/mention` payload for relative directory (with trailing separator) and submit  |
+| `:CodexResume`                  | `codex.resume({ last = false })` | In-process `/resume` or launch `codex resume`                                         |
+| `:CodexResume!`                 | `codex.resume({ last = true })`  | Launch `codex resume --last` when opening new process                                 |
+| `:CodexModel`                   | `codex.set_model()`              | Mention-style slash wrapper (`/model`): capture->copy->clear->send->auto-submit       |
+| `:CodexStatus`                  | `codex.show_status()`            | Mention-style slash wrapper (`/status`): capture->copy->clear->send->auto-submit      |
+| `:CodexPermissions`             | `codex.show_permissions()`       | Mention-style slash wrapper (`/permissions`): capture->copy->clear->send->auto-submit |
+| `:CodexCompact`                 | `codex.compact()`                | Mention-style slash wrapper (`/compact`): capture->copy->clear->send->auto-submit     |
+| `:CodexReview [instructions]`   | `codex.review(instructions)`     | Mention-style slash wrapper (`/review ...`): capture->copy->clear->send->auto-submit  |
+| `:CodexDiff`                    | `codex.show_diff()`              | Mention-style slash wrapper (`/diff`): capture->copy->clear->send->auto-submit        |
 
 ## Setup Registration Flow
 
@@ -187,27 +187,67 @@ commands.lua -> codex.resume({ last = opts.bang })
 init.lua resume(opts)
     |- ensure_setup()
     |- session_lifecycle.get_active_session_and_provider(deps, config)
-    |- [active + alive session] -> send_command("resume") (in-process /resume)
+    |- [active + alive session] -> dispatch_wrapper_command("resume") (in-process /resume)
     \- [no active/alive session]
          |- args = { "resume" }
          |- if opts.last then args += "--last"
          \- session_lifecycle.open_session(deps, config, args, focus=true)
 ```
 
-### Slash Command Wrappers
+### Generic `send_command()`
 
-These commands all route through `send_command()`, which normalizes the slash
-command, builds `"/<command>\n"`, and calls:
+`send_command()` normalizes the slash command, sends `"/<command>"`, then
+submits with Enter in the same queue callback:
 
 ```text
 send_dispatch.dispatch_send(payload, {
   open_focus = true,
   pre_focus = true,
   command_path = "/<command>",
+  on_sent = function()
+    prompt_submit.submit_with_enter_key(..., "/<command>")
+  end,
 })
 ```
 
-| User Command                  | API Method             | `send_command(...)` Input   | Command Path             |
+Current command-facing usage:
+
+- No built-in `:Codex*` user command calls `send_command()` directly.
+
+### Wrapper Slash Commands (Mention-Style Autosubmit)
+
+These wrappers (`set_model`, `show_status`, `show_permissions`, `compact`,
+`review`, `show_diff`, and active-session `resume`) use a mention-style pre-clear flow with an atomic
+send + submit path:
+
+```text
+init.lua dispatch_wrapper_command(command)
+    |- ensure_setup()
+    |- normalize -> command_path ("/<command>")
+    |- [active + alive session] provider.focus(handle) before capture
+    |- capture prompt input (best effort)
+    |- [captured input] vim.fn.setreg('"', captured_input)
+    |- payload = clear_line_sequence + command_path
+    \- send_dispatch.dispatch_send(payload, {
+         open_focus = true,
+         pre_focus = true,
+         command_path = command_path,
+         on_sent = function()
+           prompt_submit.submit_with_enter_key(..., command_path)
+         end,
+       })
+```
+
+Notes:
+
+- Existing prompt input is copied to the unnamed register (`"`), then cleared.
+- Successful non-empty save emits a WARN notification.
+- If an active session buffer cannot be introspected (`unavailable_buffer`) before clear, a WARN notification is emitted.
+- Input is not restored after command submission.
+- Wrapper command submission is atomic per queue item, so rapid consecutive calls
+  keep FIFO command ordering.
+
+| User Command                  | API Method             | Wrapper Input               | Command Path             |
 | ----------------------------- | ---------------------- | --------------------------- | ------------------------ |
 | `:CodexModel`                 | `set_model()`          | `"model"`                   | `/model`                 |
 | `:CodexStatus`                | `show_status()`        | `"status"`                  | `/status`                |
@@ -216,3 +256,4 @@ send_dispatch.dispatch_send(payload, {
 | `:CodexReview`                | `review(nil)`          | `"review"`                  | `/review`                |
 | `:CodexReview <instructions>` | `review(instructions)` | `"review " .. instructions` | `/review <instructions>` |
 | `:CodexDiff`                  | `show_diff()`          | `"diff"`                    | `/diff`                  |
+| `:CodexResume`                | `resume()`             | `"resume"` (active session) | `/resume`                |

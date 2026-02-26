@@ -1,5 +1,6 @@
 local terminal_io = require("codex.runtime.terminal_io")
 local session_lifecycle = require("codex.state.session_lifecycle")
+local prompt_submit = require("codex.context.prompt_submit")
 
 ---@class codex.MentionOpts
 ---@field get_deps fun(): table
@@ -16,114 +17,6 @@ function M.create(opts)
   local get_config = opts.get_config
   local dispatch_send = opts.dispatch_send
 
-  ---Best-effort capture of current terminal prompt input for post-mention restore.
-  ---@return string|nil
-  local function capture_terminal_prompt_input()
-    local deps = get_deps()
-    local config = get_config()
-    local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
-    if
-      not session_lifecycle.session_is_alive(session, provider)
-      or type(provider.get_bufnr) ~= "function"
-    then
-      return nil
-    end
-
-    local bufnr = provider.get_bufnr(session.handle)
-    local api = deps.vim.api
-    if type(bufnr) ~= "number" then
-      return nil
-    end
-    local ok_valid, is_valid = pcall(api.nvim_buf_is_valid, bufnr)
-    if not ok_valid or not is_valid then
-      return nil
-    end
-
-    local ok_count, line_count = pcall(api.nvim_buf_line_count, bufnr)
-    if not ok_count or type(line_count) ~= "number" or line_count < 1 then
-      return nil
-    end
-
-    local candidates = {}
-    local seen = {}
-    local cursor_line = nil
-    local cursor_col = nil
-
-    local ok_winid, winid = pcall(deps.vim.fn.bufwinid, bufnr)
-    if ok_winid and type(winid) == "number" and winid > 0 then
-      local ok_cursor, cursor = pcall(api.nvim_win_get_cursor, winid)
-      if ok_cursor and type(cursor) == "table" then
-        cursor_line = cursor[1]
-        cursor_col = cursor[2]
-        terminal_io.add_candidate_line(candidates, seen, cursor_line)
-      end
-    end
-
-    for offset = 0, terminal_io.PROMPT_CAPTURE_LOOKBACK_LINES do
-      terminal_io.add_candidate_line(candidates, seen, line_count - offset)
-    end
-
-    for _, line_number in ipairs(candidates) do
-      local ok_lines, lines =
-        pcall(api.nvim_buf_get_lines, bufnr, line_number - 1, line_number, false)
-      if ok_lines and type(lines) == "table" then
-        local line = lines[1]
-        local parsed = terminal_io.parse_prompt_input(line)
-        if parsed ~= nil then
-          if
-            line_number == cursor_line
-            and type(cursor_col) == "number"
-            and cursor_col <= parsed.input_start_col
-          then
-            -- Cursor is parked at input start; treat trailing ghost text as not-yet-accepted.
-            return nil
-          end
-          if parsed.input ~= "" then
-            return parsed.input
-          end
-        end
-      end
-    end
-
-    return nil
-  end
-
-  ---Submits the current prompt using Enter, with provider-send fallback.
-  ---@param target string
-  ---@return boolean ok
-  ---@return string|nil err
-  local function submit_with_enter_key(target)
-    local deps = get_deps()
-    local config = get_config()
-    local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
-    if not session_lifecycle.session_is_alive(session, provider) then
-      return false, "no active Codex session"
-    end
-
-    provider.focus(session.handle)
-    local enter_termcode = terminal_io.encode_termcode(deps, "<CR>")
-    local feedkeys = deps.vim.api.nvim_feedkeys
-    if type(feedkeys) == "function" then
-      terminal_io.append_send_debug_entry(
-        deps,
-        string.format("%s[feedkeys_submit]", target),
-        enter_termcode
-      )
-      local ok, feedkeys_err = pcall(feedkeys, enter_termcode, "nt", false)
-      if ok then
-        return true
-      end
-      deps.logger.warn("feedkeys submit failed, falling back to channel send: %s", feedkeys_err)
-    end
-
-    terminal_io.append_send_debug_entry(
-      deps,
-      string.format("%s[channel_submit]", target),
-      terminal_io.CODEX_ENTER_SEQUENCE
-    )
-    return provider.send(session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
-  end
-
   ---Sends `/mention` for an already-resolved relative path, auto-submits, and restores prompt input.
   ---@param resolved_path string Relative path to mention.
   ---@return codex.SendResult ok True when mention payload is sent.
@@ -139,7 +32,7 @@ function M.create(opts)
       provider.focus(session.handle)
     end
 
-    local existing_input = capture_terminal_prompt_input()
+    local existing_input = prompt_submit.capture_prompt_input(get_deps, get_config)
     local mention_payload = terminal_io.encode_clear_line_for_mention(deps) .. mention
     return dispatch_send(mention_payload, {
       open_focus = true,
@@ -147,7 +40,8 @@ function M.create(opts)
       command_path = "/mention",
       on_sent = function()
         deps.vim.defer_fn(function()
-          local submit_ok, submit_err = submit_with_enter_key("/mention")
+          local submit_ok, submit_err =
+            prompt_submit.submit_with_enter_key(get_deps, get_config, "/mention")
           if not submit_ok then
             deps.logger.error("failed to submit /mention: %s", submit_err)
             return

@@ -6,6 +6,10 @@ local terminal_io = require("codex.runtime.terminal_io")
 local session_lifecycle = require("codex.state.session_lifecycle")
 local send_dispatch_mod = require("codex.runtime.send_dispatch")
 local mention_mod = require("codex.context.mention")
+local prompt_submit = require("codex.context.prompt_submit")
+
+local SAVED_PROMPT_NOTIFY_MSG = "Saved current prompt to unnamed register"
+local COULD_NOT_SAVE_PROMPT_NOTIFY_MSG = "Could not save existing prompt before clearing"
 
 local default_deps = {
   config = require("codex.config"),
@@ -178,6 +182,41 @@ function M.clear_input()
   return provider.send(session.handle, clear_sequence)
 end
 
+---Captures prompt input, stores it in unnamed register when non-empty, and returns clear+command payload.
+---@param slash_cmd string Slash command name with or without a leading `/`.
+---@return string payload
+---@return string command_path
+local function build_wrapper_command_payload(slash_cmd)
+  ensure_setup()
+  local deps = get_deps()
+  local normalized = slash_cmd:gsub("^/+", "")
+  local command_path = "/" .. normalized
+
+  local session, provider = session_lifecycle.get_active_session_and_provider(deps, state.config)
+  if session_lifecycle.session_is_alive(session, provider) then
+    -- Capture depends on terminal buffer/window state; focus first to ensure buffer visibility.
+    provider.focus(session.handle)
+  end
+
+  local existing_input, capture_status = prompt_submit.capture_prompt_input(get_deps, function()
+    return state.config
+  end)
+  if existing_input and existing_input ~= "" then
+    local save_ok = pcall(deps.vim.fn.setreg, '"', existing_input)
+    if save_ok then
+      deps.logger.warn(SAVED_PROMPT_NOTIFY_MSG)
+    else
+      deps.logger.warn(COULD_NOT_SAVE_PROMPT_NOTIFY_MSG)
+    end
+  elseif capture_status == "unavailable_buffer" then
+    -- Alive session but no confident capture/save path; clearing may drop typed prompt text.
+    deps.logger.warn(COULD_NOT_SAVE_PROMPT_NOTIFY_MSG)
+  end
+
+  local payload = terminal_io.encode_clear_line_for_mention(deps) .. command_path
+  return payload, command_path
+end
+
 ---Normalizes and dispatches a slash command payload.
 ---@param slash_cmd string Slash command name with or without a leading `/`.
 ---@return codex.SendResult ok True when command payload is sent.
@@ -186,11 +225,40 @@ function M.send_command(slash_cmd)
   ensure_setup()
   local normalized = slash_cmd:gsub("^/+", "")
   local command_path = "/" .. normalized
-  local payload = command_path .. terminal_io.SLASH_COMMAND_SUBMIT_SEQUENCE
+  local payload = command_path
   return state.send_dispatch.dispatch_send(payload, {
     open_focus = true,
     pre_focus = true,
     command_path = command_path,
+    on_sent = function()
+      local submit_ok, submit_err = prompt_submit.submit_with_enter_key(get_deps, function()
+        return state.config
+      end, command_path)
+      if not submit_ok then
+        error(submit_err or ("failed to submit " .. command_path))
+      end
+    end,
+  })
+end
+
+---Dispatches wrapper slash commands with prompt capture/copy/clear before submit.
+---@param slash_cmd string Slash command name with or without a leading `/`.
+---@return codex.SendResult ok True when command payload is sent.
+---@return string|nil err
+local function dispatch_wrapper_command(slash_cmd)
+  local payload, command_path = build_wrapper_command_payload(slash_cmd)
+  return state.send_dispatch.dispatch_send(payload, {
+    open_focus = true,
+    pre_focus = true,
+    command_path = command_path,
+    on_sent = function()
+      local submit_ok, submit_err = prompt_submit.submit_with_enter_key(get_deps, function()
+        return state.config
+      end, command_path)
+      if not submit_ok then
+        error(submit_err or ("failed to submit " .. command_path))
+      end
+    end,
   })
 end
 
@@ -198,28 +266,28 @@ end
 ---@return codex.SendResult ok True when `/model` is sent.
 ---@return string|nil err
 function M.set_model()
-  return M.send_command("model")
+  return dispatch_wrapper_command("model")
 end
 
 ---Requests current session status in Codex CLI.
 ---@return codex.SendResult ok True when `/status` is sent.
 ---@return string|nil err
 function M.show_status()
-  return M.send_command("status")
+  return dispatch_wrapper_command("status")
 end
 
 ---Requests permission status in Codex CLI.
 ---@return codex.SendResult ok True when `/permissions` is sent.
 ---@return string|nil err
 function M.show_permissions()
-  return M.send_command("permissions")
+  return dispatch_wrapper_command("permissions")
 end
 
 ---Requests context compaction in Codex CLI.
 ---@return codex.SendResult ok True when `/compact` is sent.
 ---@return string|nil err
 function M.compact()
-  return M.send_command("compact")
+  return dispatch_wrapper_command("compact")
 end
 
 ---Starts a review command, with optional inline instructions.
@@ -228,16 +296,16 @@ end
 ---@return string|nil err
 function M.review(instructions)
   if instructions == nil or instructions == "" then
-    return M.send_command("review")
+    return dispatch_wrapper_command("review")
   end
-  return M.send_command("review " .. instructions)
+  return dispatch_wrapper_command("review " .. instructions)
 end
 
 ---Requests a diff summary in Codex CLI.
 ---@return codex.SendResult ok True when `/diff` is sent.
 ---@return string|nil err
 function M.show_diff()
-  return M.send_command("diff")
+  return dispatch_wrapper_command("diff")
 end
 
 ---@class codex.ResumeOpts
@@ -255,7 +323,7 @@ function M.resume(opts)
   local session, provider = session_lifecycle.get_active_session_and_provider(deps, state.config)
 
   if session and session.alive and provider.is_alive(session.handle) then
-    return M.send_command("resume")
+    return dispatch_wrapper_command("resume")
   end
 
   local args = { "resume" }

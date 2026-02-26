@@ -180,6 +180,7 @@ local function make_logger()
     set_levels = {},
     errors = {},
     debugs = {},
+    infos = {},
     warns = {},
   }
 
@@ -191,7 +192,9 @@ local function make_logger()
     table.insert(logger.debugs, string.format(msg, ...))
   end
 
-  function logger.info() end
+  function logger.info(msg, ...)
+    table.insert(logger.infos, string.format(msg, ...))
+  end
   function logger.warn(msg, ...)
     table.insert(logger.warns, string.format(msg, ...))
   end
@@ -256,6 +259,8 @@ local function make_fake_vim()
   local replace_termcodes_calls = {}
   local input_calls = {}
   local feedkeys_calls = {}
+  local setreg_calls = {}
+  local notify_calls = {}
   local buf_lines = {}
   local buf_winids = {}
   local win_cursors = {}
@@ -330,6 +335,9 @@ local function make_fake_vim()
         return win_cursors[winid] or { 1, 0 }
       end,
     },
+    notify = function(msg, level)
+      table.insert(notify_calls, { msg = msg, level = level })
+    end,
     fn = {
       getcwd = function()
         return "/test/cwd"
@@ -365,6 +373,9 @@ local function make_fake_vim()
       bufwinid = function(bufnr)
         return buf_winids[bufnr] or -1
       end,
+      setreg = function(reg, value)
+        table.insert(setreg_calls, { reg = reg, value = value })
+      end,
     },
     schedule = function(cb)
       table.insert(scheduled, cb)
@@ -383,6 +394,8 @@ local function make_fake_vim()
     _replace_termcodes_calls = replace_termcodes_calls,
     _input_calls = input_calls,
     _feedkeys_calls = feedkeys_calls,
+    _setreg_calls = setreg_calls,
+    _notify_calls = notify_calls,
     _scheduled = scheduled,
     _deferred = deferred,
     _runtime = runtime,
@@ -712,9 +725,13 @@ describe("codex.init public api", function()
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
     assert.equals(1, #env.provider.send_calls)
-    assert.equals("/status\n", env.provider.send_calls[1].text)
-    assert.equals(0, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("/status", env.provider.send_calls[1].text)
+    assert.equals(1, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("<CR>", env.fake_vim._replace_termcodes_calls[1].str)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
+    assert.equals("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
     assert.equals(0, #env.fake_vim._input_calls)
+    assert.equals(2, #env.provider.focus_calls)
   end)
 
   it("send_command focuses existing session and sends slash command", function()
@@ -726,10 +743,13 @@ describe("codex.init public api", function()
 
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
-    assert.equals(1, #env.provider.focus_calls)
+    assert.equals(2, #env.provider.focus_calls)
     assert.same(active_handle, env.provider.focus_calls[1])
-    assert.equals("/model\n", env.provider.send_calls[1].text)
-    assert.equals(0, #env.fake_vim._replace_termcodes_calls)
+    assert.same(active_handle, env.provider.focus_calls[2])
+    assert.equals("/model", env.provider.send_calls[1].text)
+    assert.equals(1, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("<CR>", env.fake_vim._replace_termcodes_calls[1].str)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
     assert.equals(0, #env.fake_vim._input_calls)
   end)
 
@@ -742,10 +762,27 @@ describe("codex.init public api", function()
 
     assert.is_false(ok)
     assert.equals("boom", err)
-    assert.equals("/compact\n", env.provider.send_calls[1].text)
+    assert.equals("/compact", env.provider.send_calls[1].text)
     assert.equals(0, #env.fake_vim._replace_termcodes_calls)
+    assert.equals(0, #env.fake_vim._feedkeys_calls)
     assert.equals(0, #env.fake_vim._input_calls)
     assert.matches("failed to send command /compact: boom", env.logger.errors[1])
+  end)
+
+  it("send_command does not capture or store existing prompt input", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> keep this draft" })
+
+    local ok = env.codex.send_command("status")
+
+    assert.is_true(ok)
+    assert.equals(0, #env.fake_vim._setreg_calls)
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals("/status", env.provider.send_calls[1].text)
   end)
 
   it("send_command queues when terminal is starting and flushes later", function()
@@ -773,10 +810,12 @@ describe("codex.init public api", function()
 
     run_deferred(env.fake_vim, 1)
     assert.equals(1, #env.provider.send_calls)
-    assert.equals("/status\n", env.provider.send_calls[1].text)
-    assert.equals(0, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("/status", env.provider.send_calls[1].text)
+    assert.equals(1, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("<CR>", env.fake_vim._replace_termcodes_calls[1].str)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
     assert.equals(0, #env.fake_vim._input_calls)
-    assert.equals(1, #env.provider.focus_calls)
+    assert.equals(2, #env.provider.focus_calls)
   end)
 
   it("send_command waits for provider readiness even when process is alive", function()
@@ -804,18 +843,30 @@ describe("codex.init public api", function()
 
     run_deferred(env.fake_vim, 1)
     assert.equals(1, #env.provider.send_calls)
-    assert.equals("/status\n", env.provider.send_calls[1].text)
-    assert.equals(0, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("/status", env.provider.send_calls[1].text)
+    assert.equals(1, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("<CR>", env.fake_vim._replace_termcodes_calls[1].str)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
     assert.equals(0, #env.fake_vim._input_calls)
   end)
 
-  it("set_model dispatches /model", function()
+  it("set_model clears input and auto-submits /model", function()
     local env = setup_with_deps()
 
     local ok = env.codex.set_model()
+    local model_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/model"
 
     assert.is_true(ok)
-    assert.equals("/model\n", env.provider.send_calls[1].text)
+    assert.equals(model_payload_expected, env.provider.send_calls[1].text)
+    assert.equals(3, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("<C-e>", env.fake_vim._replace_termcodes_calls[1].str)
+    assert.equals("<C-u>", env.fake_vim._replace_termcodes_calls[2].str)
+    assert.equals("<CR>", env.fake_vim._replace_termcodes_calls[3].str)
+    assert.equals(0, #env.fake_vim._setreg_calls)
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals(0, #env.fake_vim._deferred)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
+    assert.equals("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
   end)
 
   it("show_status dispatches /status", function()
@@ -824,7 +875,7 @@ describe("codex.init public api", function()
     local ok = env.codex.show_status()
 
     assert.is_true(ok)
-    assert.equals("/status\n", env.provider.send_calls[1].text)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/status", env.provider.send_calls[1].text)
   end)
 
   it("show_permissions dispatches /permissions", function()
@@ -833,7 +884,7 @@ describe("codex.init public api", function()
     local ok = env.codex.show_permissions()
 
     assert.is_true(ok)
-    assert.equals("/permissions\n", env.provider.send_calls[1].text)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/permissions", env.provider.send_calls[1].text)
   end)
 
   it("compact dispatches /compact", function()
@@ -842,7 +893,7 @@ describe("codex.init public api", function()
     local ok = env.codex.compact()
 
     assert.is_true(ok)
-    assert.equals("/compact\n", env.provider.send_calls[1].text)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/compact", env.provider.send_calls[1].text)
   end)
 
   it("review dispatches /review when no instructions are provided", function()
@@ -851,7 +902,7 @@ describe("codex.init public api", function()
     local ok = env.codex.review()
 
     assert.is_true(ok)
-    assert.equals("/review\n", env.provider.send_calls[1].text)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/review", env.provider.send_calls[1].text)
   end)
 
   it("review dispatches /review with inline instructions", function()
@@ -860,7 +911,10 @@ describe("codex.init public api", function()
     local ok = env.codex.review("focus on security")
 
     assert.is_true(ok)
-    assert.equals("/review focus on security\n", env.provider.send_calls[1].text)
+    assert.equals(
+      "<termcoded:<C-e>><termcoded:<C-u>>/review focus on security",
+      env.provider.send_calls[1].text
+    )
   end)
 
   it("review treats empty instructions as plain /review", function()
@@ -869,7 +923,7 @@ describe("codex.init public api", function()
     local ok = env.codex.review("")
 
     assert.is_true(ok)
-    assert.equals("/review\n", env.provider.send_calls[1].text)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/review", env.provider.send_calls[1].text)
   end)
 
   it("review opens with focus when no active session exists", function()
@@ -880,7 +934,8 @@ describe("codex.init public api", function()
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
-    assert.equals("/review\n", env.provider.send_calls[1].text)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/review", env.provider.send_calls[1].text)
+    assert.equals(0, #env.fake_vim._notify_calls)
   end)
 
   it("show_diff dispatches /diff", function()
@@ -889,7 +944,181 @@ describe("codex.init public api", function()
     local ok = env.codex.show_diff()
 
     assert.is_true(ok)
-    assert.equals("/diff\n", env.provider.send_calls[1].text)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/diff", env.provider.send_calls[1].text)
+  end)
+
+  it("wrapper commands are sent atomically and remain ordered for consecutive calls", function()
+    local env = setup_with_deps()
+
+    local ok_status = env.codex.show_status()
+    local ok_diff = env.codex.show_diff()
+
+    assert.is_true(ok_status)
+    assert.is_true(ok_diff)
+    assert.equals(2, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/status", env.provider.send_calls[1].text)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/diff", env.provider.send_calls[2].text)
+    assert.equals(0, #env.fake_vim._deferred)
+    assert.equals(2, #env.fake_vim._feedkeys_calls)
+  end)
+
+  it("wrapper commands copy existing prompt input to unnamed register without restoring", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> draft instructions" })
+
+    local ok = env.codex.review("focus on security")
+
+    assert.is_true(ok)
+    assert.equals(1, #env.fake_vim._setreg_calls)
+    assert.equals('"', env.fake_vim._setreg_calls[1].reg)
+    assert.equals("draft instructions", env.fake_vim._setreg_calls[1].value)
+    assert.equals(1, #env.logger.warns)
+    assert.equals("Saved current prompt to unnamed register", env.logger.warns[1])
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals(0, #env.fake_vim._deferred)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
+    assert.equals(
+      "<termcoded:<C-e>><termcoded:<C-u>>/review focus on security",
+      env.provider.send_calls[1].text
+    )
+    assert.equals(1, #env.provider.send_calls)
+  end)
+
+  it("wrapper commands warn when setreg fails", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> draft instructions" })
+    env.fake_vim.fn.setreg = function()
+      error("setreg boom")
+    end
+
+    local ok = env.codex.show_status()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.logger.warns)
+    assert.equals("Could not save existing prompt before clearing", env.logger.warns[1])
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/status", env.provider.send_calls[1].text)
+    assert.equals(0, #env.fake_vim._deferred)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
+  end)
+
+  it("wrapper commands do not warn when prompt input is uncertain", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> draft instructions" })
+    env.fake_vim._set_buf_cursor(77, 1702, 1, 0)
+
+    local ok = env.codex.compact()
+
+    assert.is_true(ok)
+    assert.equals(0, #env.fake_vim._setreg_calls)
+    assert.equals(0, #env.logger.warns)
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/compact", env.provider.send_calls[1].text)
+  end)
+
+  it("wrapper commands do not warn when prompt line has no typed input", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> " })
+    env.fake_vim._set_buf_cursor(77, 1702, 1, 0)
+
+    local ok = env.codex.compact()
+
+    assert.is_true(ok)
+    assert.equals(0, #env.fake_vim._setreg_calls)
+    assert.equals(0, #env.logger.warns)
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/compact", env.provider.send_calls[1].text)
+  end)
+
+  it("wrapper commands do not warn for symbol-only prompt markers", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { ">> " })
+    env.fake_vim._set_buf_cursor(77, 1702, 1, 0)
+
+    local ok = env.codex.resume()
+
+    assert.is_true(ok)
+    assert.equals(0, #env.fake_vim._setreg_calls)
+    assert.equals(0, #env.logger.warns)
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/resume", env.provider.send_calls[1].text)
+  end)
+
+  it("wrapper commands warn when capture is unavailable for an alive-session buffer", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return nil
+    end
+
+    local ok = env.codex.show_permissions()
+
+    assert.is_true(ok)
+    assert.equals(0, #env.fake_vim._setreg_calls)
+    assert.equals(1, #env.logger.warns)
+    assert.equals("Could not save existing prompt before clearing", env.logger.warns[1])
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/permissions", env.provider.send_calls[1].text)
+  end)
+
+  it("resume warns when capture is unavailable for an alive-session buffer", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return nil
+    end
+
+    local ok = env.codex.resume()
+
+    assert.is_true(ok)
+    assert.equals(0, #env.fake_vim._setreg_calls)
+    assert.equals(1, #env.logger.warns)
+    assert.equals("Could not save existing prompt before clearing", env.logger.warns[1])
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/resume", env.provider.send_calls[1].text)
+  end)
+
+  it("wrapper commands use logger.warn when prompt save succeeds", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> draft instructions" })
+
+    local ok = env.codex.review()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.logger.warns)
+    assert.equals("Saved current prompt to unnamed register", env.logger.warns[1])
+    assert.equals(0, #env.fake_vim._notify_calls)
   end)
 
   it("resume sends /resume when an active session exists", function()
@@ -901,9 +1130,38 @@ describe("codex.init public api", function()
 
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
-    assert.equals(1, #env.provider.focus_calls)
+    assert.equals(3, #env.provider.focus_calls)
     assert.same(active_handle, env.provider.focus_calls[1])
-    assert.equals("/resume\n", env.provider.send_calls[1].text)
+    assert.same(active_handle, env.provider.focus_calls[2])
+    assert.same(active_handle, env.provider.focus_calls[3])
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/resume", env.provider.send_calls[1].text)
+    assert.equals(3, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("<C-e>", env.fake_vim._replace_termcodes_calls[1].str)
+    assert.equals("<C-u>", env.fake_vim._replace_termcodes_calls[2].str)
+    assert.equals("<CR>", env.fake_vim._replace_termcodes_calls[3].str)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
+  end)
+
+  it("resume copies existing prompt input to unnamed register before dispatching", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> asdf" })
+
+    local ok = env.codex.resume()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.fake_vim._setreg_calls)
+    assert.equals('"', env.fake_vim._setreg_calls[1].reg)
+    assert.equals("asdf", env.fake_vim._setreg_calls[1].value)
+    assert.equals(1, #env.logger.warns)
+    assert.equals("Saved current prompt to unnamed register", env.logger.warns[1])
+    assert.equals(0, #env.fake_vim._notify_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/resume", env.provider.send_calls[1].text)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
   end)
 
   it("resume opens `codex resume` when no active session exists", function()
@@ -937,7 +1195,8 @@ describe("codex.init public api", function()
 
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
-    assert.equals("/resume\n", env.provider.send_calls[1].text)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/resume", env.provider.send_calls[1].text)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
   end)
 
   it("resume closes stale session before opening resume process", function()
@@ -1233,7 +1492,7 @@ describe("codex.init public api", function()
 
     run_deferred(env.fake_vim, 1)
     assert.equals(2, #env.provider.send_calls)
-    assert.equals("\r\n", env.provider.send_calls[2].text)
+    assert.equals("\r", env.provider.send_calls[2].text)
     assert.matches("feedkeys submit failed, falling back to channel send", env.logger.warns[1])
   end)
 
@@ -1472,6 +1731,23 @@ describe("codex.init public api", function()
     run_deferred(skip_env.fake_vim, 1)
     assert.equals(1, #skip_env.provider.send_calls)
     assert.equals(0, #skip_env.fake_vim._deferred)
+  end)
+
+  it("mention_file captures compact prompt input without delimiter space", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { ">draft-without-space" })
+
+    local ok = env.codex.mention_file("/tmp/example.lua")
+
+    assert.is_true(ok)
+    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 1)
+    assert.equals(2, #env.provider.send_calls)
+    assert.equals("draft-without-space", env.provider.send_calls[2].text)
   end)
 
   it("mention_file returns provider send errors with command context", function()
