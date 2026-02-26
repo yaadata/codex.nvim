@@ -1,9 +1,13 @@
 local M = {}
 local path = require("codex.context.path")
 
-local ERR_NO_FILEPATH = "current buffer has no file path"
-local ERR_NO_SELECTION = "no visual selection range found"
 local CTRL_V = string.char(22)
+
+M.errors = {
+  NO_FILEPATH = "current buffer has no file path",
+  INVALID_FILEPATH = "current buffer path is not a regular file",
+  NO_SELECTION = "no visual selection range found",
+}
 
 ---@class codex.SelectionOpts
 ---@field line1? integer
@@ -134,6 +138,30 @@ local function resolve_visual_mode(opts)
   return nil
 end
 
+--- Determine whether filepath points to a regular file.
+---@param vim_api table
+---@param filepath string
+---@return boolean
+local function is_regular_file(vim_api, filepath)
+  local uv = vim_api.uv or vim_api.loop
+  if uv and type(uv.fs_stat) == "function" then
+    local ok, stat = pcall(uv.fs_stat, filepath)
+    if ok then
+      return type(stat) == "table" and stat.type == "file"
+    end
+  end
+
+  local fn = vim_api.fn
+  if type(fn) == "table" and type(fn.filereadable) == "function" then
+    local ok, readable = pcall(fn.filereadable, filepath)
+    if ok then
+      return readable == 1
+    end
+  end
+
+  return true
+end
+
 --- Trim lines to the selected columns based on the visual mode.
 ---@param lines string[]
 ---@param visual_mode string|nil
@@ -174,7 +202,11 @@ function M.get_visual_selection(vim_api, opts)
   local bufnr = opts.bufnr or vim_api.api.nvim_get_current_buf()
   local filepath = vim_api.api.nvim_buf_get_name(bufnr)
   if not filepath or filepath == "" then
-    return nil, ERR_NO_FILEPATH
+    return nil, M.errors.NO_FILEPATH
+  end
+
+  if not is_regular_file(vim_api, filepath) then
+    return nil, M.errors.INVALID_FILEPATH
   end
 
   local start_mark = vim_api.api.nvim_buf_get_mark(bufnr, "<")
@@ -194,7 +226,7 @@ function M.get_visual_selection(vim_api, opts)
 
   local start_line, end_line = resolve_range(marks, opts)
   if not start_line or not end_line then
-    return nil, ERR_NO_SELECTION
+    return nil, M.errors.NO_SELECTION
   end
 
   start_line, end_line = normalize_lines(start_line, end_line)

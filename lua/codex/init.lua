@@ -344,7 +344,12 @@ function M.send_selection(opts)
   local deps = get_deps()
   local spec, err = deps.selection.get_visual_selection(deps.vim, opts)
   if not spec then
-    deps.logger.error("failed to collect selection: %s", err or "unknown error")
+    local selection_errors = deps.selection.errors or {}
+    if err == selection_errors.NO_FILEPATH or err == selection_errors.INVALID_FILEPATH then
+      deps.logger.warn("failed to collect selection: %s", err or "unknown error")
+    else
+      deps.logger.error("failed to collect selection: %s", err or "unknown error")
+    end
     return false, err
   end
 

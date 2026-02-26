@@ -68,8 +68,8 @@ codex.nvim/
 │   │   │                            # terminal-local keymaps from terminal.keymaps.
 │   │   ├── snacks.lua               # Provider backed by snacks.nvim terminal integration.
 │   ├── context/
-│   │   ├── formatter.lua            # Formats selection payloads (fenced code blocks with
-│   │   │                            # adaptive backtick fencing) and /mention payloads
+│   │   ├── formatter.lua            # Formats selection payloads (ACP path refs + fenced
+│   │   │                            # code blocks with adaptive backtick fencing) and /mention payloads
 │   │   │                            # (auto-quoting paths with special characters).
 │   │   ├── mention.lua              # Mention orchestration: captures terminal prompt input,
 │   │   │                            # dispatches /mention payloads, auto-submits, and restores

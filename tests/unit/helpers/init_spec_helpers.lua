@@ -229,6 +229,11 @@ end
 local function make_selection()
   local selection = {
     calls = {},
+    errors = {
+      NO_FILEPATH = "current buffer has no file path",
+      INVALID_FILEPATH = "current buffer path is not a regular file",
+      NO_SELECTION = "no visual selection range found",
+    },
     result = {
       filepath = "test/current.lua",
       start_line = 1,

@@ -21,6 +21,7 @@ local function make_fake_vim_api(overrides)
   local filetype = overrides.filetype or "lua"
   local relative_path = overrides.relative_path or "lua/codex/init.lua"
   local visual_mode = overrides.visual_mode
+  local fs_stat = overrides.fs_stat
 
   return {
     api = {
@@ -51,6 +52,14 @@ local function make_fake_vim_api(overrides)
       end,
       visualmode = function()
         return visual_mode
+      end,
+    },
+    uv = {
+      fs_stat = function(path)
+        if type(fs_stat) == "function" then
+          return fs_stat(path)
+        end
+        return { type = "file", path = path }
       end,
     },
   }
@@ -130,6 +139,18 @@ describe("codex.context.selection", function()
 
     assert.is_nil(spec)
     assert.equals("current buffer has no file path", err)
+  end)
+
+  it("returns error when buffer path is not a regular file", function()
+    local spec, err = selection.get_visual_selection(make_fake_vim_api({
+      filepath = "lua/codex",
+      fs_stat = function()
+        return { type = "directory" }
+      end,
+    }))
+
+    assert.is_nil(spec)
+    assert.equals("current buffer path is not a regular file", err)
   end)
 
   it("uses explicit range when provided", function()

@@ -143,7 +143,7 @@ init.lua send_selection()
     |    |- nvim_buf_get_lines(bufnr, start-1, end, false)
     |    \- return SelectionSpec { path, start_line, end_line, filetype, lines }
     |- formatter.format_selection(spec)
-    |    \- build fenced code block with adaptive backtick fencing
+    |    \- build ACP selection ref (`@path#Lstart` or `@path#Lstart-end`) + fenced code block
     \- send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), ...)
          |- [active + ready] -> provider.send(session.handle, text)
          |- [no active session] -> session_lifecycle.open_session(...)

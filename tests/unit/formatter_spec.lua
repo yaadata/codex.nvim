@@ -12,7 +12,7 @@ describe("codex.context.formatter", function()
       })
 
       assert.equals(
-        "# Selection from /tmp/example.lua (lines 10-12)\n\n```lua\nlocal a = 1\nlocal b = 2\nreturn a + b\n```",
+        "@/tmp/example.lua#L10-12\n\n```lua\nlocal a = 1\nlocal b = 2\nreturn a + b\n```",
         result
       )
     end)
@@ -26,7 +26,7 @@ describe("codex.context.formatter", function()
         lines = { "hello" },
       })
 
-      assert.equals("# Selection from a.txt (lines 1-1)\n\n```text\nhello\n```", result)
+      assert.equals("@a.txt#L1\n\n```text\nhello\n```", result)
     end)
 
     it("uses text fence when filetype is empty", function()
@@ -50,7 +50,7 @@ describe("codex.context.formatter", function()
         lines = { "return 1" },
       })
 
-      assert.is_not_nil(result:find("# Selection from  %(lines 4%-4%)"))
+      assert.is_not_nil(result:find("@#L4", 1, true))
     end)
 
     it("extends fence length when content has backticks", function()
@@ -75,10 +75,7 @@ describe("codex.context.formatter", function()
         lines = "line a\nline b",
       })
 
-      assert.equals(
-        "# Selection from plain.txt (lines 5-6)\n\n```text\nline a\nline b\n```",
-        result
-      )
+      assert.equals("@plain.txt#L5-6\n\n```text\nline a\nline b\n```", result)
     end)
   end)
 

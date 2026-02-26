@@ -107,6 +107,22 @@ describe("codex.init public api send_selection", function()
     )
   end)
 
+  it("send_selection logs warning and returns false for invalid selection path", function()
+    local env = setup_with_deps()
+    env.selection.err = env.selection.errors.INVALID_FILEPATH
+
+    local ok, err = env.codex.send_selection()
+
+    assert.is_false(ok)
+    assert.equals(env.selection.errors.INVALID_FILEPATH, err)
+    assert.equals(0, #env.provider.send_calls)
+    assert.matches(
+      "failed to collect selection: current buffer path is not a regular file",
+      env.logger.warns[1]
+    )
+    assert.equals(0, #env.logger.errors)
+  end)
+
   it("send_selection forwards explicit range options to selection extractor", function()
     local env = setup_with_deps()
 

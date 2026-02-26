@@ -65,17 +65,14 @@ function M.format_selection(spec)
   local fence_size = math.max(3, longest_backtick_run(content) + 1)
   local fence = string.rep("`", fence_size)
   local language = filetype ~= "" and filetype or "text"
+  local location
+  if start_line == end_line then
+    location = string.format("@%s#L%d", filepath, start_line)
+  else
+    location = string.format("@%s#L%d-%d", filepath, start_line, end_line)
+  end
 
-  return string.format(
-    "# Selection from %s (lines %d-%d)\n\n%s%s\n%s\n%s",
-    filepath,
-    start_line,
-    end_line,
-    fence,
-    language,
-    content,
-    fence
-  )
+  return string.format("%s\n\n%s%s\n%s\n%s", location, fence, language, content, fence)
 end
 
 --- Format a `/mention` payload; paths are quoted and escaped when needed.
