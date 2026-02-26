@@ -304,9 +304,10 @@ codex.setup({
 })
 ```
 
-See `tests/unit/init_spec.lua` for the canonical examples of all mock factories:
-`make_provider`, `make_session_store`, `make_logger`, `make_formatter`,
-`make_selection`, `make_fake_vim`, and the `setup_with_deps` helper.
+See `tests/unit/helpers/init_spec_helpers.lua` for the canonical examples of
+all mock factories: `make_provider`, `make_session_store`, `make_logger`,
+`make_formatter`, `make_selection`, `make_fake_vim`, and the
+`setup_with_deps` helper.
 
 ### Contract Tests
 
@@ -372,8 +373,10 @@ When cutting a new release tag:
    concern; otherwise keep it in `init.lua`.
 2. **User command** -- Register the `:Codex*` command in
    `lua/codex/nvim/commands.lua`, delegating to the API function.
-3. **Unit tests** -- Add test cases in `tests/unit/init_spec.lua` covering the
-   new API function (happy path, error path, auto-open behaviour).
+3. **Unit tests** -- Add test cases in the command-focused
+   `tests/unit/init_*_spec.lua` files (happy path, error path, auto-open
+   behaviour), and use `tests/unit/helpers/init_spec_helpers.lua` for shared
+   mocks and setup helpers.
 4. **Command dispatch tests** -- If the command exercises a new code path beyond
    existing patterns, add targeted tests.
 5. **README update** -- Add the command to the Commands section and the Lua API
