@@ -1,14 +1,37 @@
 local function with_stubbed_vim_api(run)
   local original_create_autocmd = vim.api.nvim_create_autocmd
+  local original_get_current_buf = vim.api.nvim_get_current_buf
+  local original_set_current_win = vim.api.nvim_set_current_win
+  local original_win_is_valid = vim.api.nvim_win_is_valid
   local original_keymap_set = vim.keymap.set
   local original_cmd = vim.cmd
   local autocmds = {}
   local keymap_set_calls = {}
   local cmd_calls = {}
+  local state = {
+    current_buf = 1,
+    current_win = 1,
+    win_buf = { [1] = 1 },
+    win_valid = { [1] = true },
+    set_current_win_calls = {},
+  }
 
   vim.api.nvim_create_autocmd = function(event, spec)
     table.insert(autocmds, { event = event, spec = spec })
     return #autocmds
+  end
+  vim.api.nvim_get_current_buf = function()
+    return state.current_buf
+  end
+  vim.api.nvim_set_current_win = function(winid)
+    table.insert(state.set_current_win_calls, winid)
+    state.current_win = winid
+    if state.win_buf[winid] then
+      state.current_buf = state.win_buf[winid]
+    end
+  end
+  vim.api.nvim_win_is_valid = function(winid)
+    return state.win_valid[winid] == true
   end
   vim.keymap.set = function(mode, lhs, rhs, opts)
     table.insert(keymap_set_calls, {
@@ -22,8 +45,11 @@ local function with_stubbed_vim_api(run)
     table.insert(cmd_calls, cmd)
   end
 
-  local ok, err = pcall(run, autocmds, keymap_set_calls, cmd_calls)
+  local ok, err = pcall(run, autocmds, keymap_set_calls, cmd_calls, state)
   vim.api.nvim_create_autocmd = original_create_autocmd
+  vim.api.nvim_get_current_buf = original_get_current_buf
+  vim.api.nvim_set_current_win = original_set_current_win
+  vim.api.nvim_win_is_valid = original_win_is_valid
   vim.keymap.set = original_keymap_set
   vim.cmd = original_cmd
 
@@ -407,11 +433,17 @@ describe("codex.providers.snacks", function()
   end)
 
   it("focuses snacks terminal and enters insert mode", function()
-    with_stubbed_vim_api(function(_, _, cmd_calls)
+    with_stubbed_vim_api(function(_, _, cmd_calls, state)
       local shown = 0
+      local focused = 0
       local terminal = {
+        buf = 42,
         show = function()
           shown = shown + 1
+        end,
+        focus = function()
+          focused = focused + 1
+          state.current_buf = 42
         end,
       }
 
@@ -421,6 +453,48 @@ describe("codex.providers.snacks", function()
       assert.is_true(ok)
       assert.is_nil(err)
       assert.equals(1, shown)
+      assert.equals(1, focused)
+      assert.same({ "startinsert" }, cmd_calls)
+    end)
+  end)
+
+  it("returns an error when snacks terminal focus does not land on terminal buffer", function()
+    with_stubbed_vim_api(function(_, _, cmd_calls, state)
+      local terminal = {
+        buf = 42,
+        show = function() end,
+        focus = function()
+          state.current_buf = 1
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      local ok, err = provider.focus({ terminal = terminal })
+
+      assert.is_false(ok)
+      assert.equals("terminal window not focused", err)
+      assert.equals(0, #cmd_calls)
+    end)
+  end)
+
+  it("uses snacks terminal window fallback to recover focus before insert", function()
+    with_stubbed_vim_api(function(_, _, cmd_calls, state)
+      state.current_buf = 1
+      state.win_valid[9] = true
+      state.win_buf[9] = 42
+
+      local terminal = {
+        buf = 42,
+        win = 9,
+        show = function() end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      local ok, err = provider.focus({ terminal = terminal })
+
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.same({ 9 }, state.set_current_win_calls)
       assert.same({ "startinsert" }, cmd_calls)
     end)
   end)

@@ -257,13 +257,39 @@ function M.focus(handle)
     return false, "no active terminal"
   end
 
-  if handle.terminal.show then
-    handle.terminal:show()
-    vim.cmd("startinsert")
-    return true
+  local term = handle.terminal
+  if term.show then
+    term:show()
   end
 
-  return false, "cannot focus terminal"
+  if term.focus then
+    term:focus()
+  elseif not term.show then
+    return false, "cannot focus terminal"
+  end
+
+  local term_buf = type(term.buf) == "number" and term.buf or nil
+  if term_buf then
+    local current_buf = vim.api.nvim_get_current_buf()
+    if current_buf ~= term_buf then
+      if
+        type(term.win) == "number"
+        and vim.api.nvim_win_is_valid(term.win)
+        and pcall(vim.api.nvim_set_current_win, term.win)
+      then
+        current_buf = vim.api.nvim_get_current_buf()
+      end
+      if current_buf ~= term_buf then
+        return false, "terminal window not focused"
+      end
+    end
+  end
+
+  local ok, err = pcall(vim.cmd, "startinsert")
+  if not ok then
+    return false, err
+  end
+  return true
 end
 
 --- Toggle the snacks terminal visibility, opening a new one if needed.

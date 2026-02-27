@@ -47,6 +47,7 @@ local function with_stubbed_native_env(run)
     "nvim_list_wins",
     "nvim_win_get_buf",
     "nvim_get_current_win",
+    "nvim_get_current_buf",
     "nvim_create_buf",
     "nvim_win_set_buf",
     "nvim_win_set_width",
@@ -93,6 +94,7 @@ local function with_stubbed_native_env(run)
     jobstop_calls = {},
     keymap_set_calls = {},
     startinsert_calls = 0,
+    set_current_win_error = nil,
   }
 
   local function create_split_window()
@@ -124,6 +126,11 @@ local function with_stubbed_native_env(run)
 
   local function nvim_get_current_win()
     return state.current_win
+  end
+
+  local function nvim_get_current_buf()
+    local win = state.wins[state.current_win]
+    return win and win.bufnr or -1
   end
 
   local function nvim_create_buf()
@@ -161,6 +168,9 @@ local function with_stubbed_native_env(run)
   end
 
   local function nvim_set_current_win(winid)
+    if state.set_current_win_error then
+      error(state.set_current_win_error)
+    end
     state.current_win = winid
     table.insert(state.set_current_win_calls, winid)
   end
@@ -236,6 +246,7 @@ local function with_stubbed_native_env(run)
   vim.api.nvim_list_wins = nvim_list_wins
   vim.api.nvim_win_get_buf = nvim_win_get_buf
   vim.api.nvim_get_current_win = nvim_get_current_win
+  vim.api.nvim_get_current_buf = nvim_get_current_buf
   vim.api.nvim_create_buf = nvim_create_buf
   vim.api.nvim_win_set_buf = nvim_win_set_buf
   vim.api.nvim_win_set_width = nvim_win_set_width
@@ -664,6 +675,93 @@ describe("codex.providers.native", function()
       assert.is_nil(handle.jobid)
       assert.is_nil(handle.winid)
       assert.is_nil(handle.bufnr)
+    end)
+  end)
+
+  it("focuses terminal window and enters insert mode", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      local handle = provider.open("codex", {}, {}, cfg, true)
+
+      state.current_win = 1
+      state.startinsert_calls = 0
+      local ok, err = provider.focus(handle)
+
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(handle.winid, state.current_win)
+      assert.equals(1, state.startinsert_calls)
+    end)
+  end)
+
+  it("focus recovers a stale window id by searching for the terminal buffer", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      local handle = provider.open("codex", {}, {}, cfg, true)
+      local expected_winid = handle.winid
+
+      handle.winid = 999
+      state.current_win = 1
+      state.startinsert_calls = 0
+      local ok, err = provider.focus(handle)
+
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(expected_winid, handle.winid)
+      assert.equals(expected_winid, state.current_win)
+      assert.equals(1, state.startinsert_calls)
+    end)
+  end)
+
+  it("focus returns terminal window mismatch when selected window buffer is wrong", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      local handle = provider.open("codex", {}, {}, cfg, true)
+
+      state.wins[handle.winid].bufnr = 1
+      state.current_win = 1
+      state.startinsert_calls = 0
+      local ok, err = provider.focus(handle)
+
+      assert.is_false(ok)
+      assert.equals("terminal window mismatch", err)
+      assert.equals(0, state.startinsert_calls)
+    end)
+  end)
+
+  it("focus returns an error when setting the terminal window fails", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      local handle = provider.open("codex", {}, {}, cfg, true)
+
+      state.set_current_win_error = "boom"
+      state.startinsert_calls = 0
+      local ok, err = provider.focus(handle)
+
+      assert.is_false(ok)
+      assert.matches("^failed to focus terminal window:", err)
+      assert.equals(0, state.startinsert_calls)
+    end)
+  end)
+
+  it("focus returns terminal window not found when no visible terminal window exists", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      local handle = provider.open("codex", {}, {}, cfg, true)
+
+      state.wins[handle.winid].valid = false
+      handle.winid = nil
+      state.startinsert_calls = 0
+      local ok, err = provider.focus(handle)
+
+      assert.is_false(ok)
+      assert.equals("terminal window not found", err)
+      assert.equals(0, state.startinsert_calls)
     end)
   end)
 

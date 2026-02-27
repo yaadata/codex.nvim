@@ -339,13 +339,24 @@ function M.focus(handle)
     winid = find_win_for_buf(handle.bufnr)
   end
 
-  if winid then
-    vim.api.nvim_set_current_win(winid)
-    vim.cmd("startinsert")
-    return true
+  if not winid then
+    return false, "terminal window not found"
   end
 
-  return false, "terminal window not found"
+  handle.winid = winid
+  local ok_focus, focus_err = pcall(vim.api.nvim_set_current_win, winid)
+  if not ok_focus then
+    return false, string.format("failed to focus terminal window: %s", tostring(focus_err))
+  end
+  if vim.api.nvim_get_current_buf() ~= handle.bufnr then
+    return false, "terminal window mismatch"
+  end
+
+  local ok_insert, insert_err = pcall(vim.cmd, "startinsert")
+  if not ok_insert then
+    return false, tostring(insert_err)
+  end
+  return true
 end
 
 --- Toggle the terminal: hide, focus, re-show, or open a new one.
