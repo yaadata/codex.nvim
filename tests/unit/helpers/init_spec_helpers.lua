@@ -178,29 +178,70 @@ end
 local function make_logger()
   local logger = {
     set_levels = {},
+    set_verboses = {},
     errors = {},
     debugs = {},
     infos = {},
     warns = {},
+    vdebugs = {},
+    entries = {},
   }
+
+  local entry_counter = 0
+
+  local function append_entry(level, message, verbose)
+    entry_counter = entry_counter + 1
+    table.insert(logger.entries, {
+      timestamp = entry_counter,
+      level = level,
+      message = message,
+      verbose = verbose,
+    })
+  end
 
   function logger.set_level(level)
     table.insert(logger.set_levels, level)
   end
 
+  function logger.set_verbose(verbose)
+    table.insert(logger.set_verboses, verbose)
+  end
+
   function logger.debug(msg, ...)
-    table.insert(logger.debugs, string.format(msg, ...))
+    local formatted = string.format(msg, ...)
+    table.insert(logger.debugs, formatted)
+    append_entry("debug", formatted, false)
   end
 
   function logger.info(msg, ...)
-    table.insert(logger.infos, string.format(msg, ...))
+    local formatted = string.format(msg, ...)
+    table.insert(logger.infos, formatted)
+    append_entry("info", formatted, false)
   end
   function logger.warn(msg, ...)
-    table.insert(logger.warns, string.format(msg, ...))
+    local formatted = string.format(msg, ...)
+    table.insert(logger.warns, formatted)
+    append_entry("warn", formatted, false)
   end
 
   function logger.error(msg, ...)
-    table.insert(logger.errors, string.format(msg, ...))
+    local formatted = string.format(msg, ...)
+    table.insert(logger.errors, formatted)
+    append_entry("error", formatted, false)
+  end
+
+  function logger.vdebug(msg, ...)
+    local formatted = string.format(msg, ...)
+    table.insert(logger.vdebugs, formatted)
+    append_entry("debug", formatted, true)
+  end
+
+  function logger.get_logs()
+    return vim.deepcopy(logger.entries)
+  end
+
+  function logger.clear_logs()
+    logger.entries = {}
   end
 
   return logger

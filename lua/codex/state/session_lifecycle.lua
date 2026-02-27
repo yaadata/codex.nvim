@@ -1,5 +1,16 @@
 local M = {}
 
+---Emit a verbose-only debug log when supported.
+---@param deps table
+---@param msg string
+---@param ... any
+---@return nil
+local function vdebug(deps, msg, ...)
+  if type(deps.logger.vdebug) == "function" then
+    deps.logger.vdebug(msg, ...)
+  end
+end
+
 ---Resolves the configured terminal provider implementation.
 ---@param deps table
 ---@param config table
@@ -65,8 +76,11 @@ end
 function M.open_session(deps, config, args, focus)
   local session = deps.session_store.get_active()
   local provider, provider_name = M.get_provider(deps, config)
+  local arg_count = type(args) == "table" and #args or 0
+  vdebug(deps, "open_session requested focus=%s args=%d", tostring(focus), arg_count)
 
   if session and session.alive and provider.is_alive(session.handle) then
+    vdebug(deps, "open_session reusing alive active session id=%s", session.id)
     if focus then
       provider.focus(session.handle)
     end
@@ -75,6 +89,7 @@ function M.open_session(deps, config, args, focus)
 
   -- Close stale session if any
   if session then
+    vdebug(deps, "open_session closing stale session id=%s", session.id)
     provider.close(session.handle)
     deps.session_store.remove(session.id)
   end
@@ -82,6 +97,7 @@ function M.open_session(deps, config, args, focus)
   local handle = provider.open(config.cmd, args, config.env, config, focus, function(exited_handle)
     M.mark_session_dead_by_handle(deps, exited_handle)
   end)
+  vdebug(deps, "open_session created new session provider=%s", provider_name)
 
   deps.session_store.create({
     handle = handle,
@@ -99,6 +115,7 @@ end
 function M.close_session(deps, config, send_queue)
   local session = deps.session_store.get_active()
   if not session then
+    vdebug(deps, "close_session no active session")
     if send_queue then
       send_queue:reset()
     end
@@ -106,6 +123,7 @@ function M.close_session(deps, config, send_queue)
   end
 
   local provider = M.get_provider(deps, config)
+  vdebug(deps, "close_session closing session id=%s", session.id)
   provider.close(session.handle)
   deps.session_store.remove(session.id)
   if send_queue then
@@ -122,14 +140,17 @@ function M.toggle_session(deps, config)
   local provider = M.get_provider(deps, config)
 
   if session and session.alive and provider.is_alive(session.handle) then
+    vdebug(deps, "toggle_session toggling alive session id=%s", session.id)
     local new_handle = provider.toggle(session.handle, config.cmd, config.args, config.env, config)
     if new_handle then
+      vdebug(deps, "toggle_session provider returned replacement handle for id=%s", session.id)
       session.handle = new_handle
     end
     return
   end
 
   -- No active session — open one
+  vdebug(deps, "toggle_session opening new session (no alive active session)")
   M.open_session(deps, config, config.args, true)
 end
 
@@ -142,10 +163,12 @@ function M.focus_session(deps, config)
   local provider = M.get_provider(deps, config)
 
   if session and session.alive and provider.is_alive(session.handle) then
+    vdebug(deps, "focus_session focusing session id=%s", session.id)
     provider.focus(session.handle)
     return true
   end
 
+  vdebug(deps, "focus_session no alive active session")
   return false
 end
 
@@ -164,21 +187,25 @@ function M.is_running(deps, config)
 end
 
 ---Re-focuses the terminal after sends, reopening/toggling when focus is lost.
+---@param deps table
 ---@param session codex.Session
 ---@param provider codex.Provider
 ---@param config table
 ---@return nil
-function M.apply_post_send_focus(session, provider, config)
+function M.apply_post_send_focus(deps, session, provider, config)
   local focused = provider.focus(session.handle)
   if focused then
+    vdebug(deps, "apply_post_send_focus focused active terminal")
     return
   end
 
+  vdebug(deps, "apply_post_send_focus focus failed, toggling provider")
   local new_handle = provider.toggle(session.handle, config.cmd, config.args, config.env, config)
   if new_handle then
     session.handle = new_handle
   end
   provider.focus(session.handle)
+  vdebug(deps, "apply_post_send_focus re-focused after toggle")
 end
 
 return M

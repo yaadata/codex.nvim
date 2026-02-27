@@ -111,7 +111,10 @@ require("codex").setup({
   args = {},
   env = {},
   auto_start = false,
-  log_level = "warn",
+  log = {
+    level = "warn",
+    verbose = false,
+  },
   terminal = {
     provider = "auto", -- auto | snacks | native
     window = "vsplit", -- vsplit | hsplit | float
@@ -288,6 +291,10 @@ separately via `terminal.keymaps`:
 
 ```lua
 require("codex").setup({
+  log = {
+    level = "warn",
+    verbose = false,
+  },
   terminal = {
     keymaps = {
       toggle = "<C-c>",
@@ -335,6 +342,8 @@ navigation keymaps, or set individual directions to `false`.
   path.
 - `require("codex").is_running()` check whether active session is alive.
 - `require("codex").get_config()` return resolved config snapshot.
+- `require("codex").get_logs()` return captured in-memory logs.
+- `require("codex").clear_logs()` clear captured in-memory logs.
 
 For command and component interaction details, see
 [`docs/command-interactions.md`](docs/command-interactions.md).
@@ -349,3 +358,8 @@ implementation details.
 
 See [docs/contributing.md](docs/contributing.md) for setup, testing, formatting,
 linting, and code style guidelines.
+
+## Troubleshooting
+
+See [docs/troubleshooting.md](docs/troubleshooting.md) for logging-focused
+debugging steps and issue report guidance.

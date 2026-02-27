@@ -46,7 +46,10 @@ M.defaults = {
     },
   },
   cwd = nil,
-  log_level = "warn",
+  log = {
+    level = "warn",
+    verbose = false,
+  },
 }
 
 local valid_providers = { auto = true, snacks = true, native = true }
@@ -60,6 +63,7 @@ local valid_terminal_keymap_actions = {
 local valid_terminal_keymap_action_list = "toggle, clear_input, close, nav"
 local valid_nav_keymap_actions = { left = true, down = true, up = true, right = true }
 local valid_nav_keymap_action_list = "left, down, up, right"
+local valid_log_levels = { debug = true, info = true, warn = true, error = true }
 local valid_config_keys = {
   cmd = true,
   args = true,
@@ -67,7 +71,7 @@ local valid_config_keys = {
   auto_start = true,
   terminal = true,
   cwd = true,
-  log_level = true,
+  log = true,
 }
 ---@param source table
 ---@param known table
@@ -90,7 +94,13 @@ function M.validate(config)
     env = { config.env, "table" },
     auto_start = { config.auto_start, "boolean" },
     terminal = { config.terminal, "table" },
-    log_level = { config.log_level, "string" },
+    log = { config.log, "table" },
+  })
+
+  local log = config.log or {}
+  vim.validate({
+    ["log.level"] = { log.level, "string" },
+    ["log.verbose"] = { log.verbose, "boolean" },
   })
 
   local unknown_config_keys = {}
@@ -122,6 +132,15 @@ function M.validate(config)
   if #unknown > 0 then
     table.sort(unknown)
     error("codex: unknown terminal config key(s): " .. table.concat(unknown, ", "))
+  end
+
+  local unknown_log = {}
+  if type(config.log) == "table" then
+    collect_unknown_keys(config.log, M.defaults.log, "log", unknown_log)
+  end
+  if #unknown_log > 0 then
+    table.sort(unknown_log)
+    error("codex: unknown log config key(s): " .. table.concat(unknown_log, ", "))
   end
 
   for key, value in pairs(config.env) do
@@ -196,6 +215,15 @@ function M.validate(config)
       string.format(
         "codex: invalid terminal.window %q, expected one of: vsplit, hsplit, float",
         config.terminal.window
+      )
+    )
+  end
+
+  if not valid_log_levels[config.log.level] then
+    error(
+      string.format(
+        "codex: invalid log.level %q, expected one of: debug, info, warn, error",
+        config.log.level
       )
     )
   end

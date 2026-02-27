@@ -161,6 +161,10 @@ end
 ---@param text string
 ---@return nil
 function M.append_send_debug_entry(deps, target, text)
+  if type(deps.logger.vdebug) == "function" then
+    deps.logger.vdebug("send payload target=%s len=%d", target, #text)
+    return
+  end
   deps.logger.debug("send payload target=%s len=%d", target, #text)
 end
 

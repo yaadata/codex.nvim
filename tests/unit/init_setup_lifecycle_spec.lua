@@ -21,18 +21,41 @@ describe("codex.init public api lifecycle", function()
     end, "codex.nvim: call require('codex').setup() first")
   end)
 
+  it("requires setup before get_logs and clear_logs", function()
+    local codex = require("codex")
+    assert.has_error(function()
+      codex.get_logs()
+    end, "codex.nvim: call require('codex').setup() first")
+    assert.has_error(function()
+      codex.clear_logs()
+    end, "codex.nvim: call require('codex').setup() first")
+  end)
+
   it("setup uses injected dependencies and strips _deps from config", function()
-    local env = setup_with_deps({ log_level = "info" })
+    local env = setup_with_deps({ log = { level = "info", verbose = true } })
 
     assert.equals(1, env.commands.register_calls)
     assert.same({ "commands" }, env.call_order)
     assert.equals("info", env.logger.set_levels[1])
+    assert.is_true(env.logger.set_verboses[1])
     assert.equals(1, #env.fake_vim._autocmds)
     assert.equals("VimLeavePre", env.fake_vim._autocmds[1].event)
 
     local cfg = env.codex.get_config()
     assert.equals("codex-test", cfg.cmd)
     assert.is_nil(cfg._deps)
+  end)
+
+  it("get_logs returns captured logs and clear_logs empties them", function()
+    local env = setup_with_deps()
+    env.codex.send("hello")
+
+    local logs = env.codex.get_logs()
+    assert.is_true(#logs > 0)
+
+    env.codex.clear_logs()
+    local cleared = env.codex.get_logs()
+    assert.equals(0, #cleared)
   end)
 
   it("open creates a new session when none exists", function()

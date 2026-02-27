@@ -17,6 +17,17 @@ function M.create(opts)
   local get_config = opts.get_config
   local dispatch_send = opts.dispatch_send
 
+  ---Emit a verbose-only debug log when supported.
+  ---@param msg string
+  ---@param ... any
+  ---@return nil
+  local function vdebug(msg, ...)
+    local deps = get_deps()
+    if type(deps.logger.vdebug) == "function" then
+      deps.logger.vdebug(msg, ...)
+    end
+  end
+
   ---Sends `/mention` for an already-resolved relative path, auto-submits, and restores prompt input.
   ---@param resolved_path string Relative path to mention.
   ---@return codex.SendResult ok True when mention payload is sent.
@@ -25,14 +36,21 @@ function M.create(opts)
     local deps = get_deps()
     local config = get_config()
     local mention = deps.formatter.format_mention(resolved_path)
+    vdebug("dispatch_mention path=%s", resolved_path)
 
     local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
     if session_lifecycle.session_is_alive(session, provider) then
       -- Capture depends on terminal buffer/window state; focus first to ensure buffer visibility.
+      vdebug("dispatch_mention focusing active session before prompt capture")
       provider.focus(session.handle)
     end
 
     local existing_input = prompt_submit.capture_prompt_input(get_deps, get_config)
+    if existing_input and existing_input ~= "" then
+      vdebug("dispatch_mention captured existing prompt input len=%d", #existing_input)
+    else
+      vdebug("dispatch_mention no existing prompt input captured")
+    end
     local mention_payload = terminal_io.encode_clear_line_for_mention(deps) .. mention
     return dispatch_send(mention_payload, {
       open_focus = true,
@@ -43,22 +61,28 @@ function M.create(opts)
           local submit_ok, submit_err =
             prompt_submit.submit_with_enter_key(get_deps, get_config, "/mention")
           if not submit_ok then
+            vdebug("dispatch_mention submit failed err=%s", submit_err or "unknown")
             deps.logger.error("failed to submit /mention: %s", submit_err)
             return
           end
+          vdebug("dispatch_mention submit succeeded")
 
           if not existing_input or existing_input == "" then
             return
           end
 
           deps.vim.defer_fn(function()
+            vdebug("dispatch_mention restoring previous prompt input len=%d", #existing_input)
             local restore_ok, restore_err = dispatch_send(existing_input, {
               open_focus = true,
               post_focus = true,
             })
             if not restore_ok then
+              vdebug("dispatch_mention restore failed err=%s", restore_err or "unknown")
               deps.logger.error("failed to restore terminal input after /mention: %s", restore_err)
+              return
             end
+            vdebug("dispatch_mention restore succeeded")
           end, terminal_io.RESTORE_INPUT_DELAY_MS)
         end, terminal_io.SUBMIT_INPUT_DELAY_MS)
       end,
@@ -83,6 +107,7 @@ function M.create(opts)
     end
 
     resolved_path = deps.path.to_relative(deps.vim, resolved_path)
+    vdebug("mention_file resolved_path=%s", resolved_path)
     return dispatch_mention(resolved_path)
   end
 
@@ -111,6 +136,7 @@ function M.create(opts)
 
     resolved_path = deps.path.to_relative(deps.vim, resolved_path)
     resolved_path = deps.path.ensure_dir_trailing_separator(deps.vim, resolved_path)
+    vdebug("mention_directory resolved_path=%s", resolved_path)
     return dispatch_mention(resolved_path)
   end
 

@@ -11,6 +11,17 @@
 ---| "warn"
 ---| "error"
 
+---@class codex.LogConfig
+---@field level codex.LogLevel
+---@field verbose boolean
+
+---@class codex.LogEntry
+---@field seq integer
+---@field timestamp integer
+---@field level codex.LogLevel
+---@field message string
+---@field verbose boolean
+
 ---@alias codex.WindowType
 ---| "vsplit"
 ---| "hsplit"
@@ -66,7 +77,7 @@
 ---@field auto_start boolean
 ---@field terminal codex.TerminalConfig
 ---@field cwd string|nil
----@field log_level codex.LogLevel
+---@field log codex.LogConfig
 
 ---@class codex.SessionSpec
 ---@field handle codex.ProviderHandle

@@ -17,7 +17,7 @@ plugin/codex.lua          (entry point, version guard, load guard)
 lua/codex/init.lua        (public API facade, DI container, setup wiring)
         │
         ├──► config.lua           (defaults, validation, deep merge)
-        ├──► logger.lua           (level-gated vim.notify wrapper)
+        ├──► logger.lua           (level-gated notify facade + in-memory capture buffer)
         ├──► nvim/commands.lua    (user command registration)
         ├──► providers/init.lua   (provider registry + auto-resolution)
         │        ├── native.lua
@@ -51,8 +51,9 @@ codex.nvim/
 │   │                                # validation, and deep-merge with user options.
 │   ├── types.lua                    # EmmyLua annotations only (no runtime code).
 │   │                                # Central type definitions for the whole plugin.
-│   ├── logger.lua                   # Thin wrapper around vim.notify with level gating
-│   │                                # (debug/info/warn/error) and string.format support.
+│   ├── logger.lua                   # Logging facade with level-gated vim.notify output,
+│   │                                # verbose-only capture logs, and bounded in-memory
+│   │                                # log entries exposed via get_logs()/clear_logs().
 │   ├── nvim/
 │   │   ├── commands.lua             # Registers all :Codex* user commands. Each command
 │   │                                # delegates to the corresponding init.lua API function.
@@ -101,7 +102,7 @@ codex.nvim/
 │   └── contract/
 │       └── provider_contract_spec.lua  # Structural compliance tests verifying every
 │                                       # provider exports the required 9 methods.
-├── docs/                            # Internal planning and developer documentation.
+├── docs/                            # Internal planning and user/developer documentation.
 ├── justfile                         # Task runner (test, fmt, lint, bootstrap).
 ├── .stylua.toml                     # Stylua formatter configuration.
 ├── selene.toml                      # Selene linter configuration.
@@ -303,6 +304,8 @@ Key types:
 | `codex.TerminalKeymapConfig` | class | Terminal-local keymaps (`toggle`, `clear_input`, `close`, `nav`) |
 | `codex.ProviderName`         | alias | Union of valid provider name strings                             |
 | `codex.LogLevel`             | alias | Union of log level strings                                       |
+| `codex.LogConfig`            | class | Logging config (`level`, `verbose`)                              |
+| `codex.LogEntry`             | class | Captured in-memory log entry shape                               |
 | `codex.Provider`             | class | 9-method structural interface for providers                      |
 | `codex.ProviderHandle`       | alias | Opaque handle (`table`) returned by `provider.open()`            |
 | `codex.Session`              | class | Session record extending `codex.SessionSpec`                     |

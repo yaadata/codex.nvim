@@ -11,26 +11,36 @@ local M = {}
 function M.capture_prompt_input(get_deps, get_config)
   local deps = get_deps()
   local config = get_config()
+  local function vdebug(msg, ...)
+    if type(deps.logger.vdebug) == "function" then
+      deps.logger.vdebug(msg, ...)
+    end
+  end
   local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
   if not session_lifecycle.session_is_alive(session, provider) then
+    vdebug("capture_prompt_input unavailable session")
     return nil, "unavailable_session"
   end
   if type(provider.get_bufnr) ~= "function" then
+    vdebug("capture_prompt_input provider missing get_bufnr")
     return nil, "unavailable_buffer"
   end
 
   local bufnr = provider.get_bufnr(session.handle)
   local api = deps.vim.api
   if type(bufnr) ~= "number" then
+    vdebug("capture_prompt_input unavailable buffer (bufnr missing)")
     return nil, "unavailable_buffer"
   end
   local ok_valid, is_valid = pcall(api.nvim_buf_is_valid, bufnr)
   if not ok_valid or not is_valid then
+    vdebug("capture_prompt_input unavailable buffer (invalid bufnr=%s)", tostring(bufnr))
     return nil, "unavailable_buffer"
   end
 
   local ok_count, line_count = pcall(api.nvim_buf_line_count, bufnr)
   if not ok_count or type(line_count) ~= "number" or line_count < 1 then
+    vdebug("capture_prompt_input unavailable buffer (line_count invalid)")
     return nil, "unavailable_buffer"
   end
 
@@ -70,6 +80,7 @@ function M.capture_prompt_input(get_deps, get_config)
           -- real input in some terminal states.
           uncertain = true
         elseif parsed.input ~= "" then
+          vdebug("capture_prompt_input captured len=%d line=%d", #parsed.input, line_number)
           return parsed.input, "captured"
         end
       elseif
@@ -98,8 +109,10 @@ function M.capture_prompt_input(get_deps, get_config)
   end
 
   if uncertain then
+    vdebug("capture_prompt_input uncertain")
     return nil, "uncertain"
   end
+  vdebug("capture_prompt_input no_input")
   return nil, "no_input"
 end
 
@@ -112,8 +125,14 @@ end
 function M.submit_with_enter_key(get_deps, get_config, target)
   local deps = get_deps()
   local config = get_config()
+  local function vdebug(msg, ...)
+    if type(deps.logger.vdebug) == "function" then
+      deps.logger.vdebug(msg, ...)
+    end
+  end
   local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
   if not session_lifecycle.session_is_alive(session, provider) then
+    vdebug("submit_with_enter_key no active session target=%s", target)
     return false, "no active Codex session"
   end
 
@@ -128,8 +147,10 @@ function M.submit_with_enter_key(get_deps, get_config, target)
     )
     local ok, feedkeys_err = pcall(feedkeys, enter_termcode, "nt", false)
     if ok then
+      vdebug("submit_with_enter_key feedkeys success target=%s", target)
       return true
     end
+    vdebug("submit_with_enter_key feedkeys failed target=%s err=%s", target, feedkeys_err)
     deps.logger.warn("feedkeys submit failed, falling back to channel send: %s", feedkeys_err)
   end
 
@@ -138,7 +159,13 @@ function M.submit_with_enter_key(get_deps, get_config, target)
     string.format("%s[channel_submit]", target),
     terminal_io.CODEX_ENTER_SEQUENCE
   )
-  return provider.send(session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
+  local ok, err = provider.send(session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
+  if ok then
+    vdebug("submit_with_enter_key channel send success target=%s", target)
+  else
+    vdebug("submit_with_enter_key channel send failed target=%s err=%s", target, err or "unknown")
+  end
+  return ok, err
 end
 
 return M

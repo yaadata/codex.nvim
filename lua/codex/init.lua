@@ -90,7 +90,10 @@ function M.setup(opts)
     end,
   })
 
-  deps.logger.set_level(state.config.log_level)
+  deps.logger.set_level(state.config.log.level)
+  if type(deps.logger.set_verbose) == "function" then
+    deps.logger.set_verbose(state.config.log.verbose)
+  end
 
   deps.commands.register()
 
@@ -422,6 +425,20 @@ end
 function M.get_config()
   local deps = get_deps()
   return state.config and deps.vim.deepcopy(state.config) or nil
+end
+
+---Returns a snapshot of captured in-memory log entries.
+---@return codex.LogEntry[]
+function M.get_logs()
+  ensure_setup()
+  return get_deps().logger.get_logs()
+end
+
+---Clears captured in-memory log entries.
+---@return nil
+function M.clear_logs()
+  ensure_setup()
+  get_deps().logger.clear_logs()
 end
 
 return M

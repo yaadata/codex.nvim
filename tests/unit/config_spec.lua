@@ -37,7 +37,8 @@ describe("codex.config", function()
       assert.equals("<C-k>", config.defaults.terminal.keymaps.nav.up)
       assert.equals("<C-l>", config.defaults.terminal.keymaps.nav.right)
       assert.is_false(config.defaults.auto_start)
-      assert.equals("warn", config.defaults.log_level)
+      assert.equals("warn", config.defaults.log.level)
+      assert.is_false(config.defaults.log.verbose)
     end)
   end)
 
@@ -85,6 +86,17 @@ describe("codex.config", function()
       assert.equals("/tmp/project", cfg.cwd)
     end)
 
+    it("merges log overrides", function()
+      local cfg = config.apply({
+        log = {
+          level = "info",
+          verbose = true,
+        },
+      })
+      assert.equals("info", cfg.log.level)
+      assert.is_true(cfg.log.verbose)
+    end)
+
     it("does not mutate defaults", function()
       config.apply({ cmd = "other" })
       assert.equals("codex", config.defaults.cmd)
@@ -100,6 +112,24 @@ describe("codex.config", function()
       assert.has_error(function()
         config.apply({ terminal = { provider = "invalid" } })
       end, 'codex: invalid terminal.provider "invalid", expected one of: auto, snacks, native')
+    end)
+
+    it("rejects invalid log.level", function()
+      assert.has_error(function()
+        config.apply({ log = { level = "trace" } })
+      end, 'codex: invalid log.level "trace", expected one of: debug, info, warn, error')
+    end)
+
+    it("rejects non-boolean log.verbose", function()
+      assert.has_error(function()
+        config.apply({ log = { verbose = "yes" } })
+      end, "log.verbose: expected boolean, got string")
+    end)
+
+    it("rejects unknown log keys", function()
+      assert.has_error(function()
+        config.apply({ log = { level = "warn", verbose = false, extra = true } })
+      end, "codex: unknown log config key(s): log.extra")
     end)
 
     it("rejects invalid window type", function()
@@ -307,6 +337,14 @@ describe("codex.config", function()
           keymaps_force = true,
         })
       end, "codex: unknown config key(s): keymaps_force")
+    end)
+
+    it("rejects legacy log_level config key", function()
+      assert.has_error(function()
+        config.apply({
+          log_level = "debug",
+        })
+      end, "codex: unknown config key(s): log_level")
     end)
 
     it("rejects env maps with non-string keys", function()

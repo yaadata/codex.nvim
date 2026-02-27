@@ -37,6 +37,17 @@ function M.create(opts)
   local get_send_queue = opts.get_send_queue
   local open_session = opts.open_session
 
+  ---Emit a verbose-only debug log when supported.
+  ---@param msg string
+  ---@param ... any
+  ---@return nil
+  local function vdebug(msg, ...)
+    local deps = get_deps()
+    if type(deps.logger.vdebug) == "function" then
+      deps.logger.vdebug(msg, ...)
+    end
+  end
+
   ---Logs send failures with command-specific context when available.
   ---@param item codex.PendingSend
   ---@param err string|nil
@@ -69,6 +80,7 @@ function M.create(opts)
     local config = get_config()
 
     if item.pre_focus then
+      vdebug("send_item_now pre_focus command_path=%s", item.command_path or "<text>")
       provider.focus(session.handle)
     end
 
@@ -77,19 +89,28 @@ function M.create(opts)
 
     local ok, err = provider.send(session.handle, item.text)
     if not ok then
+      vdebug("send_item_now provider.send failed command_path=%s err=%s", target, err or "unknown")
       return false, err
     end
 
     if item.on_sent then
+      vdebug("send_item_now running on_sent callback command_path=%s", target)
       local callback_ok, callback_err = pcall(item.on_sent)
       if not callback_ok then
+        vdebug(
+          "send_item_now on_sent callback failed command_path=%s err=%s",
+          target,
+          callback_err or "unknown"
+        )
         return false, callback_err
       end
     end
 
     if item.post_focus then
-      session_lifecycle.apply_post_send_focus(session, provider, config)
+      vdebug("send_item_now post_focus command_path=%s", target)
+      session_lifecycle.apply_post_send_focus(deps, session, provider, config)
     end
+    vdebug("send_item_now sent command_path=%s", target)
     return true
   end
 
@@ -102,11 +123,17 @@ function M.create(opts)
     local config = get_config()
     local first_attempt = not item.has_attempted
     item.has_attempted = true
+    vdebug(
+      "process_pending_send_item attempt command_path=%s first_attempt=%s",
+      item.command_path or "<text>",
+      tostring(first_attempt)
+    )
 
     local session = deps.session_store.get_active()
     local provider = session_lifecycle.get_provider(deps, config)
 
     if not session or not session.alive then
+      vdebug("process_pending_send_item opening session (missing or dead)")
       open_session(config.args, item.open_focus)
       session = deps.session_store.get_active()
       provider = session_lifecycle.get_provider(deps, config)
@@ -122,6 +149,7 @@ function M.create(opts)
       and not item.opened_in_dispatch
       and not item.reopen_attempted
     then
+      vdebug("process_pending_send_item reopening stale active session")
       open_session(config.args, item.open_focus)
       session = deps.session_store.get_active()
       provider = session_lifecycle.get_provider(deps, config)
@@ -134,17 +162,33 @@ function M.create(opts)
     then
       local elapsed_ms = terminal_io.now_ms(deps) - item.created_at
       if elapsed_ms >= config.terminal.startup.timeout_ms then
+        vdebug(
+          "process_pending_send_item drop timeout command_path=%s elapsed_ms=%d",
+          item.command_path or "<text>",
+          elapsed_ms
+        )
         log_send_timeout(item)
         return "drop"
       end
+      vdebug(
+        "process_pending_send_item retry waiting for readiness command_path=%s elapsed_ms=%d",
+        item.command_path or "<text>",
+        elapsed_ms
+      )
       return "retry"
     end
 
     local ok, err = send_item_now(item, session, provider)
     if not ok then
+      vdebug(
+        "process_pending_send_item drop after send failure command_path=%s err=%s",
+        item.command_path or "<text>",
+        err or "unknown"
+      )
       log_send_failure(item, err)
       return "drop", err
     end
+    vdebug("process_pending_send_item sent command_path=%s", item.command_path or "<text>")
     return "sent"
   end
 
@@ -168,6 +212,14 @@ function M.create(opts)
       reopen_attempted = false,
       has_attempted = false,
     }
+    vdebug(
+      "dispatch_send queued command_path=%s open_focus=%s pre_focus=%s post_focus=%s len=%d",
+      item.command_path or "<text>",
+      tostring(item.open_focus),
+      tostring(item.pre_focus),
+      tostring(item.post_focus),
+      #text
+    )
     return get_send_queue():submit(item)
   end
 
