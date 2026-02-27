@@ -8,6 +8,10 @@ local provider_modules = {
 }
 
 local loaded = {}
+---@type codex.Provider|nil
+local auto_resolved_provider = nil
+---@type string|nil
+local auto_resolved_name = nil
 
 --- Lazy-load and cache a provider module by name.
 ---@param name codex.ProviderName|"native"|"snacks"
@@ -38,14 +42,22 @@ end
 ---@return string resolved_name
 function M.resolve(provider_name)
   if provider_name == "auto" then
+    if auto_resolved_provider and auto_resolved_name then
+      return auto_resolved_provider, auto_resolved_name
+    end
+
     local snacks = load_provider("snacks")
     if snacks and snacks.is_available() then
       log.debug("auto-resolved provider to snacks")
+      auto_resolved_provider = snacks
+      auto_resolved_name = "snacks"
       return snacks, "snacks"
     end
 
     local native = load_provider("native")
     log.debug("auto-resolved provider to native")
+    auto_resolved_provider = native
+    auto_resolved_name = "native"
     return native, "native"
   end
 
@@ -65,6 +77,8 @@ end
 ---@return nil
 function M.reset()
   loaded = {}
+  auto_resolved_provider = nil
+  auto_resolved_name = nil
 end
 
 return M

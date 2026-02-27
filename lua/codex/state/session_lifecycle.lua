@@ -20,6 +20,47 @@ function M.get_provider(deps, config)
   return deps.providers.resolve(config.terminal.provider)
 end
 
+---Opens or reuses a terminal session with a pre-resolved provider.
+---@param deps table
+---@param config table
+---@param args string[]
+---@param focus boolean
+---@param provider codex.Provider
+---@param provider_name string
+---@param session codex.Session|nil
+---@return nil
+local function open_or_reuse_session(deps, config, args, focus, provider, provider_name, session)
+  local arg_count = type(args) == "table" and #args or 0
+  vdebug(deps, "open_session requested focus=%s args=%d", tostring(focus), arg_count)
+
+  if session and session.alive and provider.is_alive(session.handle) then
+    vdebug(deps, "open_session reusing alive active session id=%s", session.id)
+    if focus then
+      provider.focus(session.handle)
+    end
+    return
+  end
+
+  -- Close stale session if any
+  if session then
+    vdebug(deps, "open_session closing stale session id=%s", session.id)
+    provider.close(session.handle)
+    deps.session_store.remove(session.id)
+  end
+
+  local handle = provider.open(config.cmd, args, config.env, config, focus, function(exited_handle)
+    M.mark_session_dead_by_handle(deps, exited_handle)
+  end)
+  vdebug(deps, "open_session created new session provider=%s", provider_name)
+
+  deps.session_store.create({
+    handle = handle,
+    cmd = config.cmd,
+    cwd = config.cwd or deps.vim.fn.getcwd(),
+    provider_name = provider_name,
+  })
+end
+
 ---Marks the session that owns `dead_handle` as no longer alive.
 ---@param deps table
 ---@param dead_handle codex.ProviderHandle|nil
@@ -76,35 +117,7 @@ end
 function M.open_session(deps, config, args, focus)
   local session = deps.session_store.get_active()
   local provider, provider_name = M.get_provider(deps, config)
-  local arg_count = type(args) == "table" and #args or 0
-  vdebug(deps, "open_session requested focus=%s args=%d", tostring(focus), arg_count)
-
-  if session and session.alive and provider.is_alive(session.handle) then
-    vdebug(deps, "open_session reusing alive active session id=%s", session.id)
-    if focus then
-      provider.focus(session.handle)
-    end
-    return
-  end
-
-  -- Close stale session if any
-  if session then
-    vdebug(deps, "open_session closing stale session id=%s", session.id)
-    provider.close(session.handle)
-    deps.session_store.remove(session.id)
-  end
-
-  local handle = provider.open(config.cmd, args, config.env, config, focus, function(exited_handle)
-    M.mark_session_dead_by_handle(deps, exited_handle)
-  end)
-  vdebug(deps, "open_session created new session provider=%s", provider_name)
-
-  deps.session_store.create({
-    handle = handle,
-    cmd = config.cmd,
-    cwd = config.cwd or deps.vim.fn.getcwd(),
-    provider_name = provider_name,
-  })
+  open_or_reuse_session(deps, config, args, focus, provider, provider_name, session)
 end
 
 ---Closes the active terminal session and resets the send queue.
@@ -137,7 +150,7 @@ end
 ---@return nil
 function M.toggle_session(deps, config)
   local session = deps.session_store.get_active()
-  local provider = M.get_provider(deps, config)
+  local provider, provider_name = M.get_provider(deps, config)
 
   if session and session.alive and provider.is_alive(session.handle) then
     vdebug(deps, "toggle_session toggling alive session id=%s", session.id)
@@ -151,7 +164,7 @@ function M.toggle_session(deps, config)
 
   -- No active session — open one
   vdebug(deps, "toggle_session opening new session (no alive active session)")
-  M.open_session(deps, config, config.args, true)
+  open_or_reuse_session(deps, config, config.args, true, provider, provider_name, session)
 end
 
 ---Focuses active session if alive.

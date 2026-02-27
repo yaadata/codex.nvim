@@ -109,6 +109,18 @@ describe("codex.init public api lifecycle", function()
     assert.equals(replacement, env.store.get_active().handle)
   end)
 
+  it("toggle resolves provider once when opening from no active session", function()
+    local env = setup_with_deps({
+      terminal = { provider = "auto" },
+    })
+
+    env.codex.toggle()
+
+    assert.equals(1, #env.providers.resolve_calls)
+    assert.equals("auto", env.providers.resolve_calls[1])
+    assert.equals(1, #env.provider.open_calls)
+  end)
+
   it("toggle opens a fresh session when active handle is stale", function()
     local env = setup_with_deps()
     env.codex.open(false)
