@@ -212,10 +212,10 @@ init.lua mention_file(path) / mention_directory(path) -> mention module
     \- mention.dispatch(relative_path)
          |- formatter.format_mention(relative_path)
          |- [active + alive] provider.focus(handle) before prompt capture
-         |- capture_terminal_prompt_input() (best effort)
+         |- capture_terminal_prompt_input() (best effort; nearest valid prompt head within lookback)
          |- mention_payload = clear_line_sequence + mention_text
          \- send_dispatch.dispatch_send(mention_payload, { open_focus=true, pre_focus=true, command_path="/mention", on_sent=... })
-              |- on_sent: submit_with_enter_key("/mention")
+              |- on_sent: submit Enter for /mention (multiline capture -> channel send, otherwise feedkeys path)
               \- on_sent: restore captured prompt input via delayed dispatch_send(...)
 ```
 
@@ -269,7 +269,7 @@ init.lua dispatch_wrapper_command(command)
     |- ensure_setup()
     |- normalize -> command_path ("/<command>")
     |- [active + alive session] provider.focus(handle) before capture
-    |- capture prompt input (best effort)
+    |- capture prompt input (best effort; nearest valid prompt head, strict compact marker parsing)
     |- [captured input] vim.fn.setreg('"', captured_input)
     |- payload = clear_line_sequence + command_path
     \- send_dispatch.dispatch_send(payload, {
@@ -277,7 +277,8 @@ init.lua dispatch_wrapper_command(command)
          pre_focus = true,
          command_path = command_path,
          on_sent = function()
-           prompt_submit.submit_with_enter_key(..., command_path)
+           submit Enter for command_path
+           (multiline capture -> channel send, otherwise feedkeys path)
          end,
        })
 ```
@@ -285,6 +286,8 @@ init.lua dispatch_wrapper_command(command)
 Notes:
 
 - Existing prompt input is copied to the unnamed register (`"`), then cleared.
+- Multiline continuation lines are normalized to strip prompt gutter padding
+  before save/restore.
 - Successful non-empty save emits a WARN notification.
 - If an active session buffer cannot be introspected (`unavailable_buffer`)
   before clear, a WARN notification is emitted.

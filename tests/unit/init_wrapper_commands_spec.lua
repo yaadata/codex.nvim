@@ -145,6 +145,118 @@ describe("codex.init public api wrapper commands", function()
     assert.equals(1, #env.provider.send_calls)
   end)
 
+  it("wrapper commands clear multiline prompt input before slash dispatch", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> first line", "  second line" })
+    env.fake_vim._set_buf_cursor(77, 1701, 2, 11)
+
+    local ok = env.codex.show_status()
+
+    assert.is_true(ok)
+    assert.equals(2, #env.provider.send_calls)
+    assert.equals(
+      "<termcoded:<C-e>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>>/status",
+      env.provider.send_calls[1].text
+    )
+    assert.equals("\r", env.provider.send_calls[2].text)
+    assert.equals(1, #env.fake_vim._setreg_calls)
+    assert.equals("first line\nsecond line", env.fake_vim._setreg_calls[1].value)
+    assert.equals("<C-e>", env.fake_vim._replace_termcodes_calls[1].str)
+    assert.equals("<C-u>", env.fake_vim._replace_termcodes_calls[2].str)
+    assert.equals("<C-h>", env.fake_vim._replace_termcodes_calls[3].str)
+    assert.equals("<C-u>", env.fake_vim._replace_termcodes_calls[4].str)
+    assert.equals(0, #env.fake_vim._feedkeys_calls)
+  end)
+
+  it(
+    "wrapper commands capture nearest multiline draft and normalize continuation gutters",
+    function()
+      local env = setup_with_deps()
+      env.codex.open(false)
+      env.provider.get_bufnr_fn = function()
+        return 77
+      end
+      env.fake_vim._set_buf_lines(77, {
+        "> stale prompt",
+        "  stale continuation",
+        "> active prompt",
+        "  . active continuation",
+        "  final line",
+      })
+      env.fake_vim._set_buf_cursor(77, 1701, 5, 12)
+
+      local ok = env.codex.compact()
+
+      assert.is_true(ok)
+      assert.equals(2, #env.provider.send_calls)
+      assert.equals(
+        "<termcoded:<C-e>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>>/compact",
+        env.provider.send_calls[1].text
+      )
+      assert.equals("\r", env.provider.send_calls[2].text)
+      assert.equals(1, #env.fake_vim._setreg_calls)
+      assert.equals(
+        "active prompt\nactive continuation\nfinal line",
+        env.fake_vim._setreg_calls[1].value
+      )
+      assert.equals(0, #env.fake_vim._feedkeys_calls)
+    end
+  )
+
+  it("wrapper commands clear full draft when code-fence-like lines are near cursor", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    local draft_lines = {
+      "> asdf",
+      "qwerty",
+      "asdf",
+      "```lua",
+      'vim.api.nvim_create_user_command("CodexCompact", function()',
+      'local codex = require("codex")',
+      "codex.compact()",
+      "end, {",
+      'desc = "Run Codex /compact in the active session",',
+      "nargs = 0,",
+      "})",
+      "```",
+    }
+    env.fake_vim._set_buf_lines(77, draft_lines)
+    env.fake_vim._set_buf_cursor(77, 1701, 12, 3)
+
+    local ok = env.codex.compact()
+
+    assert.is_true(ok)
+    assert.equals(2, #env.provider.send_calls)
+    local expected_clear_prefix = "<termcoded:<C-e>><termcoded:<C-u>>"
+      .. string.rep("<termcoded:<C-h>><termcoded:<C-u>>", #draft_lines - 1)
+    assert.equals(expected_clear_prefix .. "/compact", env.provider.send_calls[1].text)
+    assert.equals("\r", env.provider.send_calls[2].text)
+    local expected_saved = table.concat({
+      "asdf",
+      "qwerty",
+      "asdf",
+      "```lua",
+      'vim.api.nvim_create_user_command("CodexCompact", function()',
+      'local codex = require("codex")',
+      "codex.compact()",
+      "end, {",
+      'desc = "Run Codex /compact in the active session",',
+      "nargs = 0,",
+      "})",
+      "```",
+    }, "\n")
+    assert.equals(1, #env.fake_vim._setreg_calls)
+    assert.equals(expected_saved, env.fake_vim._setreg_calls[1].value)
+    assert.equals(0, #env.fake_vim._feedkeys_calls)
+  end)
+
   it("wrapper commands warn when setreg fails", function()
     local env = setup_with_deps()
     env.codex.open(false)

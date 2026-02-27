@@ -122,6 +122,187 @@ describe("codex.init public api mention_file", function()
     assert.equals("asdfadsfadsf", env.provider.send_calls[2].text)
   end)
 
+  it("mention_file clears multiline prompt input before dispatching /mention", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> first line", "  second line" })
+    env.fake_vim._set_buf_cursor(77, 1701, 2, 11)
+
+    local ok = env.codex.mention_file("/tmp/example.lua")
+
+    assert.is_true(ok)
+    assert.equals(
+      "<termcoded:<C-e>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>>/mention ../../tmp/example.lua",
+      env.provider.send_calls[1].text
+    )
+    assert.equals(4, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("<C-h>", env.fake_vim._replace_termcodes_calls[3].str)
+    assert.equals("<C-u>", env.fake_vim._replace_termcodes_calls[4].str)
+
+    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 1)
+    assert.equals(3, #env.provider.send_calls)
+    assert.equals("\r", env.provider.send_calls[2].text)
+    assert.equals("\27[200~first line\nsecond line\27[201~", env.provider.send_calls[3].text)
+    assert.equals(0, #env.fake_vim._feedkeys_calls)
+  end)
+
+  it("mention_file prefers the nearest prompt head when multiple prompts exist", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, {
+      "> old prompt",
+      "  old continuation",
+      "> current prompt",
+      "  current continuation",
+    })
+    env.fake_vim._set_buf_cursor(77, 1701, 4, 22)
+
+    local ok = env.codex.mention_file("/tmp/example.lua")
+
+    assert.is_true(ok)
+    assert.equals(
+      "<termcoded:<C-e>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>>/mention ../../tmp/example.lua",
+      env.provider.send_calls[1].text
+    )
+
+    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 1)
+    assert.equals(3, #env.provider.send_calls)
+    assert.equals("\r", env.provider.send_calls[2].text)
+    assert.equals(
+      "\27[200~current prompt\ncurrent continuation\27[201~",
+      env.provider.send_calls[3].text
+    )
+  end)
+
+  it("mention_file strips continuation gutter markers from multiline restore", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, {
+      "> first line",
+      "  . second line",
+      "  third line",
+    })
+    env.fake_vim._set_buf_cursor(77, 1701, 3, 12)
+
+    local ok = env.codex.mention_file("/tmp/example.lua")
+
+    assert.is_true(ok)
+    assert.equals(
+      "<termcoded:<C-e>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>>/mention ../../tmp/example.lua",
+      env.provider.send_calls[1].text
+    )
+
+    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 1)
+    assert.equals(3, #env.provider.send_calls)
+    assert.equals("\r", env.provider.send_calls[2].text)
+    assert.equals(
+      "\27[200~first line\nsecond line\nthird line\27[201~",
+      env.provider.send_calls[3].text
+    )
+  end)
+
+  it(
+    "mention_file captures multiline drafts for non-standard prompt markers at cursor col 0",
+    function()
+      local env = setup_with_deps()
+      env.codex.open(false)
+      env.provider.get_bufnr_fn = function()
+        return 77
+      end
+      env.fake_vim._set_buf_lines(77, {
+        "▶ first line",
+        "second line",
+        "third line",
+        "",
+      })
+      env.fake_vim._set_buf_cursor(77, 1701, 4, 0)
+
+      local ok = env.codex.mention_file("/tmp/example.lua")
+
+      assert.is_true(ok)
+      assert.equals(
+        "<termcoded:<C-e>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>>/mention ../../tmp/example.lua",
+        env.provider.send_calls[1].text
+      )
+
+      run_deferred(env.fake_vim, 1)
+      run_deferred(env.fake_vim, 1)
+      assert.equals(3, #env.provider.send_calls)
+      assert.equals("\r", env.provider.send_calls[2].text)
+      assert.equals(
+        "\27[200~first line\nsecond line\nthird line\27[201~",
+        env.provider.send_calls[3].text
+      )
+    end
+  )
+
+  it("mention_file prefers full prompt head over code-fence-like compact lines", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    local draft_lines = {
+      "> asdf",
+      "qwerty",
+      "asdf",
+      "```lua",
+      'vim.api.nvim_create_user_command("CodexCompact", function()',
+      'local codex = require("codex")',
+      "codex.compact()",
+      "end, {",
+      'desc = "Run Codex /compact in the active session",',
+      "nargs = 0,",
+      "})",
+      "```",
+    }
+    env.fake_vim._set_buf_lines(77, draft_lines)
+    env.fake_vim._set_buf_cursor(77, 1701, 12, 3)
+
+    local ok = env.codex.mention_file("/tmp/example.lua")
+
+    assert.is_true(ok)
+    local expected_clear_prefix = "<termcoded:<C-e>><termcoded:<C-u>>"
+      .. string.rep("<termcoded:<C-h>><termcoded:<C-u>>", #draft_lines - 1)
+    assert.equals(
+      expected_clear_prefix .. "/mention ../../tmp/example.lua",
+      env.provider.send_calls[1].text
+    )
+
+    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 1)
+    assert.equals(3, #env.provider.send_calls)
+    assert.equals("\r", env.provider.send_calls[2].text)
+    local expected_restored = table.concat({
+      "asdf",
+      "qwerty",
+      "asdf",
+      "```lua",
+      'vim.api.nvim_create_user_command("CodexCompact", function()',
+      'local codex = require("codex")',
+      "codex.compact()",
+      "end, {",
+      'desc = "Run Codex /compact in the active session",',
+      "nargs = 0,",
+      "})",
+      "```",
+    }, "\n")
+    assert.equals("\27[200~" .. expected_restored .. "\27[201~", env.provider.send_calls[3].text)
+    assert.equals(0, #env.fake_vim._feedkeys_calls)
+  end)
+
   it("mention_file skips ghost prompt text when cursor is at input start", function()
     local env = setup_with_deps()
     env.codex.open(false)
@@ -266,28 +447,11 @@ describe("codex.init public api mention_file", function()
     env.provider.get_bufnr_fn = function()
       return 77
     end
-    env.fake_vim._set_buf_lines(77, {
-      "> too-far",
-      "line 2",
-      "line 3",
-      "line 4",
-      "line 5",
-      "line 6",
-      "line 7",
-      "line 8",
-      "line 9",
-      "line 10",
-      "line 11",
-      "line 12",
-      "line 13",
-      "line 14",
-      "line 15",
-      "line 16",
-      "line 17",
-      "line 18",
-      "line 19",
-      "line 20",
-    })
+    local lines = { "> too-far" }
+    for idx = 2, 1000 do
+      table.insert(lines, "line " .. idx)
+    end
+    env.fake_vim._set_buf_lines(77, lines)
 
     local ok = env.codex.mention_file("/tmp/example.lua")
 

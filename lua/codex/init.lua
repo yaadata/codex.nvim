@@ -187,6 +187,7 @@ end
 ---@param slash_cmd string Slash command name with or without a leading `/`.
 ---@return string payload
 ---@return string command_path
+---@return boolean submit_via_channel
 local function build_wrapper_command_payload(slash_cmd)
   ensure_setup()
   local deps = get_deps()
@@ -199,9 +200,12 @@ local function build_wrapper_command_payload(slash_cmd)
     provider.focus(session.handle)
   end
 
-  local existing_input, capture_status = prompt_submit.capture_prompt_input(get_deps, function()
-    return state.config
-  end)
+  local existing_input, capture_status, clear_line_count = prompt_submit.capture_prompt_input(
+    get_deps,
+    function()
+      return state.config
+    end
+  )
   if existing_input and existing_input ~= "" then
     local save_ok = pcall(deps.vim.fn.setreg, '"', existing_input)
     if save_ok then
@@ -214,8 +218,9 @@ local function build_wrapper_command_payload(slash_cmd)
     deps.logger.warn(COULD_NOT_SAVE_PROMPT_NOTIFY_MSG)
   end
 
-  local payload = terminal_io.encode_clear_line_for_mention(deps) .. command_path
-  return payload, command_path
+  local submit_via_channel = clear_line_count > 1
+  local payload = terminal_io.encode_clear_line_for_mention(deps, clear_line_count) .. command_path
+  return payload, command_path, submit_via_channel
 end
 
 ---Normalizes and dispatches a slash command payload.
@@ -247,15 +252,32 @@ end
 ---@return codex.SendResult ok True when command payload is sent.
 ---@return string|nil err
 local function dispatch_wrapper_command(slash_cmd)
-  local payload, command_path = build_wrapper_command_payload(slash_cmd)
+  local payload, command_path, submit_via_channel = build_wrapper_command_payload(slash_cmd)
   return state.send_dispatch.dispatch_send(payload, {
     open_focus = true,
     pre_focus = true,
     command_path = command_path,
     on_sent = function()
-      local submit_ok, submit_err = prompt_submit.submit_with_enter_key(get_deps, function()
-        return state.config
-      end, command_path)
+      local submit_ok, submit_err
+      if submit_via_channel then
+        local deps = get_deps()
+        local session, provider =
+          session_lifecycle.get_active_session_and_provider(deps, state.config)
+        if not session_lifecycle.session_is_alive(session, provider) then
+          submit_ok, submit_err = false, "no active Codex session"
+        else
+          terminal_io.append_send_debug_entry(
+            deps,
+            string.format("%s[channel_submit_multiline]", command_path),
+            terminal_io.CODEX_ENTER_SEQUENCE
+          )
+          submit_ok, submit_err = provider.send(session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
+        end
+      else
+        submit_ok, submit_err = prompt_submit.submit_with_enter_key(get_deps, function()
+          return state.config
+        end, command_path)
+      end
       if not submit_ok then
         error(submit_err or ("failed to submit " .. command_path))
       end

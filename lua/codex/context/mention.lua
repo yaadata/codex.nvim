@@ -45,21 +45,40 @@ function M.create(opts)
       provider.focus(session.handle)
     end
 
-    local existing_input = prompt_submit.capture_prompt_input(get_deps, get_config)
+    local existing_input, _, clear_line_count =
+      prompt_submit.capture_prompt_input(get_deps, get_config)
     if existing_input and existing_input ~= "" then
       vdebug("dispatch_mention captured existing prompt input len=%d", #existing_input)
     else
       vdebug("dispatch_mention no existing prompt input captured")
     end
-    local mention_payload = terminal_io.encode_clear_line_for_mention(deps) .. mention
+    local mention_payload = terminal_io.encode_clear_line_for_mention(deps, clear_line_count)
+      .. mention
     return dispatch_send(mention_payload, {
       open_focus = true,
       pre_focus = true,
       command_path = "/mention",
       on_sent = function()
         deps.vim.defer_fn(function()
-          local submit_ok, submit_err =
-            prompt_submit.submit_with_enter_key(get_deps, get_config, "/mention")
+          local submit_ok, submit_err
+          if existing_input and existing_input:find("\n", 1, true) then
+            local submit_session, submit_provider =
+              session_lifecycle.get_active_session_and_provider(deps, config)
+            if not session_lifecycle.session_is_alive(submit_session, submit_provider) then
+              submit_ok, submit_err = false, "no active Codex session"
+            else
+              terminal_io.append_send_debug_entry(
+                deps,
+                "/mention[channel_submit_multiline]",
+                terminal_io.CODEX_ENTER_SEQUENCE
+              )
+              submit_ok, submit_err =
+                submit_provider.send(submit_session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
+            end
+          else
+            submit_ok, submit_err =
+              prompt_submit.submit_with_enter_key(get_deps, get_config, "/mention")
+          end
           if not submit_ok then
             vdebug("dispatch_mention submit failed err=%s", submit_err or "unknown")
             deps.logger.error("failed to submit /mention: %s", submit_err)
@@ -73,7 +92,11 @@ function M.create(opts)
 
           deps.vim.defer_fn(function()
             vdebug("dispatch_mention restoring previous prompt input len=%d", #existing_input)
-            local restore_ok, restore_err = dispatch_send(existing_input, {
+            local restore_payload = existing_input
+            if existing_input:find("\n", 1, true) then
+              restore_payload = terminal_io.encode_bracketed_paste(existing_input)
+            end
+            local restore_ok, restore_err = dispatch_send(restore_payload, {
               open_focus = true,
               post_focus = true,
             })
