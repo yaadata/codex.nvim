@@ -35,6 +35,12 @@ require("codex").setup({
 :lua vim.print(require("codex").get_logs())
 ```
 
+5. Copy logs to your system clipboard:
+
+```vim
+:lua vim.fn.setreg("+", vim.inspect(require("codex").get_logs()))
+```
+
 The returned entries are tables with:
 
 - `seq` (monotonic sequence number for stable ordering)
@@ -49,7 +55,7 @@ The returned entries are tables with:
 - Your `codex.nvim` version/commit.
 - Relevant `setup()` config (`cmd`, `terminal.*`, and `log.*`).
 - Reproduction steps.
-- Captured output from `require("codex").get_logs()`.
+- Captured output from `require("codex").get_logs()` (printed or pasted from clipboard).
 
 ## Reset After Debugging
 
