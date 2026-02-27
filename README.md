@@ -51,6 +51,9 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 
 Use this table as your lazy.nvim plugin `opts` value:
 
+<details>
+<summary>Show default <code>opts</code> table</summary>
+
 ```lua
 opts = {
   launch = {
@@ -103,6 +106,8 @@ opts = {
 }
 ```
 
+</details>
+
 ## Commands
 
 - `:Codex` toggles the Codex terminal
@@ -144,6 +149,9 @@ run.
 
 codex.nvim does not register global keymaps in `setup()`. Define global mappings
 in your lazy.nvim plugin spec `keys`:
+
+<details>
+<summary>Show lazy <code>keys</code> table</summary>
 
 ```lua
 {
@@ -263,6 +271,8 @@ in your lazy.nvim plugin spec `keys`:
   },
 }
 ```
+
+</details>
 
 Set `vim.g.mapleader` before plugin setup so `<leader>` expands as expected.
 
