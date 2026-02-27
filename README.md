@@ -23,90 +23,36 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
   version = "0.3.0",
-  keys = {
-    {
-      "<leader>ot",
-      function()
-        require("codex").toggle()
-      end,
-      desc = "Codex: Toggle terminal",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>oo",
-      function()
-        require("codex").open(true)
-      end,
-      desc = "Codex: Open and focus",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>of",
-      function()
-        require("codex").focus()
-      end,
-      desc = "Codex: Focus terminal",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>ox",
-      function()
-        require("codex").close()
-      end,
-      desc = "Codex: Close session",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>os",
-      function()
-        require("codex").send_buffer()
-      end,
-      desc = "Codex: Add current buffer",
-      mode = "n",
-    },
-    {
-      "<leader>os",
-      function()
-        require("codex").send_selection()
-      end,
-      desc = "Codex: Send selection",
-      mode = "x",
-    },
-    {
-      "<leader>om",
-      function()
-        require("codex").mention_file()
-      end,
-      desc = "Codex: Mention current file",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>oM",
-      function()
-        require("codex").mention_directory()
-      end,
-      desc = "Codex: Mention current directory",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>oi",
-      function()
-        require("codex").show_status()
-      end,
-      desc = "Codex: Show status",
-      mode = { "n", "v" },
-    },
+  cmd = {
+    "Codex",
+    "CodexFocus",
+    "CodexClose",
+    "CodexClearInput",
+    "CodexSend",
+    "CodexAddBuffer",
+    "CodexMentionFile",
+    "CodexMentionDirectory",
+    "CodexResume",
+    "CodexModel",
+    "CodexStatus",
+    "CodexPermissions",
+    "CodexCompact",
+    "CodexReview",
+    "CodexDiff",
   },
-  config = function()
-    require("codex").setup({})
+  opts = {},
+  config = function(_, opts)
+    require("codex").setup(opts)
   end,
 }
 ```
 
 ## Configuration
 
+Use this table as your lazy.nvim plugin `opts` value:
+
 ```lua
-require("codex").setup({
+opts = {
   cmd = "codex",
   args = {},
   env = {},
@@ -151,7 +97,7 @@ require("codex").setup({
       },
     },
   },
-})
+}
 ```
 
 ## Commands
@@ -179,6 +125,18 @@ require("codex").setup({
 For detailed command behavior and component interactions, see
 [`docs/command-interactions.md`](docs/command-interactions.md).
 
+When using lazy.nvim with `cmd` + `opts`, prefer wiring setup explicitly in
+`config` and passing lazy's resolved opts through:
+
+```lua
+config = function(_, opts)
+  require("codex").setup(opts)
+end
+```
+
+The `cmd` list still ensures first-use lazy loading when a `:Codex*` command is
+run.
+
 ## Keymaps
 
 codex.nvim does not register global keymaps in `setup()`. Define global mappings
@@ -188,6 +146,28 @@ in your lazy.nvim plugin spec `keys`:
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
   version = "0.3.0",
+  main = "codex",
+  cmd = {
+    "Codex",
+    "CodexFocus",
+    "CodexClose",
+    "CodexClearInput",
+    "CodexSend",
+    "CodexAddBuffer",
+    "CodexMentionFile",
+    "CodexMentionDirectory",
+    "CodexResume",
+    "CodexModel",
+    "CodexStatus",
+    "CodexPermissions",
+    "CodexCompact",
+    "CodexReview",
+    "CodexDiff",
+  },
+  opts = {},
+  config = function(_, opts)
+    require("codex").setup(opts)
+  end,
   keys = {
     {
       "<leader>ot",
@@ -278,9 +258,6 @@ in your lazy.nvim plugin spec `keys`:
       mode = { "n", "v" },
     },
   },
-  config = function()
-    require("codex").setup({})
-  end,
 }
 ```
 
@@ -320,7 +297,8 @@ navigation keymaps, or set individual directions to `false`.
 
 ## Lua API
 
-- `require("codex").setup(opts)` initialize plugin config and commands.
+- `require("codex").setup(opts)` initialize plugin config/runtime and register
+  commands.
 - `require("codex").open(focus)` open terminal session.
 - `require("codex").close()` close active session.
 - `require("codex").toggle()` toggle terminal visibility.

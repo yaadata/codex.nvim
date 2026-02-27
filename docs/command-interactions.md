@@ -29,6 +29,30 @@ provider collaborators.
 | `:CodexReview [instructions]`   | `codex.review(instructions)`     | Mention-style slash wrapper (`/review ...`): capture->copy->clear->send->auto-submit  |
 | `:CodexDiff`                    | `codex.show_diff()`              | Mention-style slash wrapper (`/diff`): capture->copy->clear->send->auto-submit        |
 
+## Lazy.nvim Command Bootstrap (Recommended)
+
+When configured through lazy.nvim with `cmd = { ... }` and `opts = { ... }`,
+the first `:Codex*` invocation typically follows this flow:
+
+```text
+User runs :CodexStatus (example)
+    |
+    v
+lazy.nvim command stub for "CodexStatus"
+    |
+    v
+lazy loads codex.nvim
+    |
+    v
+lazy calls require("codex").setup(opts)
+    |
+    v
+init.lua setup() registers :Codex* commands and runtime wiring
+    |
+    v
+command executes against configured codex runtime
+```
+
 ## Setup Registration Flow
 
 ```text

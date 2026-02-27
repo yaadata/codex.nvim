@@ -246,9 +246,11 @@ After resolving deps and config, `setup()` wires the constructor modules:
 This wiring order allows `send_dispatch` to reference the send queue (via
 closure) even though the queue is created after the dispatch instance.
 
-After wiring, setup registers `:Codex*` commands and cleanup autocmds. Global
-keymaps are intentionally not managed in runtime setup; users configure them in
-their plugin manager (for example lazy.nvim `keys`).
+After wiring, setup registers `:Codex*` commands and cleanup autocmds. In
+lazy.nvim `cmd + opts` setups, first-command discovery and plugin load are
+handled by lazy command stubs before `setup()` runs. Global keymaps are
+intentionally not managed in runtime setup; users configure them in their
+plugin manager (for example lazy.nvim `keys`).
 
 ### Error Handling
 
