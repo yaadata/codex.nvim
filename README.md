@@ -22,7 +22,81 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = '0.3.0',
+  version = "0.3.0",
+  keys = {
+    {
+      "<leader>ot",
+      function()
+        require("codex").toggle()
+      end,
+      desc = "Codex: Toggle terminal",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>oo",
+      function()
+        require("codex").open(true)
+      end,
+      desc = "Codex: Open and focus",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>of",
+      function()
+        require("codex").focus()
+      end,
+      desc = "Codex: Focus terminal",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>ox",
+      function()
+        require("codex").close()
+      end,
+      desc = "Codex: Close session",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>os",
+      function()
+        require("codex").send_buffer()
+      end,
+      desc = "Codex: Add current buffer",
+      mode = "n",
+    },
+    {
+      "<leader>os",
+      function()
+        require("codex").send_selection()
+      end,
+      desc = "Codex: Send selection",
+      mode = "x",
+    },
+    {
+      "<leader>om",
+      function()
+        require("codex").mention_file()
+      end,
+      desc = "Codex: Mention current file",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>oM",
+      function()
+        require("codex").mention_directory()
+      end,
+      desc = "Codex: Mention current directory",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>oi",
+      function()
+        require("codex").show_status()
+      end,
+      desc = "Codex: Show status",
+      mode = { "n", "v" },
+    },
+  },
   config = function()
     require("codex").setup({})
   end,
@@ -74,22 +148,6 @@ require("codex").setup({
       },
     },
   },
-  keymaps = {
-    toggle = "<leader>ot",
-    open = "<leader>oo",
-    focus = "<leader>of",
-    close = "<leader>ox",
-    send = "<leader>os",
-    mention_file = "<leader>om",
-    mention_dir = "<leader>oM",
-    resume = "<leader>or",
-    status = "<leader>oi",
-    permissions = "<leader>op",
-    compact = "<leader>oc",
-    review = "<leader>oR",
-    diff = "<leader>od",
-  },
-  keymaps_force = false, -- do not override existing mappings unless true
 })
 ```
 
@@ -120,59 +178,110 @@ For detailed command behavior and component interactions, see
 
 ## Keymaps
 
-Default keymaps are registered under `<leader>o`:
+codex.nvim does not register global keymaps in `setup()`. Define global mappings
+in your lazy.nvim plugin spec `keys`:
 
 ```lua
-require("codex").setup({
-  keymaps = {
-    toggle = "<leader>ot",
-    open = "<leader>oo",
-    focus = "<leader>of",
-    close = "<leader>ox",
-    send = "<leader>os",
-    mention_file = "<leader>om",
-    mention_dir = "<leader>oM",
-    resume = "<leader>or",
-    status = "<leader>oi",
-    permissions = "<leader>op",
-    compact = "<leader>oc",
-    review = "<leader>oR",
-    diff = "<leader>od",
+{
+  url = "https://codeberg.org/yaadata/codex.nvim.git",
+  version = "0.3.0",
+  keys = {
+    {
+      "<leader>ot",
+      function()
+        require("codex").toggle()
+      end,
+      desc = "Codex: Toggle terminal",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>os",
+      function()
+        require("codex").send_buffer()
+      end,
+      desc = "Codex: Add current buffer",
+      mode = "n",
+    },
+    {
+      "<leader>os",
+      function()
+        require("codex").send_selection()
+      end,
+      desc = "Codex: Send selection",
+      mode = "x",
+    },
+    {
+      "<leader>om",
+      function()
+        require("codex").mention_file()
+      end,
+      desc = "Codex: Mention current file",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>oM",
+      function()
+        require("codex").mention_directory()
+      end,
+      desc = "Codex: Mention current directory",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>or",
+      function()
+        require("codex").resume()
+      end,
+      desc = "Codex: Resume session",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>oi",
+      function()
+        require("codex").show_status()
+      end,
+      desc = "Codex: Show status",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>op",
+      function()
+        require("codex").show_permissions()
+      end,
+      desc = "Codex: Permissions",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>oc",
+      function()
+        require("codex").compact()
+      end,
+      desc = "Codex: Compact context",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>oR",
+      function()
+        require("codex").review()
+      end,
+      desc = "Codex: Review changes",
+      mode = { "n", "v" },
+    },
+    {
+      "<leader>od",
+      function()
+        require("codex").show_diff()
+      end,
+      desc = "Codex: Show diff",
+      mode = { "n", "v" },
+    },
   },
-  keymaps_force = false, -- keep existing user mappings by default
-})
+  config = function()
+    require("codex").setup({})
+  end,
+}
 ```
 
-Override examples:
-
-```lua
--- Disable all default mappings
-require("codex").setup({
-  keymaps = false,
-})
-
--- Override one mapping and disable another
-require("codex").setup({
-  keymaps = {
-    toggle = "<leader>xx",
-    status = false,
-  },
-})
-
--- Intentionally overwrite existing mappings
-require("codex").setup({
-  keymaps_force = true,
-})
-```
-
-Set `vim.g.mapleader` before calling `require("codex").setup()` so `<leader>`
-expands to the expected key.
-
-`keymaps.send` is mode-aware:
-
-- Normal mode sends current buffer as `@path` (`:CodexAddBuffer`).
-- Visual mode sends selection as ACP line reference plus fenced code block
-  (`:CodexSend`).
+Set `vim.g.mapleader` before plugin setup so `<leader>` expands as expected.
 
 Terminal-local keymaps inside the Codex terminal buffer are configured
 separately via `terminal.keymaps`:
@@ -204,8 +313,7 @@ navigation keymaps, or set individual directions to `false`.
 
 ## Lua API
 
-- `require("codex").setup(opts)` initialize plugin config, commands, and
-  keymaps.
+- `require("codex").setup(opts)` initialize plugin config and commands.
 - `require("codex").open(focus)` open terminal session.
 - `require("codex").close()` close active session.
 - `require("codex").toggle()` toggle terminal visibility.

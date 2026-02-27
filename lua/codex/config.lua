@@ -47,22 +47,6 @@ M.defaults = {
   },
   cwd = nil,
   log_level = "warn",
-  keymaps = {
-    toggle = "<leader>ot",
-    open = "<leader>oo",
-    focus = "<leader>of",
-    close = "<leader>ox",
-    send = "<leader>os",
-    mention_file = "<leader>om",
-    mention_dir = "<leader>oM",
-    resume = "<leader>or",
-    status = "<leader>oi",
-    permissions = "<leader>op",
-    compact = "<leader>oc",
-    review = "<leader>oR",
-    diff = "<leader>od",
-  },
-  keymaps_force = false,
 }
 
 local valid_providers = { auto = true, snacks = true, native = true }
@@ -76,24 +60,15 @@ local valid_terminal_keymap_actions = {
 local valid_terminal_keymap_action_list = "toggle, clear_input, close, nav"
 local valid_nav_keymap_actions = { left = true, down = true, up = true, right = true }
 local valid_nav_keymap_action_list = "left, down, up, right"
-local valid_keymap_actions = {
-  toggle = true,
-  open = true,
-  focus = true,
-  close = true,
-  send = true,
-  mention_file = true,
-  mention_dir = true,
-  resume = true,
-  status = true,
-  permissions = true,
-  compact = true,
-  review = true,
-  diff = true,
+local valid_config_keys = {
+  cmd = true,
+  args = true,
+  env = true,
+  auto_start = true,
+  terminal = true,
+  cwd = true,
+  log_level = true,
 }
-local valid_keymap_action_list =
-  "toggle, open, focus, close, send, mention_file, mention_dir, resume, status, permissions, compact, review, diff"
-
 ---@param source table
 ---@param known table
 ---@param prefix string
@@ -116,8 +91,18 @@ function M.validate(config)
     auto_start = { config.auto_start, "boolean" },
     terminal = { config.terminal, "table" },
     log_level = { config.log_level, "string" },
-    keymaps_force = { config.keymaps_force, "boolean" },
   })
+
+  local unknown_config_keys = {}
+  for key in pairs(config) do
+    if not valid_config_keys[key] then
+      table.insert(unknown_config_keys, key)
+    end
+  end
+  if #unknown_config_keys > 0 then
+    table.sort(unknown_config_keys)
+    error("codex: unknown config key(s): " .. table.concat(unknown_config_keys, ", "))
+  end
 
   local unknown = {}
   collect_unknown_keys(config.terminal, M.defaults.terminal, "terminal", unknown)
@@ -145,26 +130,6 @@ function M.validate(config)
     end
     if type(value) ~= "string" then
       error(string.format("codex: env.%s must be a string", key))
-    end
-  end
-
-  if config.keymaps ~= false then
-    vim.validate({
-      keymaps = { config.keymaps, "table" },
-    })
-    for action, lhs in pairs(config.keymaps) do
-      if not valid_keymap_actions[action] then
-        error(
-          string.format(
-            "codex: invalid keymaps action %q, expected one of: %s",
-            action,
-            valid_keymap_action_list
-          )
-        )
-      end
-      if lhs ~= false and type(lhs) ~= "string" then
-        error(string.format("codex: keymaps.%s must be a string or false", action))
-      end
     end
   end
 

@@ -38,11 +38,6 @@ describe("codex.config", function()
       assert.equals("<C-l>", config.defaults.terminal.keymaps.nav.right)
       assert.is_false(config.defaults.auto_start)
       assert.equals("warn", config.defaults.log_level)
-      assert.equals("<leader>ot", config.defaults.keymaps.toggle)
-      assert.equals("<leader>ox", config.defaults.keymaps.close)
-      assert.equals("<leader>os", config.defaults.keymaps.send)
-      assert.equals("<leader>oR", config.defaults.keymaps.review)
-      assert.is_false(config.defaults.keymaps_force)
     end)
   end)
 
@@ -67,10 +62,6 @@ describe("codex.config", function()
           hsplit = { size_pct = 50 },
           keymaps = { close = "<C-d>" },
         },
-        keymaps = {
-          toggle = "<leader>xx",
-          status = false,
-        },
       })
       assert.equals("/usr/local/bin/codex", cfg.cmd)
       assert.equals("hsplit", cfg.terminal.window)
@@ -85,18 +76,13 @@ describe("codex.config", function()
       assert.equals("<C-j>", cfg.terminal.keymaps.nav.down)
       assert.equals("<C-k>", cfg.terminal.keymaps.nav.up)
       assert.equals("<C-l>", cfg.terminal.keymaps.nav.right)
-      assert.equals("<leader>xx", cfg.keymaps.toggle)
-      assert.is_false(cfg.keymaps.status)
-      assert.equals("<leader>ox", cfg.keymaps.close)
-      assert.equals("<leader>os", cfg.keymaps.send)
       -- non-overridden values preserved
       assert.equals("auto", cfg.terminal.provider)
-      assert.is_false(cfg.keymaps_force)
     end)
 
-    it("accepts disabling all default keymaps", function()
-      local cfg = config.apply({ keymaps = false })
-      assert.is_false(cfg.keymaps)
+    it("accepts cwd override despite nil default", function()
+      local cfg = config.apply({ cwd = "/tmp/project" })
+      assert.equals("/tmp/project", cfg.cwd)
     end)
 
     it("does not mutate defaults", function()
@@ -247,12 +233,6 @@ describe("codex.config", function()
       end, "terminal.float.title")
     end)
 
-    it("accepts keymaps = false", function()
-      local cfg = make_valid_config()
-      cfg.keymaps = false
-      assert.is_true(config.validate(cfg))
-    end)
-
     it("rejects unknown terminal keymap actions", function()
       assert.has_error(
         function()
@@ -311,43 +291,22 @@ describe("codex.config", function()
       end, "codex: terminal.keymaps.toggle must be a string or false")
     end)
 
-    it("rejects unknown keymap actions", function()
-      assert.has_error(
-        function()
-          config.apply({
-            keymaps = {
-              launch = "<leader>ol",
-            },
-          })
-        end,
-        'codex: invalid keymaps action "launch", expected one of: toggle, open, focus, close, send, mention_file, mention_dir, resume, status, permissions, compact, review, diff'
-      )
-    end)
-
-    it("rejects keymap values that are not string|false", function()
+    it("rejects removed global keymaps config key", function()
       assert.has_error(function()
         config.apply({
           keymaps = {
-            toggle = 42,
+            toggle = "<leader>xx",
           },
         })
-      end, "codex: keymaps.toggle must be a string or false")
+      end, "codex: unknown config key(s): keymaps")
     end)
 
-    it("rejects non-table keymaps when not false", function()
-      local cfg = make_valid_config()
-      cfg.keymaps = true
-      assert_error_contains(function()
-        config.validate(cfg)
-      end, "keymaps: expected table")
-    end)
-
-    it("rejects non-boolean keymaps_force", function()
-      local cfg = make_valid_config()
-      cfg.keymaps_force = "yes"
-      assert_error_contains(function()
-        config.validate(cfg)
-      end, "keymaps_force: expected boolean")
+    it("rejects removed global keymaps_force config key", function()
+      assert.has_error(function()
+        config.apply({
+          keymaps_force = true,
+        })
+      end, "codex: unknown config key(s): keymaps_force")
     end)
 
     it("rejects env maps with non-string keys", function()

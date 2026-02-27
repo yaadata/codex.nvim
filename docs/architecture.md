@@ -19,7 +19,6 @@ lua/codex/init.lua        (public API facade, DI container, setup wiring)
         ├──► config.lua           (defaults, validation, deep merge)
         ├──► logger.lua           (level-gated vim.notify wrapper)
         ├──► nvim/commands.lua    (user command registration)
-        ├──► nvim/keymaps.lua     (default keymap registration)
         ├──► providers/init.lua   (provider registry + auto-resolution)
         │        ├── native.lua
         │        └── snacks.lua
@@ -57,8 +56,6 @@ codex.nvim/
 │   ├── nvim/
 │   │   ├── commands.lua             # Registers all :Codex* user commands. Each command
 │   │                                # delegates to the corresponding init.lua API function.
-│   │   └── keymaps.lua              # Registers default keymaps, skips collisions by default,
-│   │                                # supports keymaps_force overrides, and handles re-register.
 │   ├── providers/
 │   │   ├── init.lua                 # Provider registry. Maps names to module paths,
 │   │   │                            # lazy-loads on first resolve, implements auto-resolution
@@ -224,7 +221,6 @@ local default_deps = {
   session_store = require("codex.state.session_store"),
   send_queue = require("codex.runtime.send_queue"),
   commands = require("codex.nvim.commands"),
-  keymaps = require("codex.nvim.keymaps"),
   formatter = require("codex.context.formatter"),
   selection = require("codex.context.selection"),
   path = require("codex.context.path"),
@@ -248,6 +244,10 @@ After resolving deps and config, `setup()` wires the constructor modules:
 
 This wiring order allows `send_dispatch` to reference the send queue (via
 closure) even though the queue is created after the dispatch instance.
+
+After wiring, setup registers `:Codex*` commands and cleanup autocmds. Global
+keymaps are intentionally not managed in runtime setup; users configure them in
+their plugin manager (for example lazy.nvim `keys`).
 
 ### Error Handling
 
@@ -292,29 +292,28 @@ and `---@alias` annotations. This file contains no runtime code (`return {}`).
 
 Key types:
 
-| Type                         | Kind  | Purpose                                                       |
-| ---------------------------- | ----- | ------------------------------------------------------------- |
-| `codex.Config`               | class | Merged configuration after `setup()`                          |
-| `codex.TerminalConfig`       | class | Nested terminal-specific options                              |
-| `codex.WindowType`           | alias | Window mode union: `vsplit`, `hsplit`, `float`                |
-| `codex.VsplitConfig`         | class | Vertical split options (`side`, `size_pct`)                   |
-| `codex.HsplitConfig`         | class | Horizontal split options (`side`, `size_pct`)                 |
-| `codex.FloatConfig`          | class | Floating window options (size, border, title, title_pos)      |
-| `codex.TerminalKeymapConfig` | class | Terminal-local keymaps (`toggle`, `clear_input`, `close`)     |
-| `codex.KeymapConfig`         | class | Keymap action table (`string` or `false` per action)          |
-| `codex.ProviderName`         | alias | Union of valid provider name strings                          |
-| `codex.LogLevel`             | alias | Union of log level strings                                    |
-| `codex.Provider`             | class | 9-method structural interface for providers                   |
-| `codex.ProviderHandle`       | alias | Opaque handle (`table`) returned by `provider.open()`         |
-| `codex.Session`              | class | Session record extending `codex.SessionSpec`                  |
-| `codex.SessionSpec`          | class | Spec for creating a new session                               |
-| `codex.SelectionSpec`        | class | Visual selection data (defined in `formatter.lua`)            |
-| `codex.SelectionOpts`        | class | Options for selection extraction (defined in `selection.lua`) |
-| `codex.UserCommandOpts`      | class | Neovim user command callback argument shape                   |
-| `codex.PendingSend`          | class | Queued send item (defined in `send_dispatch.lua`)             |
-| `codex.DispatchSendOpts`     | class | Options for dispatch_send (defined in `send_dispatch.lua`)    |
-| `codex.ResumeOpts`           | class | Options for the resume API (defined in `init.lua`)            |
-| `codex.SendResult`           | alias | Boolean result alias (defined in `init.lua`)                  |
+| Type                         | Kind  | Purpose                                                          |
+| ---------------------------- | ----- | ---------------------------------------------------------------- |
+| `codex.Config`               | class | Merged configuration after `setup()`                             |
+| `codex.TerminalConfig`       | class | Nested terminal-specific options                                 |
+| `codex.WindowType`           | alias | Window mode union: `vsplit`, `hsplit`, `float`                   |
+| `codex.VsplitConfig`         | class | Vertical split options (`side`, `size_pct`)                      |
+| `codex.HsplitConfig`         | class | Horizontal split options (`side`, `size_pct`)                    |
+| `codex.FloatConfig`          | class | Floating window options (size, border, title, title_pos)         |
+| `codex.TerminalKeymapConfig` | class | Terminal-local keymaps (`toggle`, `clear_input`, `close`, `nav`) |
+| `codex.ProviderName`         | alias | Union of valid provider name strings                             |
+| `codex.LogLevel`             | alias | Union of log level strings                                       |
+| `codex.Provider`             | class | 9-method structural interface for providers                      |
+| `codex.ProviderHandle`       | alias | Opaque handle (`table`) returned by `provider.open()`            |
+| `codex.Session`              | class | Session record extending `codex.SessionSpec`                     |
+| `codex.SessionSpec`          | class | Spec for creating a new session                                  |
+| `codex.SelectionSpec`        | class | Visual selection data (defined in `formatter.lua`)               |
+| `codex.SelectionOpts`        | class | Options for selection extraction (defined in `selection.lua`)    |
+| `codex.UserCommandOpts`      | class | Neovim user command callback argument shape                      |
+| `codex.PendingSend`          | class | Queued send item (defined in `send_dispatch.lua`)                |
+| `codex.DispatchSendOpts`     | class | Options for dispatch_send (defined in `send_dispatch.lua`)       |
+| `codex.ResumeOpts`           | class | Options for the resume API (defined in `init.lua`)               |
+| `codex.SendResult`           | alias | Boolean result alias (defined in `init.lua`)                     |
 
 `codex.ProviderHandle` is intentionally opaque (`table`). Providers define their
 own internal handle structure; the core never inspects handle contents.

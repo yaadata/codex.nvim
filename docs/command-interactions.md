@@ -42,11 +42,6 @@ init.lua setup()
     |- send_queue.new({ process = send_dispatch.process_pending_send_item })
     |- mention.create({ get_deps, get_config, dispatch_send })
     |- commands.register()
-    |- keymaps.register(config)
-    |    |- unregister stale Codex keymaps from previous setup
-    |    |- skip keymaps when keymaps=false
-    |    |- skip mapping collisions unless keymaps_force=true
-    |    \- register n/x mappings for Codex actions
     \- register VimLeavePre cleanup autocmd
 ```
 

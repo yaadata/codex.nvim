@@ -18,7 +18,6 @@ local default_deps = {
   session_store = require("codex.state.session_store"),
   send_queue = require("codex.runtime.send_queue"),
   commands = require("codex.nvim.commands"),
-  keymaps = require("codex.nvim.keymaps"),
   formatter = require("codex.context.formatter"),
   selection = require("codex.context.selection"),
   path = require("codex.context.path"),
@@ -40,7 +39,7 @@ local function get_deps()
   return state.deps or default_deps
 end
 
----Initializes codex.nvim state, commands, keymaps, queue, and lifecycle hooks.
+---Initializes codex.nvim state, commands, queue, and lifecycle hooks.
 ---@param opts? table
 ---@return nil
 function M.setup(opts)
@@ -94,7 +93,6 @@ function M.setup(opts)
   deps.logger.set_level(state.config.log_level)
 
   deps.commands.register()
-  deps.keymaps.register(state.config)
 
   deps.vim.api.nvim_create_autocmd("VimLeavePre", {
     group = deps.vim.api.nvim_create_augroup("codex_cleanup", { clear = true }),

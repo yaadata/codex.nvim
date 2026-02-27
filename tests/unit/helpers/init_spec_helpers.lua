@@ -455,12 +455,6 @@ local function setup_with_deps(overrides)
     table.insert(call_order, "commands")
   end
 
-  local keymaps = { register_calls = 0 }
-  function keymaps.register()
-    keymaps.register_calls = keymaps.register_calls + 1
-    table.insert(call_order, "keymaps")
-  end
-
   local providers = { resolve_calls = {} }
   function providers.resolve(name)
     table.insert(providers.resolve_calls, name)
@@ -478,7 +472,6 @@ local function setup_with_deps(overrides)
       session_store = store,
       logger = logger,
       commands = commands,
-      keymaps = keymaps,
       formatter = formatter,
       selection = selection,
       vim = fake_vim,
@@ -494,7 +487,6 @@ local function setup_with_deps(overrides)
     formatter = formatter,
     selection = selection,
     commands = commands,
-    keymaps = keymaps,
     call_order = call_order,
     providers = providers,
   }
