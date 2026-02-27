@@ -134,7 +134,7 @@ function M.create(opts)
 
     if not session or not session.alive then
       vdebug("process_pending_send_item opening session (missing or dead)")
-      open_session(config.args, item.open_focus)
+      open_session(config.launch.args, item.open_focus)
       session = deps.session_store.get_active()
       provider = session_lifecycle.get_provider(deps, config)
       if first_attempt then
@@ -150,7 +150,7 @@ function M.create(opts)
       and not item.reopen_attempted
     then
       vdebug("process_pending_send_item reopening stale active session")
-      open_session(config.args, item.open_focus)
+      open_session(config.launch.args, item.open_focus)
       session = deps.session_store.get_active()
       provider = session_lifecycle.get_provider(deps, config)
       item.reopen_attempted = true

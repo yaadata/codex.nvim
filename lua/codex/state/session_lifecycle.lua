@@ -48,15 +48,22 @@ local function open_or_reuse_session(deps, config, args, focus, provider, provid
     deps.session_store.remove(session.id)
   end
 
-  local handle = provider.open(config.cmd, args, config.env, config, focus, function(exited_handle)
-    M.mark_session_dead_by_handle(deps, exited_handle)
-  end)
+  local handle = provider.open(
+    config.launch.cmd,
+    args,
+    config.launch.env,
+    config,
+    focus,
+    function(exited_handle)
+      M.mark_session_dead_by_handle(deps, exited_handle)
+    end
+  )
   vdebug(deps, "open_session created new session provider=%s", provider_name)
 
   deps.session_store.create({
     handle = handle,
-    cmd = config.cmd,
-    cwd = config.cwd or deps.vim.fn.getcwd(),
+    cmd = config.launch.cmd,
+    cwd = config.launch.cwd or deps.vim.fn.getcwd(),
     provider_name = provider_name,
   })
 end
@@ -154,7 +161,13 @@ function M.toggle_session(deps, config)
 
   if session and session.alive and provider.is_alive(session.handle) then
     vdebug(deps, "toggle_session toggling alive session id=%s", session.id)
-    local new_handle = provider.toggle(session.handle, config.cmd, config.args, config.env, config)
+    local new_handle = provider.toggle(
+      session.handle,
+      config.launch.cmd,
+      config.launch.args,
+      config.launch.env,
+      config
+    )
     if new_handle then
       vdebug(deps, "toggle_session provider returned replacement handle for id=%s", session.id)
       session.handle = new_handle
@@ -164,7 +177,7 @@ function M.toggle_session(deps, config)
 
   -- No active session — open one
   vdebug(deps, "toggle_session opening new session (no alive active session)")
-  open_or_reuse_session(deps, config, config.args, true, provider, provider_name, session)
+  open_or_reuse_session(deps, config, config.launch.args, true, provider, provider_name, session)
 end
 
 ---Focuses active session if alive.
@@ -213,7 +226,13 @@ function M.apply_post_send_focus(deps, session, provider, config)
   end
 
   vdebug(deps, "apply_post_send_focus focus failed, toggling provider")
-  local new_handle = provider.toggle(session.handle, config.cmd, config.args, config.env, config)
+  local new_handle = provider.toggle(
+    session.handle,
+    config.launch.cmd,
+    config.launch.args,
+    config.launch.env,
+    config
+  )
   if new_handle then
     session.handle = new_handle
   end

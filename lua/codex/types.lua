@@ -70,13 +70,16 @@
 ---@field keymaps codex.TerminalKeymapConfig
 ---@field provider_opts table<string, table>
 
----@class codex.Config
+---@class codex.LaunchConfig
 ---@field cmd string
 ---@field args string[]
 ---@field env table<string, string>
 ---@field auto_start boolean
----@field terminal codex.TerminalConfig
 ---@field cwd string|nil
+
+---@class codex.Config
+---@field launch codex.LaunchConfig
+---@field terminal codex.TerminalConfig
 ---@field log codex.LogConfig
 
 ---@class codex.SessionSpec

@@ -504,9 +504,11 @@ local function setup_with_deps(overrides)
 
   local codex = require("codex")
   codex.setup(vim.tbl_deep_extend("force", {
-    cmd = "codex-test",
-    args = { "--flag" },
-    env = { CODEX_TEST = "1" },
+    launch = {
+      cmd = "codex-test",
+      args = { "--flag" },
+      env = { CODEX_TEST = "1" },
+    },
     terminal = { provider = "native" },
     _deps = {
       providers = providers,

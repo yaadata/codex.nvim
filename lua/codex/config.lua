@@ -2,10 +2,13 @@ local M = {}
 
 ---@type codex.Config
 M.defaults = {
-  cmd = "codex",
-  args = {},
-  env = {},
-  auto_start = false,
+  launch = {
+    cmd = "codex",
+    args = {},
+    env = {},
+    auto_start = false,
+    cwd = nil,
+  },
   terminal = {
     provider = "auto",
     window = "vsplit",
@@ -45,7 +48,6 @@ M.defaults = {
       snacks = {},
     },
   },
-  cwd = nil,
   log = {
     level = "warn",
     verbose = false,
@@ -64,13 +66,16 @@ local valid_terminal_keymap_action_list = "toggle, clear_input, close, nav"
 local valid_nav_keymap_actions = { left = true, down = true, up = true, right = true }
 local valid_nav_keymap_action_list = "left, down, up, right"
 local valid_log_levels = { debug = true, info = true, warn = true, error = true }
-local valid_config_keys = {
+local valid_launch_keys = {
   cmd = true,
   args = true,
   env = true,
   auto_start = true,
-  terminal = true,
   cwd = true,
+}
+local valid_config_keys = {
+  launch = true,
+  terminal = true,
   log = true,
 }
 ---@param source table
@@ -89,13 +94,21 @@ end
 ---@return true
 function M.validate(config)
   vim.validate({
-    cmd = { config.cmd, "string" },
-    args = { config.args, "table" },
-    env = { config.env, "table" },
-    auto_start = { config.auto_start, "boolean" },
+    launch = { config.launch, "table" },
     terminal = { config.terminal, "table" },
     log = { config.log, "table" },
   })
+
+  local launch = config.launch or {}
+  vim.validate({
+    ["launch.cmd"] = { launch.cmd, "string" },
+    ["launch.args"] = { launch.args, "table" },
+    ["launch.env"] = { launch.env, "table" },
+    ["launch.auto_start"] = { launch.auto_start, "boolean" },
+  })
+  if launch.cwd ~= nil and type(launch.cwd) ~= "string" then
+    error("codex: launch.cwd must be a string or nil")
+  end
 
   local log = config.log or {}
   vim.validate({
@@ -134,6 +147,15 @@ function M.validate(config)
     error("codex: unknown terminal config key(s): " .. table.concat(unknown, ", "))
   end
 
+  local unknown_launch = {}
+  if type(config.launch) == "table" then
+    collect_unknown_keys(config.launch, valid_launch_keys, "launch", unknown_launch)
+  end
+  if #unknown_launch > 0 then
+    table.sort(unknown_launch)
+    error("codex: unknown launch config key(s): " .. table.concat(unknown_launch, ", "))
+  end
+
   local unknown_log = {}
   if type(config.log) == "table" then
     collect_unknown_keys(config.log, M.defaults.log, "log", unknown_log)
@@ -143,12 +165,12 @@ function M.validate(config)
     error("codex: unknown log config key(s): " .. table.concat(unknown_log, ", "))
   end
 
-  for key, value in pairs(config.env) do
+  for key, value in pairs(config.launch.env) do
     if type(key) ~= "string" then
-      error("codex: env keys must be strings")
+      error("codex: launch.env keys must be strings")
     end
     if type(value) ~= "string" then
-      error(string.format("codex: env.%s must be a string", key))
+      error(string.format("codex: launch.env.%s must be a string", key))
     end
   end
 

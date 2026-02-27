@@ -146,7 +146,8 @@ end
 function M.open(cmd, args, env, config, focus, on_exit)
   local snacks = require("snacks")
   local full_cmd = build_cmd(cmd, args)
-  local cwd = config.cwd or vim.fn.getcwd()
+  local launch = config.launch or {}
+  local cwd = launch.cwd or vim.fn.getcwd()
   local snacks_opts = config.terminal.provider_opts.snacks or {}
 
   local base_opts = {

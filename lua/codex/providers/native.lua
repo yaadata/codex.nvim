@@ -242,7 +242,8 @@ end
 ---@return codex.ProviderHandle handle
 function M.open(cmd, args, env, config, focus, on_exit)
   local full_cmd = build_cmd(cmd, args)
-  local cwd = config.cwd or vim.fn.getcwd()
+  local launch = config.launch or {}
+  local cwd = launch.cwd or vim.fn.getcwd()
   local term_config = config.terminal
   local prev_win = vim.api.nvim_get_current_win()
   local bufnr, winid = create_window(term_config)

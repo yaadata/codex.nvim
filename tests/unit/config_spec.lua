@@ -14,7 +14,11 @@ describe("codex.config", function()
 
   describe("defaults", function()
     it("has expected default values", function()
-      assert.equals("codex", config.defaults.cmd)
+      assert.equals("codex", config.defaults.launch.cmd)
+      assert.same({}, config.defaults.launch.args)
+      assert.same({}, config.defaults.launch.env)
+      assert.is_false(config.defaults.launch.auto_start)
+      assert.is_nil(config.defaults.launch.cwd)
       assert.equals("auto", config.defaults.terminal.provider)
       assert.equals("vsplit", config.defaults.terminal.window)
       assert.equals("right", config.defaults.terminal.vsplit.side)
@@ -36,7 +40,6 @@ describe("codex.config", function()
       assert.equals("<C-j>", config.defaults.terminal.keymaps.nav.down)
       assert.equals("<C-k>", config.defaults.terminal.keymaps.nav.up)
       assert.equals("<C-l>", config.defaults.terminal.keymaps.nav.right)
-      assert.is_false(config.defaults.auto_start)
       assert.equals("warn", config.defaults.log.level)
       assert.is_false(config.defaults.log.verbose)
     end)
@@ -45,18 +48,20 @@ describe("codex.config", function()
   describe("apply", function()
     it("returns defaults when called with nil", function()
       local cfg = config.apply(nil)
-      assert.equals("codex", cfg.cmd)
+      assert.equals("codex", cfg.launch.cmd)
       assert.equals("auto", cfg.terminal.provider)
     end)
 
     it("returns defaults when called with empty table", function()
       local cfg = config.apply({})
-      assert.equals("codex", cfg.cmd)
+      assert.equals("codex", cfg.launch.cmd)
     end)
 
     it("merges user overrides", function()
       local cfg = config.apply({
-        cmd = "/usr/local/bin/codex",
+        launch = {
+          cmd = "/usr/local/bin/codex",
+        },
         terminal = {
           window = "hsplit",
           vsplit = { side = "left" },
@@ -64,7 +69,7 @@ describe("codex.config", function()
           keymaps = { close = "<C-d>" },
         },
       })
-      assert.equals("/usr/local/bin/codex", cfg.cmd)
+      assert.equals("/usr/local/bin/codex", cfg.launch.cmd)
       assert.equals("hsplit", cfg.terminal.window)
       assert.equals("left", cfg.terminal.vsplit.side)
       assert.equals(40, cfg.terminal.vsplit.size_pct)
@@ -82,8 +87,8 @@ describe("codex.config", function()
     end)
 
     it("accepts cwd override despite nil default", function()
-      local cfg = config.apply({ cwd = "/tmp/project" })
-      assert.equals("/tmp/project", cfg.cwd)
+      local cfg = config.apply({ launch = { cwd = "/tmp/project" } })
+      assert.equals("/tmp/project", cfg.launch.cwd)
     end)
 
     it("merges log overrides", function()
@@ -98,8 +103,8 @@ describe("codex.config", function()
     end)
 
     it("does not mutate defaults", function()
-      config.apply({ cmd = "other" })
-      assert.equals("codex", config.defaults.cmd)
+      config.apply({ launch = { cmd = "other" } })
+      assert.equals("codex", config.defaults.launch.cmd)
     end)
   end)
 
@@ -221,6 +226,36 @@ describe("codex.config", function()
       assert.has_error(function()
         config.apply({ terminal = { startup = { retri_interval_ms = 25 } } })
       end, "codex: unknown terminal config key(s): terminal.startup.retri_interval_ms")
+    end)
+
+    it("rejects unknown launch keys", function()
+      assert.has_error(function()
+        config.apply({ launch = { command = "codex" } })
+      end, "codex: unknown launch config key(s): launch.command")
+    end)
+
+    it("rejects legacy top-level launch keys", function()
+      assert.has_error(function()
+        config.apply({ cmd = "codex" })
+      end, "codex: unknown config key(s): cmd")
+      assert.has_error(function()
+        config.apply({ args = { "--flag" } })
+      end, "codex: unknown config key(s): args")
+      assert.has_error(function()
+        config.apply({ env = { CODEX_TEST = "1" } })
+      end, "codex: unknown config key(s): env")
+      assert.has_error(function()
+        config.apply({ auto_start = true })
+      end, "codex: unknown config key(s): auto_start")
+      assert.has_error(function()
+        config.apply({ cwd = "/tmp/project" })
+      end, "codex: unknown config key(s): cwd")
+    end)
+
+    it("rejects non-string launch.cwd", function()
+      assert.has_error(function()
+        config.apply({ launch = { cwd = 123 } })
+      end, "codex: launch.cwd must be a string or nil")
     end)
 
     it("rejects non-table terminal.vsplit", function()
@@ -349,18 +384,18 @@ describe("codex.config", function()
 
     it("rejects env maps with non-string keys", function()
       local cfg = make_valid_config()
-      cfg.env = { [1] = "value" }
+      cfg.launch.env = { [1] = "value" }
       assert.has_error(function()
         config.validate(cfg)
-      end, "codex: env keys must be strings")
+      end, "codex: launch.env keys must be strings")
     end)
 
     it("rejects env maps with non-string values", function()
       local cfg = make_valid_config()
-      cfg.env = { CODEX_TEST = true }
+      cfg.launch.env = { CODEX_TEST = true }
       assert.has_error(function()
         config.validate(cfg)
-      end, "codex: env.CODEX_TEST must be a string")
+      end, "codex: launch.env.CODEX_TEST must be a string")
     end)
   end)
 end)

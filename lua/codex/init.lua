@@ -107,7 +107,7 @@ function M.setup(opts)
   state.initialized = true
   deps.logger.debug("codex.nvim initialized")
 
-  if state.config.auto_start then
+  if state.config.launch.auto_start then
     deps.vim.schedule(function()
       M.open(false)
     end)
@@ -130,7 +130,7 @@ function M.open(focus)
   if focus == nil then
     focus = true
   end
-  session_lifecycle.open_session(get_deps(), state.config, state.config.args, focus)
+  session_lifecycle.open_session(get_deps(), state.config, state.config.launch.args, focus)
 end
 
 ---Closes the active terminal session and resets the send queue.

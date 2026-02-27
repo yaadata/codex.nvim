@@ -8,7 +8,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ## Requirements
 
 - Neovim >= 0.11.0
-- `codex` available on your `PATH` (or configure `cmd`)
+- `codex` available on your `PATH` (or configure `launch.cmd`)
 
 > [!CAUTION]
 > You are reading the `main` branch README. Install and configuration details
@@ -53,10 +53,13 @@ Use this table as your lazy.nvim plugin `opts` value:
 
 ```lua
 opts = {
-  cmd = "codex",
-  args = {},
-  env = {},
-  auto_start = false,
+  launch = {
+    cmd = "codex",
+    args = {},
+    env = {},
+    auto_start = false,
+    cwd = nil,
+  },
   log = {
     level = "warn",
     verbose = false,

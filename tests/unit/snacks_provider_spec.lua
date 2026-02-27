@@ -536,7 +536,9 @@ describe("codex.providers.snacks", function()
 
       local provider = require("codex.providers.snacks")
       provider.open("codex", { "--foo", "bar" }, { CODEX_TEST = "1" }, {
-        cwd = "/tmp/work",
+        launch = {
+          cwd = "/tmp/work",
+        },
         terminal = {
           startup = { grace_ms = 0 },
           provider_opts = {

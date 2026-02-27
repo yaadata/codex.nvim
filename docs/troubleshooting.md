@@ -53,7 +53,7 @@ The returned entries are tables with:
 
 - Your Neovim version (`nvim --version`).
 - Your `codex.nvim` version/commit.
-- Relevant `setup()` config (`cmd`, `terminal.*`, and `log.*`).
+- Relevant `setup()` config (`launch.*`, `terminal.*`, and `log.*`).
 - Reproduction steps.
 - Captured output from `require("codex").get_logs()` (printed or pasted from clipboard).
 

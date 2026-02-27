@@ -1,6 +1,8 @@
 local function make_config(overrides)
   local base = {
-    cwd = nil,
+    launch = {
+      cwd = nil,
+    },
     terminal = {
       window = "vsplit",
       vsplit = {

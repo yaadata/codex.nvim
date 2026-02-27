@@ -42,7 +42,7 @@ describe("codex.init public api lifecycle", function()
     assert.equals("VimLeavePre", env.fake_vim._autocmds[1].event)
 
     local cfg = env.codex.get_config()
-    assert.equals("codex-test", cfg.cmd)
+    assert.equals("codex-test", cfg.launch.cmd)
     assert.is_nil(cfg._deps)
   end)
 
@@ -301,7 +301,7 @@ describe("codex.init public api lifecycle", function()
   end)
 
   it("auto_start schedules open(false)", function()
-    local env = setup_with_deps({ auto_start = true })
+    local env = setup_with_deps({ launch = { auto_start = true } })
 
     assert.equals(1, #env.fake_vim._scheduled)
     assert.equals(0, #env.provider.open_calls)
