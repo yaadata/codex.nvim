@@ -1,6 +1,7 @@
 local helpers = require("tests.unit.helpers.init_spec_helpers")
 local setup_with_deps = helpers.setup_with_deps
 local run_deferred = helpers.run_deferred
+local CTRL_V = string.char(22)
 
 describe("codex.init public api send_selection", function()
   before_each(function()
@@ -125,9 +126,58 @@ describe("codex.init public api send_selection", function()
 
   it("send_selection forwards explicit range options to selection extractor", function()
     local env = setup_with_deps()
+    env.fake_vim.fn.mode = function()
+      return "v"
+    end
+    env.fake_vim.fn.getpos = function()
+      return { 0, 8, 6, 0 }
+    end
+    env.fake_vim._set_buf_cursor(1, 0, 10, 4)
 
     env.codex.send_selection({ line1 = 3, line2 = 5 })
 
     assert.same({ line1 = 3, line2 = 5 }, env.selection.calls[1].opts)
+  end)
+
+  it("send_selection derives visual range when called in visual mode without opts", function()
+    local env = setup_with_deps()
+    env.fake_vim.fn.mode = function()
+      return "v"
+    end
+    env.fake_vim.fn.getpos = function()
+      return { 0, 4, 3, 0 }
+    end
+    env.fake_vim._set_buf_cursor(1, 0, 7, 9)
+
+    env.codex.send_selection()
+
+    assert.same({
+      line1 = 4,
+      line2 = 7,
+      start_col = 2,
+      end_col = 9,
+      visual_mode = "v",
+    }, env.selection.calls[1].opts)
+  end)
+
+  it("send_selection derives blockwise mode for visual fallback", function()
+    local env = setup_with_deps()
+    env.fake_vim.fn.mode = function()
+      return CTRL_V
+    end
+    env.fake_vim.fn.getpos = function()
+      return { 0, 6, 4, 0 }
+    end
+    env.fake_vim._set_buf_cursor(1, 0, 9, 12)
+
+    env.codex.send_selection()
+
+    assert.same({
+      line1 = 6,
+      line2 = 9,
+      start_col = 3,
+      end_col = 12,
+      visual_mode = CTRL_V,
+    }, env.selection.calls[1].opts)
   end)
 end)
