@@ -1,6 +1,8 @@
 local M = {}
 local CTRL_V = string.char(22)
 
+---Neovim-mode helpers used by command/send flows.
+
 ---Exit visual mode when currently in a visual variant.
 ---@param vim_api table|nil
 ---@return boolean exited True when Escape was sent successfully.

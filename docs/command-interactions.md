@@ -158,10 +158,12 @@ commands.lua
         v
 init.lua send_selection()
     |- ensure_setup()
-    |- selection.get_visual_selection(vim, opts)
+    |- selection_send.resolve_selection_opts(deps, opts)
+    |- selection.get_visual_selection(vim, selection_opts)
     |    |- resolve_range(vim_api, bufnr, opts)
     |    |- nvim_buf_get_lines(bufnr, start-1, end, false)
     |    \- return SelectionSpec { path, start_line, end_line, filetype, lines }
+    |- nvim_visual.exit_visual_mode_if_active(vim) (best effort)
     |- formatter.format_selection(spec)
     |    \- build ACP selection ref (`@path#Lstart` or `@path#Lstart-end`) + fenced code block
     \- send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), ...)

@@ -18,7 +18,9 @@ lua/codex/init.lua        (public API facade, DI container, setup wiring)
         │
         ├──► config.lua           (defaults, validation, deep merge)
         ├──► logger.lua           (level-gated notify facade + in-memory capture buffer)
-        ├──► nvim/commands.lua    (user command registration)
+        ├──► nvim/
+        │        ├── commands.lua (user command registration)
+        │        └── visual.lua   (best-effort visual-mode exit helper for selection sends)
         ├──► providers/init.lua   (provider registry + auto-resolution)
         │        ├── native.lua
         │        └── snacks.lua
@@ -59,6 +61,8 @@ codex.nvim/
 │   ├── nvim/
 │   │   ├── commands.lua             # Registers all :Codex* user commands. Each command
 │   │                                # delegates to the corresponding init.lua API function.
+│   │   └── visual.lua               # Neovim mode helper used to best-effort exit visual
+│   │                                # mode before selection payload dispatch.
 │   ├── providers/
 │   │   ├── init.lua                 # Provider registry. Maps names to module paths,
 │   │   │                            # lazy-loads on first resolve, implements auto-resolution
@@ -230,8 +234,10 @@ local default_deps = {
   session_store = require("codex.state.session_store"),
   send_queue = require("codex.runtime.send_queue"),
   commands = require("codex.nvim.commands"),
+  nvim_visual = require("codex.nvim.visual"),
   formatter = require("codex.context.formatter"),
   selection = require("codex.context.selection"),
+  selection_send = require("codex.context.selection_send"),
   path = require("codex.context.path"),
   vim = vim,
 }
