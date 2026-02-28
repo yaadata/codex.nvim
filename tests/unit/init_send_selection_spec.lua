@@ -23,6 +23,33 @@ describe("codex.init public api send_selection", function()
     assert.equals(1, #env.provider.send_calls)
     assert.equals("\27[200~[selection]\27[201~", env.provider.send_calls[1].text)
     assert.equals(1, #env.provider.focus_calls)
+    assert.equals(0, #env.fake_vim._input_calls)
+  end)
+
+  it("send_selection exits visual mode before dispatching payload", function()
+    local env = setup_with_deps()
+    env.fake_vim.fn.mode = function()
+      return "v"
+    end
+
+    local ok = env.codex.send_selection()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.fake_vim._input_calls)
+    assert.equals("<termcoded:<Esc>>", env.fake_vim._input_calls[1].keys)
+  end)
+
+  it("send_selection schedules a follow-up focus to keep terminal input mode", function()
+    local env = setup_with_deps()
+
+    local ok = env.codex.send_selection()
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.focus_calls)
+    assert.equals(1, #env.fake_vim._scheduled)
+
+    env.fake_vim._scheduled[1]()
+    assert.equals(2, #env.provider.focus_calls)
   end)
 
   it("send_selection wraps real formatter output in bracketed paste", function()
@@ -69,6 +96,31 @@ describe("codex.init public api send_selection", function()
     run_deferred(env.fake_vim, 2)
     assert.equals(1, #env.provider.send_calls)
     assert.equals("\27[200~[selection]\27[201~", env.provider.send_calls[1].text)
+  end)
+
+  it("send_selection schedules follow-up focus when queued sends flush", function()
+    local env = setup_with_deps({
+      terminal = {
+        startup = { timeout_ms = 200, retry_interval_ms = 50 },
+      },
+    })
+    env.provider.is_alive_fn = function(handle)
+      return handle and env.fake_vim._runtime.now >= 100
+    end
+
+    local ok = env.codex.send_selection()
+
+    assert.is_true(ok)
+    assert.equals(0, #env.fake_vim._scheduled)
+
+    run_deferred(env.fake_vim, 2)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals(1, #env.provider.focus_calls)
+    assert.equals(1, #env.fake_vim._scheduled)
+    assert.equals(0, #env.fake_vim._input_calls)
+
+    env.fake_vim._scheduled[1]()
+    assert.equals(2, #env.provider.focus_calls)
   end)
 
   it("send_selection drops queued payload after startup timeout", function()

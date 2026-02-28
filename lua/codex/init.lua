@@ -19,6 +19,7 @@ local default_deps = {
   session_store = require("codex.state.session_store"),
   send_queue = require("codex.runtime.send_queue"),
   commands = require("codex.nvim.commands"),
+  nvim_visual = require("codex.nvim.visual"),
   formatter = require("codex.context.formatter"),
   selection = require("codex.context.selection"),
   path = require("codex.context.path"),
@@ -510,10 +511,45 @@ function M.send_selection(opts)
     return false, err
   end
 
+  if deps.nvim_visual and type(deps.nvim_visual.exit_visual_mode_if_active) == "function" then
+    deps.nvim_visual.exit_visual_mode_if_active(deps.vim)
+  end
+
   local payload = deps.formatter.format_selection(spec)
   return state.send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), {
     open_focus = true,
     post_focus = true,
+    on_sent = function()
+      local schedule = deps.vim.schedule
+      if type(schedule) == "function" then
+        local scheduled = pcall(schedule, function()
+          local callback_deps = get_deps()
+          local session, provider =
+            session_lifecycle.get_active_session_and_provider(callback_deps, state.config)
+          if not session_lifecycle.session_is_alive(session, provider) then
+            return
+          end
+          pcall(
+            session_lifecycle.apply_post_send_focus,
+            callback_deps,
+            session,
+            provider,
+            state.config
+          )
+        end)
+        if scheduled then
+          return
+        end
+      end
+
+      local callback_deps = get_deps()
+      local session, provider =
+        session_lifecycle.get_active_session_and_provider(callback_deps, state.config)
+      if not session_lifecycle.session_is_alive(session, provider) then
+        return
+      end
+      pcall(session_lifecycle.apply_post_send_focus, callback_deps, session, provider, state.config)
+    end,
   })
 end
 
