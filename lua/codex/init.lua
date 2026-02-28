@@ -382,7 +382,7 @@ end
 ---Check whether a value is an integer >= 1.
 ---@param value any
 ---@return boolean
-local function is_positive_integer(value)
+local function is_integer_greater_than_one(value)
   return type(value) == "number" and value >= 1 and math.floor(value) == value
 end
 
@@ -411,7 +411,9 @@ end
 ---@return codex.SelectionOpts
 local function resolve_selection_opts(deps, opts)
   local resolved = copy_opts(opts)
-  if is_positive_integer(resolved.line1) and is_positive_integer(resolved.line2) then
+  if
+    is_integer_greater_than_one(resolved.line1) and is_integer_greater_than_one(resolved.line2)
+  then
     return resolved
   end
 
@@ -454,17 +456,19 @@ local function resolve_selection_opts(deps, opts)
   local cursor_line = cursor[1]
   local cursor_col = cursor[2]
 
-  if not is_positive_integer(anchor_line) or not is_positive_integer(cursor_line) then
+  if
+    not is_integer_greater_than_one(anchor_line) or not is_integer_greater_than_one(cursor_line)
+  then
     return resolved
   end
-  if not is_positive_integer(anchor_col) or not is_non_negative_integer(cursor_col) then
+  if not is_integer_greater_than_one(anchor_col) or not is_non_negative_integer(cursor_col) then
     return resolved
   end
 
-  if not is_positive_integer(resolved.line1) then
+  if not is_integer_greater_than_one(resolved.line1) then
     resolved.line1 = anchor_line
   end
-  if not is_positive_integer(resolved.line2) then
+  if not is_integer_greater_than_one(resolved.line2) then
     resolved.line2 = cursor_line
   end
   if not is_non_negative_integer(resolved.start_col) then
