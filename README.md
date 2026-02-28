@@ -1,9 +1,11 @@
-# codex.nvim
+# <p style="text-align:center;">codex.nvim</p>
 
+<p style="text-align:center;">
 Neovim plugin for running the Codex CLI in an embedded terminal.
+</p>
 
-> **Primary home:** [Codeberg](https://codeberg.org/yaadata/codex.nvim) ·
-> mirrored on [GitHub](https://github.com/yaadata/codex.nvim)
+- **Primary home:** [Codeberg](https://codeberg.org/yaadata/codex.nvim)
+- Mirrored on [GitHub](https://github.com/yaadata/codex.nvim)
 
 ## Requirements
 
@@ -13,7 +15,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 > [!CAUTION]
 > You are reading the `main` branch README. Install and configuration details
 > may differ from tagged releases. The current latest release tag is
-> [`v0.4.0`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.4.0). For
+> [`v0.4.1`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.4.1). For
 > version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -22,7 +24,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "0.4.0",
+  version = "0.4.1",
   cmd = {
     "Codex",
     "CodexFocus",
@@ -326,10 +328,10 @@ navigation keymaps, or set individual directions to `false`.
 - `require("codex").review(instructions)` send `/review`.
 - `require("codex").show_diff()` send `/diff`.
 - `require("codex").resume(opts)` resume (`opts.last` supports `--last`).
-- `require("codex").send_buffer(opts)` send buffer/file path as `@path`
-  with a trailing space. Set `opts.path` to send an explicit file path
-  (takes precedence over `opts.bufnr`), and set `opts.focus = false` to keep
-  editor focus.
+- `require("codex").send_buffer(opts)` send buffer/file path as `@path` with a
+  trailing space. Set `opts.path` to send an explicit file path (takes
+  precedence over `opts.bufnr`), and set `opts.focus = false` to keep editor
+  focus.
 - `require("codex").send_selection(opts)` send visual/range selection with a
   trailing newline after the fenced block.
 - `require("codex").mention_file(path, opts)` send `/mention` for a file path
