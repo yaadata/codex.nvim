@@ -111,6 +111,113 @@ describe("codex.init public api mention_directory", function()
     assert.equals("asdfadsfadsf", env.provider.send_calls[2].text)
   end)
 
+  it("mention_directory runs post_execute after deferred restore completes", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
+    end
+    env.fake_vim._set_buf_lines(77, { "> keep me" })
+    local callback_calls = {}
+
+    local ok = env.codex.mention_directory("/tmp/", {
+      post_execute = function(callback_ok, callback_err)
+        table.insert(callback_calls, { ok = callback_ok, err = callback_err })
+      end,
+    })
+
+    assert.is_true(ok)
+    assert.equals(0, #callback_calls)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(0, #callback_calls)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(1, #callback_calls)
+    assert.is_true(callback_calls[1].ok)
+    assert.is_nil(callback_calls[1].err)
+  end)
+
+  it("mention_directory submits via channel when post_execute is present", function()
+    local env = setup_with_deps()
+    local callback_calls = {}
+
+    local ok = env.codex.mention_directory("/tmp/", {
+      post_execute = function(callback_ok, callback_err)
+        table.insert(callback_calls, { ok = callback_ok, err = callback_err })
+      end,
+    })
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals(1, #env.fake_vim._deferred)
+    assert.equals(0, #env.fake_vim._feedkeys_calls)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(2, #env.provider.send_calls)
+    assert.equals("\r", env.provider.send_calls[2].text)
+    assert.equals(0, #env.fake_vim._feedkeys_calls)
+    assert.equals(1, #callback_calls)
+    assert.is_true(callback_calls[1].ok)
+    assert.is_nil(callback_calls[1].err)
+  end)
+
+  it("mention_directory runs post_execute when path resolution fails", function()
+    local env = setup_with_deps({
+      _deps = {
+        vim = vim.tbl_deep_extend("force", make_fake_vim(), {
+          fn = {
+            expand = function(expr)
+              if expr == "%:p" then
+                return ""
+              end
+              if expr == "%:p:h" then
+                return "/fake/cwd"
+              end
+              return ""
+            end,
+          },
+        }),
+      },
+    })
+    local callback_calls = {}
+
+    local ok, err = env.codex.mention_directory(nil, {
+      post_execute = function(callback_ok, callback_err)
+        table.insert(callback_calls, { ok = callback_ok, err = callback_err })
+      end,
+    })
+
+    assert.is_false(ok)
+    assert.equals("current buffer has no directory path", err)
+    assert.equals(1, #callback_calls)
+    assert.is_false(callback_calls[1].ok)
+    assert.equals("current buffer has no directory path", callback_calls[1].err)
+  end)
+
+  it("mention_directory runs post_execute when initial mention send fails", function()
+    local env = setup_with_deps()
+    env.provider.send_fn = function(_, text)
+      if text:match("/mention ") then
+        return false, "boom"
+      end
+      return true
+    end
+    local callback_calls = {}
+
+    local ok, err = env.codex.mention_directory("/tmp/", {
+      post_execute = function(callback_ok, callback_err)
+        table.insert(callback_calls, { ok = callback_ok, err = callback_err })
+      end,
+    })
+
+    assert.is_false(ok)
+    assert.equals("boom", err)
+    assert.equals(1, #callback_calls)
+    assert.is_false(callback_calls[1].ok)
+    assert.equals("boom", callback_calls[1].err)
+  end)
+
   it("mention_directory returns provider send errors with command context", function()
     local env = setup_with_deps()
     env.provider.send_fn = function(_, text)

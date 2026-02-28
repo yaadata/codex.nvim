@@ -105,6 +105,9 @@
 ---@field is_ready fun(handle: codex.ProviderHandle|nil): boolean
 ---@field get_bufnr fun(handle: codex.ProviderHandle|nil): integer|nil
 
+---@class codex.MentionCommandOpts
+---@field post_execute? fun(ok: boolean, err: string|nil)
+
 ---@class codex.UserCommandOpts
 ---@field bang boolean
 ---@field line1 integer

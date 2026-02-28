@@ -328,9 +328,11 @@ navigation keymaps, or set individual directions to `false`.
 - `require("codex").resume(opts)` resume (`opts.last` supports `--last`).
 - `require("codex").send_buffer(opts)` send current buffer path as `@path`.
 - `require("codex").send_selection(opts)` send visual/range selection.
-- `require("codex").mention_file(path)` send `/mention` for a file path.
-- `require("codex").mention_directory(path)` send `/mention` for a directory
-  path.
+- `require("codex").mention_file(path, opts)` send `/mention` for a file path
+  (`opts.post_execute(ok, err)` runs after mention execution completes).
+- `require("codex").mention_directory(path, opts)` send `/mention` for a
+  directory path (`opts.post_execute(ok, err)` runs after mention execution
+  completes).
 - `require("codex").is_running()` check whether active session is alive.
 - `require("codex").get_config()` return resolved config snapshot.
 - `require("codex").get_logs()` return captured in-memory logs.

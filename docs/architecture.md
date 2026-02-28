@@ -77,8 +77,9 @@ codex.nvim/
 │   │   │                            # and /mention payloads
 │   │   │                            # (auto-quoting paths with special characters).
 │   │   ├── mention.lua              # Mention orchestration: captures terminal prompt input,
-│   │   │                            # dispatches /mention payloads, auto-submits, and restores
-│   │   │                            # previously typed text. Uses create(opts) constructor.
+│   │   │                            # dispatches /mention payloads, auto-submits, restores
+│   │   │                            # previously typed text, and runs optional post_execute
+│   │   │                            # callbacks. Uses create(opts) constructor.
 │   │   ├── path.lua                 # Normalizes file paths to CWD-relative form via
 │   │   │                            # fnamemodify(":."). Falls back to the original path
 │   │   │                            # on error.
@@ -332,6 +333,7 @@ Key types:
 | `codex.SessionSpec`          | class | Spec for creating a new session                                  |
 | `codex.SelectionSpec`        | class | Visual selection data (defined in `formatter.lua`)               |
 | `codex.SelectionOpts`        | class | Options for selection extraction (defined in `selection.lua`)    |
+| `codex.MentionCommandOpts`   | class | Mention API options (for example `post_execute(ok, err)`)        |
 | `codex.UserCommandOpts`      | class | Neovim user command callback argument shape                      |
 | `codex.PendingSend`          | class | Queued send item (defined in `send_dispatch.lua`)                |
 | `codex.DispatchSendOpts`     | class | Options for dispatch_send (defined in `send_dispatch.lua`)       |

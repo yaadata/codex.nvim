@@ -375,20 +375,22 @@ end
 
 ---Sends `/mention` for a file, auto-submits it, then restores previously captured prompt input.
 ---@param path? string Explicit file path to mention. When nil, uses current buffer path.
+---@param opts? codex.MentionCommandOpts Optional hook(s) for mention flow completion.
 ---@return codex.SendResult ok True when mention payload is sent.
 ---@return string|nil err
-function M.mention_file(path)
+function M.mention_file(path, opts)
   ensure_setup()
-  return state.mention.mention_file(path)
+  return state.mention.mention_file(path, opts)
 end
 
 ---Sends `/mention` for a directory, auto-submits it, then restores previously captured prompt input.
 ---@param path? string Explicit directory path to mention. When nil, uses current buffer's directory.
+---@param opts? codex.MentionCommandOpts Optional hook(s) for mention flow completion.
 ---@return codex.SendResult ok True when mention payload is sent.
 ---@return string|nil err
-function M.mention_directory(path)
+function M.mention_directory(path, opts)
   ensure_setup()
-  return state.mention.mention_directory(path)
+  return state.mention.mention_directory(path, opts)
 end
 
 ---Returns whether an active Codex session is currently alive.
