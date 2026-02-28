@@ -251,9 +251,9 @@ local function make_formatter()
   local formatter = {
     selection_specs = {},
     mention_paths = {},
-    selection_payload = "[selection]",
+    selection_payload = "[selection]\n",
     buffer_paths = {},
-    buffer_payload = "[@buffer]",
+    buffer_payload = "[@buffer] ",
   }
 
   function formatter.format_selection(spec)

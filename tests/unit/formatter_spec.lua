@@ -12,7 +12,7 @@ describe("codex.context.formatter", function()
       })
 
       assert.equals(
-        "@/tmp/example.lua#L10-12\n\n```lua\nlocal a = 1\nlocal b = 2\nreturn a + b\n```",
+        "@/tmp/example.lua#L10-12\n\n```lua\nlocal a = 1\nlocal b = 2\nreturn a + b\n```\n",
         result
       )
     end)
@@ -26,7 +26,7 @@ describe("codex.context.formatter", function()
         lines = { "hello" },
       })
 
-      assert.equals("@a.txt#L1\n\n```text\nhello\n```", result)
+      assert.equals("@a.txt#L1\n\n```text\nhello\n```\n", result)
     end)
 
     it("uses text fence when filetype is empty", function()
@@ -63,7 +63,7 @@ describe("codex.context.formatter", function()
       })
 
       assert.is_not_nil(result:find("`````markdown", 1, true))
-      assert.is_not_nil(result:find("\n`````$", 1))
+      assert.is_not_nil(result:find("\n`````\n$", 1))
     end)
 
     it("accepts string content", function()
@@ -75,7 +75,7 @@ describe("codex.context.formatter", function()
         lines = "line a\nline b",
       })
 
-      assert.equals("@plain.txt#L5-6\n\n```text\nline a\nline b\n```", result)
+      assert.equals("@plain.txt#L5-6\n\n```text\nline a\nline b\n```\n", result)
     end)
   end)
 
@@ -102,7 +102,7 @@ describe("codex.context.formatter", function()
 
   describe("format_buffer_ref", function()
     it("formats ACP buffer reference without line metadata", function()
-      assert.equals("@lua/codex/init.lua", formatter.format_buffer_ref("lua/codex/init.lua"))
+      assert.equals("@lua/codex/init.lua ", formatter.format_buffer_ref("lua/codex/init.lua"))
     end)
   end)
 end)

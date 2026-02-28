@@ -19,7 +19,7 @@ describe("codex.init public api send_buffer", function()
     assert.equals(1, #env.formatter.buffer_paths)
     assert.equals("test/current.lua", env.formatter.buffer_paths[1])
     assert.equals(1, #env.provider.send_calls)
-    assert.equals("\27[200~[@buffer]\27[201~", env.provider.send_calls[1].text)
+    assert.equals("\27[200~[@buffer] \27[201~", env.provider.send_calls[1].text)
     assert.equals(1, #env.provider.focus_calls)
   end)
 

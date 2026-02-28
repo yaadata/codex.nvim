@@ -165,7 +165,7 @@ init.lua send_selection()
     |    \- return SelectionSpec { path, start_line, end_line, filetype, lines }
     |- nvim_visual.exit_visual_mode_if_active(vim) (best effort)
     |- formatter.format_selection(spec)
-    |    \- build ACP selection ref (`@path#Lstart` or `@path#Lstart-end`) + fenced code block
+    |    \- build ACP selection ref (`@path#Lstart` or `@path#Lstart-end`) + fenced code block + trailing newline
     \- send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), ...)
          |- [active + ready] -> provider.send(session.handle, text)
          |- [no active session] -> session_lifecycle.open_session(...)
@@ -189,7 +189,7 @@ init.lua send_buffer()
     |    |- [non-file path] -> return nil, "current buffer path is not a regular file"
     |    \- return cwd-relative filepath
     |- formatter.format_buffer_ref(path)
-    |    \- build ACP file ref (`@path`)
+    |    \- build ACP file ref (`@path`) with trailing space
     \- send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), ...)
          |- [active + ready] -> provider.send(session.handle, text)
          |- [no active session] -> session_lifecycle.open_session(...)
