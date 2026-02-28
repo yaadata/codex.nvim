@@ -72,4 +72,68 @@ describe("codex.init public api send_buffer", function()
 
     assert.same({ bufnr = 42 }, env.selection.buffer_calls[1].opts)
   end)
+
+  it("send_buffer forwards explicit path to filepath extractor", function()
+    local env = setup_with_deps()
+
+    env.codex.send_buffer({ path = "/tmp/example.lua" })
+
+    assert.same({ path = "/tmp/example.lua" }, env.selection.buffer_calls[1].opts)
+  end)
+
+  it("send_buffer forwards both path and bufnr when both are provided", function()
+    local env = setup_with_deps()
+
+    env.codex.send_buffer({ bufnr = 42, path = "/tmp/example.lua" })
+
+    assert.same({ bufnr = 42, path = "/tmp/example.lua" }, env.selection.buffer_calls[1].opts)
+  end)
+
+  it("send_buffer keeps editor focus when opts.focus=false and opens without focus", function()
+    local env = setup_with_deps()
+    local current_win = 11
+
+    env.fake_vim.api.nvim_get_current_win = function()
+      return current_win
+    end
+    env.fake_vim.api.nvim_win_is_valid = function(winid)
+      return winid == 11
+    end
+    env.fake_vim.api.nvim_set_current_win = function(winid)
+      current_win = winid
+    end
+    env.provider.send_fn = function(_, _)
+      current_win = 99
+      return true
+    end
+
+    local ok = env.codex.send_buffer({ focus = false })
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.is_false(env.provider.open_calls[1].focus)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals(0, #env.provider.focus_calls)
+    assert.equals(11, current_win)
+  end)
+
+  it("send_buffer keeps editor focus with active session when opts.focus=false", function()
+    local env = setup_with_deps()
+    env.codex.open(false)
+
+    local ok = env.codex.send_buffer({ focus = false })
+
+    assert.is_true(ok)
+    assert.equals(1, #env.provider.open_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals(0, #env.provider.focus_calls)
+  end)
+
+  it("send_buffer accepts bufnr with opts.focus=false", function()
+    local env = setup_with_deps()
+
+    env.codex.send_buffer({ bufnr = 42, focus = false })
+
+    assert.same({ bufnr = 42 }, env.selection.buffer_calls[1].opts)
+  end)
 end)

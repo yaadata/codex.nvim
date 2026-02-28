@@ -18,6 +18,10 @@ M.errors = {
 ---@field bufnr? integer
 ---@field visual_mode? string
 
+---@class codex.BufferPathOpts
+---@field bufnr? integer
+---@field path? string
+
 --- Resolve the target buffer number from opts or current buffer.
 ---@param vim_api table
 ---@param opts codex.SelectionOpts|nil
@@ -201,12 +205,23 @@ end
 
 ---Resolve the current buffer file path as a cwd-relative path.
 ---@param vim_api table|nil
----@param opts? codex.SelectionOpts
+---@param opts? codex.BufferPathOpts
 ---@return string|nil filepath
 ---@return string|nil err
 function M.get_current_buffer_filepath(vim_api, opts)
   vim_api = vim_api or vim
   opts = opts or {}
+
+  local explicit_path = opts.path
+  if explicit_path ~= nil then
+    if type(explicit_path) ~= "string" or explicit_path == "" then
+      return nil, M.errors.NO_FILEPATH
+    end
+    if not is_regular_file(vim_api, explicit_path) then
+      return nil, M.errors.INVALID_FILEPATH
+    end
+    return path.to_relative(vim_api, explicit_path)
+  end
 
   local bufnr = resolve_bufnr(vim_api, opts)
   local is_valid_buf = vim_api.api.nvim_buf_is_valid

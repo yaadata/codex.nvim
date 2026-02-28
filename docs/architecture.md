@@ -333,6 +333,7 @@ Key types:
 | `codex.SessionSpec`          | class | Spec for creating a new session                                  |
 | `codex.SelectionSpec`        | class | Visual selection data (defined in `formatter.lua`)               |
 | `codex.SelectionOpts`        | class | Options for selection extraction (defined in `selection.lua`)    |
+| `codex.SendBufferOpts`       | class | Options for `send_buffer` (`path`, `bufnr`, optional `focus`)    |
 | `codex.MentionCommandOpts`   | class | Mention API options (for example `post_execute(ok, err)`)        |
 | `codex.UserCommandOpts`      | class | Neovim user command callback argument shape                      |
 | `codex.PendingSend`          | class | Queued send item (defined in `send_dispatch.lua`)                |

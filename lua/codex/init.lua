@@ -297,24 +297,53 @@ function M.resume(opts)
   return true
 end
 
----Formats current buffer reference and sends it as bracketed paste.
----@param opts? codex.SelectionOpts Buffer override via `opts.bufnr`.
+---Formats current buffer or explicit path reference and sends it as bracketed paste.
+---@param opts? codex.SendBufferOpts Buffer override via `opts.bufnr` or explicit `opts.path`; set `opts.focus=false` to keep editor focus.
 ---@return codex.SendResult ok True when buffer payload is sent.
 ---@return string|nil err
 function M.send_buffer(opts)
   ensure_setup()
+  opts = opts or {}
   local deps = get_deps()
-  local filepath, err = deps.selection.get_current_buffer_filepath(deps.vim, opts)
+  local should_focus = opts.focus ~= false
+  local source_win = nil
+  if not should_focus then
+    local api = deps.vim.api or {}
+    if type(api.nvim_get_current_win) == "function" then
+      local ok_win, winid = pcall(api.nvim_get_current_win)
+      if ok_win and type(winid) == "number" then
+        source_win = winid
+      end
+    end
+  end
+
+  local filepath, err = deps.selection.get_current_buffer_filepath(deps.vim, {
+    bufnr = opts.bufnr,
+    path = opts.path,
+  })
   if not filepath then
     deps.selection_send.log_selection_failure(deps, "buffer", err)
     return false, err
   end
 
   local payload = deps.formatter.format_buffer_ref(filepath)
-  return state.send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), {
-    open_focus = true,
-    post_focus = true,
-  })
+  local ok, send_err =
+    state.send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), {
+      open_focus = should_focus,
+      post_focus = should_focus,
+    })
+  if not should_focus and source_win ~= nil then
+    local api = deps.vim.api or {}
+    if
+      type(api.nvim_win_is_valid) == "function" and type(api.nvim_set_current_win) == "function"
+    then
+      local ok_valid, is_valid = pcall(api.nvim_win_is_valid, source_win)
+      if ok_valid and is_valid then
+        pcall(api.nvim_set_current_win, source_win)
+      end
+    end
+  end
+  return ok, send_err
 end
 
 ---Formats visual selection and sends it as bracketed paste.

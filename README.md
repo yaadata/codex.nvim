@@ -326,8 +326,10 @@ navigation keymaps, or set individual directions to `false`.
 - `require("codex").review(instructions)` send `/review`.
 - `require("codex").show_diff()` send `/diff`.
 - `require("codex").resume(opts)` resume (`opts.last` supports `--last`).
-- `require("codex").send_buffer(opts)` send current buffer path as `@path`
-  with a trailing space.
+- `require("codex").send_buffer(opts)` send buffer/file path as `@path`
+  with a trailing space. Set `opts.path` to send an explicit file path
+  (takes precedence over `opts.bufnr`), and set `opts.focus = false` to keep
+  editor focus.
 - `require("codex").send_selection(opts)` send visual/range selection with a
   trailing newline after the fenced block.
 - `require("codex").mention_file(path, opts)` send `/mention` for a file path

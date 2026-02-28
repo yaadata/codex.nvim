@@ -88,6 +88,62 @@ describe("codex.context.selection", function()
     assert.equals("buffer does not exist", err)
   end)
 
+  it("returns explicit filepath as relative ACP path", function()
+    local filepath = selection.get_current_buffer_filepath(
+      make_fake_vim_api({
+        relative_path = "../../tmp/example.lua",
+      }),
+      {
+        path = "/tmp/example.lua",
+      }
+    )
+
+    assert.equals("../../tmp/example.lua", filepath)
+  end)
+
+  it("returns error when explicit path is empty", function()
+    local filepath, err = selection.get_current_buffer_filepath(make_fake_vim_api(), {
+      path = "",
+    })
+
+    assert.is_nil(filepath)
+    assert.equals("current buffer has no file path", err)
+  end)
+
+  it("returns error when explicit path is not a regular file", function()
+    local filepath, err = selection.get_current_buffer_filepath(
+      make_fake_vim_api({
+        fs_stat = function(path)
+          if path == "lua/codex" then
+            return { type = "directory" }
+          end
+          return { type = "file", path = path }
+        end,
+      }),
+      {
+        path = "lua/codex",
+      }
+    )
+
+    assert.is_nil(filepath)
+    assert.equals("current buffer path is not a regular file", err)
+  end)
+
+  it("prefers explicit path over bufnr lookup when both are provided", function()
+    local filepath = selection.get_current_buffer_filepath(
+      make_fake_vim_api({
+        buf_valid = false,
+        relative_path = "src/new.lua",
+      }),
+      {
+        bufnr = 999,
+        path = "/repo/src/new.lua",
+      }
+    )
+
+    assert.equals("src/new.lua", filepath)
+  end)
+
   it("extracts multi-line selection from visual marks", function()
     local spec = selection.get_visual_selection(make_fake_vim_api())
 

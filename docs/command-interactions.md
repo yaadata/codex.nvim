@@ -9,25 +9,25 @@ provider collaborators.
 
 ## Command Mapping
 
-| User Command                    | Entry Function                          | Primary Path                                                                          |
-| ------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------- |
-| `:Codex`                        | `codex.toggle()`                        | Toggle active terminal or open a focused session                                      |
-| `:Codex!`                       | `codex.open(true)`                      | Force-open and focus terminal                                                         |
-| `:CodexFocus`                   | `codex.focus()`                         | Focus active session or open one                                                      |
-| `:CodexClose`                   | `codex.close()`                         | Close active session and reset queue                                                  |
-| `:CodexClearInput`              | `codex.clear_input()`                   | Send `<C-c>` to active session                                                        |
-| `:CodexAddBuffer`               | `codex.send_buffer(opts)`               | Collect current buffer path, format `@path`, send via queue                           |
-| `:CodexSend`                    | `codex.send_selection(opts)`            | Collect selection, format, send via queue                                             |
-| `:CodexMentionFile [path]`      | `codex.mention_file(path[, opts])`      | Build `/mention` payload for relative file and submit                                 |
-| `:CodexMentionDirectory [path]` | `codex.mention_directory(path[, opts])` | Build `/mention` payload for relative directory (with trailing separator) and submit  |
-| `:CodexResume`                  | `codex.resume({ last = false })`        | In-process `/resume` or launch `codex resume`                                         |
-| `:CodexResume!`                 | `codex.resume({ last = true })`         | Launch `codex resume --last` when opening new process                                 |
-| `:CodexModel`                   | `codex.set_model()`                     | Mention-style slash wrapper (`/model`): capture->copy->clear->send->auto-submit       |
-| `:CodexStatus`                  | `codex.show_status()`                   | Mention-style slash wrapper (`/status`): capture->copy->clear->send->auto-submit      |
-| `:CodexPermissions`             | `codex.show_permissions()`              | Mention-style slash wrapper (`/permissions`): capture->copy->clear->send->auto-submit |
-| `:CodexCompact`                 | `codex.compact()`                       | Mention-style slash wrapper (`/compact`): capture->copy->clear->send->auto-submit     |
-| `:CodexReview [instructions]`   | `codex.review(instructions)`            | Mention-style slash wrapper (`/review ...`): capture->copy->clear->send->auto-submit  |
-| `:CodexDiff`                    | `codex.show_diff()`                     | Mention-style slash wrapper (`/diff`): capture->copy->clear->send->auto-submit        |
+| User Command                    | Entry Function                          | Primary Path                                                                                    |
+| ------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `:Codex`                        | `codex.toggle()`                        | Toggle active terminal or open a focused session                                                |
+| `:Codex!`                       | `codex.open(true)`                      | Force-open and focus terminal                                                                   |
+| `:CodexFocus`                   | `codex.focus()`                         | Focus active session or open one                                                                |
+| `:CodexClose`                   | `codex.close()`                         | Close active session and reset queue                                                            |
+| `:CodexClearInput`              | `codex.clear_input()`                   | Send `<C-c>` to active session                                                                  |
+| `:CodexAddBuffer`               | `codex.send_buffer(opts)`               | Collect explicit file path (`opts.path`) or current buffer path, format `@path`, send via queue |
+| `:CodexSend`                    | `codex.send_selection(opts)`            | Collect selection, format, send via queue                                                       |
+| `:CodexMentionFile [path]`      | `codex.mention_file(path[, opts])`      | Build `/mention` payload for relative file and submit                                           |
+| `:CodexMentionDirectory [path]` | `codex.mention_directory(path[, opts])` | Build `/mention` payload for relative directory (with trailing separator) and submit            |
+| `:CodexResume`                  | `codex.resume({ last = false })`        | In-process `/resume` or launch `codex resume`                                                   |
+| `:CodexResume!`                 | `codex.resume({ last = true })`         | Launch `codex resume --last` when opening new process                                           |
+| `:CodexModel`                   | `codex.set_model()`                     | Mention-style slash wrapper (`/model`): capture->copy->clear->send->auto-submit                 |
+| `:CodexStatus`                  | `codex.show_status()`                   | Mention-style slash wrapper (`/status`): capture->copy->clear->send->auto-submit                |
+| `:CodexPermissions`             | `codex.show_permissions()`              | Mention-style slash wrapper (`/permissions`): capture->copy->clear->send->auto-submit           |
+| `:CodexCompact`                 | `codex.compact()`                       | Mention-style slash wrapper (`/compact`): capture->copy->clear->send->auto-submit               |
+| `:CodexReview [instructions]`   | `codex.review(instructions)`            | Mention-style slash wrapper (`/review ...`): capture->copy->clear->send->auto-submit            |
+| `:CodexDiff`                    | `codex.show_diff()`                     | Mention-style slash wrapper (`/diff`): capture->copy->clear->send->auto-submit                  |
 
 ## Lazy.nvim Command Bootstrap (Recommended)
 
@@ -184,6 +184,7 @@ commands.lua -> codex.send_buffer()
 init.lua send_buffer()
     |- ensure_setup()
     |- selection.get_current_buffer_filepath(vim, opts)
+    |    |- [opts.path provided] validate explicit file path and return cwd-relative filepath
     |    |- [invalid buffer] -> return nil, "buffer does not exist"
     |    |- [missing path] -> return nil, "current buffer has no file path"
     |    |- [non-file path] -> return nil, "current buffer path is not a regular file"
@@ -191,6 +192,8 @@ init.lua send_buffer()
     |- formatter.format_buffer_ref(path)
     |    \- build ACP file ref (`@path`) with trailing space
     \- send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), ...)
+         |- [opts.focus == false] -> open_focus=false, post_focus=false
+         |- [opts.focus ~= false] -> open_focus=true, post_focus=true
          |- [active + ready] -> provider.send(session.handle, text)
          |- [no active session] -> session_lifecycle.open_session(...)
          \- [not ready yet] -> queue + retry loop until ready/timeout
