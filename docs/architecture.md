@@ -7,8 +7,8 @@ the Codex CLI. The architecture centres on a **pluggable provider** abstraction:
 all terminal management (opening, closing, sending text, focus, toggling) is
 delegated to a provider that satisfies a 9-method interface contract. The core
 module (`init.lua`) acts as a thin **facade** -- it owns dependency wiring and
-the public Lua API, while delegating session lifecycle, send dispatch, and
-mention orchestration to dedicated modules.
+the public Lua API, while delegating session lifecycle, send dispatch,
+selection-send helpers, and slash-command orchestration to dedicated modules.
 
 ```
 plugin/codex.lua          (entry point, version guard, load guard)
@@ -26,7 +26,9 @@ lua/codex/init.lua        (public API facade, DI container, setup wiring)
         │        ├── formatter.lua  (selection + mention payload formatting)
         │        ├── mention.lua    (mention orchestration, prompt capture/restore)
         │        ├── path.lua       (CWD-relative path normalization)
-        │        └── selection.lua  (visual selection extraction)
+        │        ├── selection.lua  (visual selection extraction)
+        │        ├── selection_send.lua (selection-send option resolution + collection-failure logging)
+        │        └── wrapper_command.lua (slash-wrapper orchestration for /model, /status, /compact, etc.)
         ├──► runtime/
         │        ├── send_dispatch.lua  (send pipeline, queue/retry orchestration)
         │        ├── send_queue.lua     (FIFO queue + retry timer for startup readiness)
@@ -76,8 +78,14 @@ codex.nvim/
 │   │   ├── path.lua                 # Normalizes file paths to CWD-relative form via
 │   │   │                            # fnamemodify(":."). Falls back to the original path
 │   │   │                            # on error.
-│   │   └── selection.lua            # Extracts visual selection from the current buffer.
-│   │                                # Resolves range via command args or visual marks.
+│   │   ├── selection.lua            # Extracts visual selection from the current buffer.
+│   │   │                            # Resolves range via command args or visual marks.
+│   │   ├── selection_send.lua       # Selection-send helper utilities:
+│   │   │                            # visual fallback range derivation and warning/error logging
+│   │   │                            # for selection/buffer collection failures.
+│   │   └── wrapper_command.lua      # Slash-wrapper command orchestration:
+│   │   │                            # prompt capture/save/clear + dispatch + submit flow.
+│   │   │                            # Uses create(opts) constructor.
 │   ├── runtime/
 │   │   ├── send_dispatch.lua        # Send pipeline with startup/retry orchestration.
 │   │   │                            # Builds PendingSend items, submits to send_queue,
@@ -242,6 +250,10 @@ After resolving deps and config, `setup()` wires the constructor modules:
    `process_pending_send_item` as its process callback.
 3. `mention.create()` -- receives `get_deps`, `get_config`, and a
    `dispatch_send` closure that delegates to the send dispatch instance.
+4. `wrapper_command.create()` -- receives `get_deps`, `get_config`, and a
+   `dispatch_send` closure used by slash-wrapper APIs (`set_model`,
+   `show_status`, `show_permissions`, `compact`, `review`, `show_diff`, and
+   in-process `resume`).
 
 This wiring order allows `send_dispatch` to reference the send queue (via
 closure) even though the queue is created after the dispatch instance.

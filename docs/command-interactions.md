@@ -231,7 +231,7 @@ commands.lua -> codex.resume({ last = opts.bang })
 init.lua resume(opts)
     |- ensure_setup()
     |- session_lifecycle.get_active_session_and_provider(deps, config)
-    |- [active + alive session] -> dispatch_wrapper_command("resume") (in-process /resume)
+    |- [active + alive session] -> wrapper_command.dispatch_wrapper_command("resume") (in-process /resume)
     \- [no active/alive session]
          |- args = { "resume" }
          |- if opts.last then args += "--last"
@@ -265,7 +265,7 @@ These wrappers (`set_model`, `show_status`, `show_permissions`, `compact`,
 pre-clear flow with an atomic send + submit path:
 
 ```text
-init.lua dispatch_wrapper_command(command)
+init.lua -> wrapper_command.dispatch_wrapper_command(command)
     |- ensure_setup()
     |- normalize -> command_path ("/<command>")
     |- [active + alive session] provider.focus(handle) before capture

@@ -6,11 +6,8 @@ local terminal_io = require("codex.runtime.terminal_io")
 local session_lifecycle = require("codex.state.session_lifecycle")
 local send_dispatch_mod = require("codex.runtime.send_dispatch")
 local mention_mod = require("codex.context.mention")
+local wrapper_command_mod = require("codex.context.wrapper_command")
 local prompt_submit = require("codex.context.prompt_submit")
-
-local CTRL_V = string.char(22)
-local SAVED_PROMPT_NOTIFY_MSG = "Saved current prompt to unnamed register"
-local COULD_NOT_SAVE_PROMPT_NOTIFY_MSG = "Could not save existing prompt before clearing"
 
 local default_deps = {
   config = require("codex.config"),
@@ -22,6 +19,7 @@ local default_deps = {
   nvim_visual = require("codex.nvim.visual"),
   formatter = require("codex.context.formatter"),
   selection = require("codex.context.selection"),
+  selection_send = require("codex.context.selection_send"),
   path = require("codex.context.path"),
   vim = vim,
 }
@@ -33,6 +31,7 @@ local state = {
   send_queue = nil,
   send_dispatch = nil,
   mention = nil,
+  wrapper_command = nil,
 }
 
 ---Returns runtime dependencies, preferring injected deps from setup.
@@ -83,6 +82,16 @@ function M.setup(opts)
   })
 
   state.mention = mention_mod.create({
+    get_deps = get_deps,
+    get_config = function()
+      return state.config
+    end,
+    dispatch_send = function(text, send_opts)
+      return state.send_dispatch.dispatch_send(text, send_opts)
+    end,
+  })
+
+  state.wrapper_command = wrapper_command_mod.create({
     get_deps = get_deps,
     get_config = function()
       return state.config
@@ -185,46 +194,6 @@ function M.clear_input()
   return provider.send(session.handle, clear_sequence)
 end
 
----Captures prompt input, stores it in unnamed register when non-empty, and returns clear+command payload.
----@param slash_cmd string Slash command name with or without a leading `/`.
----@return string payload
----@return string command_path
----@return boolean submit_via_channel
-local function build_wrapper_command_payload(slash_cmd)
-  ensure_setup()
-  local deps = get_deps()
-  local normalized = slash_cmd:gsub("^/+", "")
-  local command_path = "/" .. normalized
-
-  local session, provider = session_lifecycle.get_active_session_and_provider(deps, state.config)
-  if session_lifecycle.session_is_alive(session, provider) then
-    -- Capture depends on terminal buffer/window state; focus first to ensure buffer visibility.
-    provider.focus(session.handle)
-  end
-
-  local existing_input, capture_status, clear_line_count = prompt_submit.capture_prompt_input(
-    get_deps,
-    function()
-      return state.config
-    end
-  )
-  if existing_input and existing_input ~= "" then
-    local save_ok = pcall(deps.vim.fn.setreg, '"', existing_input)
-    if save_ok then
-      deps.logger.warn(SAVED_PROMPT_NOTIFY_MSG)
-    else
-      deps.logger.warn(COULD_NOT_SAVE_PROMPT_NOTIFY_MSG)
-    end
-  elseif capture_status == "unavailable_buffer" then
-    -- Alive session but no confident capture/save path; clearing may drop typed prompt text.
-    deps.logger.warn(COULD_NOT_SAVE_PROMPT_NOTIFY_MSG)
-  end
-
-  local submit_via_channel = clear_line_count > 1
-  local payload = terminal_io.encode_clear_line_for_mention(deps, clear_line_count) .. command_path
-  return payload, command_path, submit_via_channel
-end
-
 ---Normalizes and dispatches a slash command payload.
 ---@param slash_cmd string Slash command name with or without a leading `/`.
 ---@return codex.SendResult ok True when command payload is sent.
@@ -249,70 +218,36 @@ function M.send_command(slash_cmd)
   })
 end
 
----Dispatches wrapper slash commands with prompt capture/copy/clear before submit.
----@param slash_cmd string Slash command name with or without a leading `/`.
----@return codex.SendResult ok True when command payload is sent.
----@return string|nil err
-local function dispatch_wrapper_command(slash_cmd)
-  local payload, command_path, submit_via_channel = build_wrapper_command_payload(slash_cmd)
-  return state.send_dispatch.dispatch_send(payload, {
-    open_focus = true,
-    pre_focus = true,
-    command_path = command_path,
-    on_sent = function()
-      local submit_ok, submit_err
-      if submit_via_channel then
-        local deps = get_deps()
-        local session, provider =
-          session_lifecycle.get_active_session_and_provider(deps, state.config)
-        if not session_lifecycle.session_is_alive(session, provider) then
-          submit_ok, submit_err = false, "no active Codex session"
-        else
-          terminal_io.append_send_debug_entry(
-            deps,
-            string.format("%s[channel_submit_multiline]", command_path),
-            terminal_io.CODEX_ENTER_SEQUENCE
-          )
-          submit_ok, submit_err = provider.send(session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
-        end
-      else
-        submit_ok, submit_err = prompt_submit.submit_with_enter_key(get_deps, function()
-          return state.config
-        end, command_path)
-      end
-      if not submit_ok then
-        error(submit_err or ("failed to submit " .. command_path))
-      end
-    end,
-  })
-end
-
 ---Requests model selection in Codex CLI.
 ---@return codex.SendResult ok True when `/model` is sent.
 ---@return string|nil err
 function M.set_model()
-  return dispatch_wrapper_command("model")
+  ensure_setup()
+  return state.wrapper_command.dispatch_wrapper_command("model")
 end
 
 ---Requests current session status in Codex CLI.
 ---@return codex.SendResult ok True when `/status` is sent.
 ---@return string|nil err
 function M.show_status()
-  return dispatch_wrapper_command("status")
+  ensure_setup()
+  return state.wrapper_command.dispatch_wrapper_command("status")
 end
 
 ---Requests permission status in Codex CLI.
 ---@return codex.SendResult ok True when `/permissions` is sent.
 ---@return string|nil err
 function M.show_permissions()
-  return dispatch_wrapper_command("permissions")
+  ensure_setup()
+  return state.wrapper_command.dispatch_wrapper_command("permissions")
 end
 
 ---Requests context compaction in Codex CLI.
 ---@return codex.SendResult ok True when `/compact` is sent.
 ---@return string|nil err
 function M.compact()
-  return dispatch_wrapper_command("compact")
+  ensure_setup()
+  return state.wrapper_command.dispatch_wrapper_command("compact")
 end
 
 ---Starts a review command, with optional inline instructions.
@@ -320,17 +255,19 @@ end
 ---@return codex.SendResult ok True when `/review` is sent.
 ---@return string|nil err
 function M.review(instructions)
+  ensure_setup()
   if instructions == nil or instructions == "" then
-    return dispatch_wrapper_command("review")
+    return state.wrapper_command.dispatch_wrapper_command("review")
   end
-  return dispatch_wrapper_command("review " .. instructions)
+  return state.wrapper_command.dispatch_wrapper_command("review " .. instructions)
 end
 
 ---Requests a diff summary in Codex CLI.
 ---@return codex.SendResult ok True when `/diff` is sent.
 ---@return string|nil err
 function M.show_diff()
-  return dispatch_wrapper_command("diff")
+  ensure_setup()
+  return state.wrapper_command.dispatch_wrapper_command("diff")
 end
 
 ---@class codex.ResumeOpts
@@ -348,7 +285,7 @@ function M.resume(opts)
   local session, provider = session_lifecycle.get_active_session_and_provider(deps, state.config)
 
   if session and session.alive and provider.is_alive(session.handle) then
-    return dispatch_wrapper_command("resume")
+    return state.wrapper_command.dispatch_wrapper_command("resume")
   end
 
   local args = { "resume" }
@@ -360,127 +297,6 @@ function M.resume(opts)
   return true
 end
 
----Log selection/buffer extraction failures with warning or error severity.
----@param deps table
----@param subject "selection"|"buffer"
----@param err string|nil
----@return nil
-local function log_selection_failure(deps, subject, err)
-  local target = subject or "selection"
-  local selection_errors = deps.selection.errors or {}
-  if err == selection_errors.BUFFER_NOT_FOUND then
-    deps.logger.warn("failed to collect %s: %s", target, err or "unknown error")
-    return
-  end
-  if err == selection_errors.NO_FILEPATH or err == selection_errors.INVALID_FILEPATH then
-    deps.logger.warn("failed to collect %s: %s", target, err or "unknown error")
-    return
-  end
-  deps.logger.error("failed to collect %s: %s", target, err or "unknown error")
-end
-
----Check whether a value is an integer >= 1.
----@param value any
----@return boolean
-local function is_integer_greater_than_one(value)
-  return type(value) == "number" and value >= 1 and math.floor(value) == value
-end
-
----Check whether a value is an integer >= 0.
----@param value any
----@return boolean
-local function is_non_negative_integer(value)
-  return type(value) == "number" and value >= 0 and math.floor(value) == value
-end
-
----Return a shallow copy of a possibly nil table.
----@param opts table|nil
----@return table
-local function copy_opts(opts)
-  local copied = {}
-  for key, value in pairs(opts or {}) do
-    copied[key] = value
-  end
-  return copied
-end
-
----Resolve active visual selection metadata when explicit range opts are missing.
----This supports first-use lazy-key visual mappings where visual marks may be unset.
----@param deps table
----@param opts? codex.SelectionOpts
----@return codex.SelectionOpts
-local function resolve_selection_opts(deps, opts)
-  local resolved = copy_opts(opts)
-  if
-    is_integer_greater_than_one(resolved.line1) and is_integer_greater_than_one(resolved.line2)
-  then
-    return resolved
-  end
-
-  local fn = deps.vim.fn or {}
-  if type(fn.mode) ~= "function" then
-    return resolved
-  end
-
-  local ok_mode, visual_mode = pcall(fn.mode, 1)
-  if not ok_mode then
-    return resolved
-  end
-  if visual_mode ~= "v" and visual_mode ~= "V" and visual_mode ~= CTRL_V then
-    return resolved
-  end
-
-  if resolved.visual_mode == nil then
-    resolved.visual_mode = visual_mode
-  end
-
-  if type(fn.getpos) ~= "function" then
-    return resolved
-  end
-  local api = deps.vim.api or {}
-  if type(api.nvim_win_get_cursor) ~= "function" then
-    return resolved
-  end
-
-  local ok_anchor, anchor = pcall(fn.getpos, "v")
-  local ok_cursor, cursor = pcall(api.nvim_win_get_cursor, 0)
-  if not ok_anchor or type(anchor) ~= "table" then
-    return resolved
-  end
-  if not ok_cursor or type(cursor) ~= "table" then
-    return resolved
-  end
-
-  local anchor_line = anchor[2]
-  local anchor_col = anchor[3]
-  local cursor_line = cursor[1]
-  local cursor_col = cursor[2]
-
-  if
-    not is_integer_greater_than_one(anchor_line) or not is_integer_greater_than_one(cursor_line)
-  then
-    return resolved
-  end
-  if not is_integer_greater_than_one(anchor_col) or not is_non_negative_integer(cursor_col) then
-    return resolved
-  end
-
-  if not is_integer_greater_than_one(resolved.line1) then
-    resolved.line1 = anchor_line
-  end
-  if not is_integer_greater_than_one(resolved.line2) then
-    resolved.line2 = cursor_line
-  end
-  if not is_non_negative_integer(resolved.start_col) then
-    resolved.start_col = anchor_col - 1
-  end
-  if not is_non_negative_integer(resolved.end_col) then
-    resolved.end_col = cursor_col
-  end
-
-  return resolved
-end
-
 ---Formats current buffer reference and sends it as bracketed paste.
 ---@param opts? codex.SelectionOpts Buffer override via `opts.bufnr`.
 ---@return codex.SendResult ok True when buffer payload is sent.
@@ -490,7 +306,7 @@ function M.send_buffer(opts)
   local deps = get_deps()
   local filepath, err = deps.selection.get_current_buffer_filepath(deps.vim, opts)
   if not filepath then
-    log_selection_failure(deps, "buffer", err)
+    deps.selection_send.log_selection_failure(deps, "buffer", err)
     return false, err
   end
 
@@ -508,10 +324,10 @@ end
 function M.send_selection(opts)
   ensure_setup()
   local deps = get_deps()
-  local spec, err =
-    deps.selection.get_visual_selection(deps.vim, resolve_selection_opts(deps, opts))
+  local selection_opts = deps.selection_send.resolve_selection_opts(deps, opts)
+  local spec, err = deps.selection.get_visual_selection(deps.vim, selection_opts)
   if not spec then
-    log_selection_failure(deps, "selection", err)
+    deps.selection_send.log_selection_failure(deps, "selection", err)
     return false, err
   end
 
