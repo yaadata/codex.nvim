@@ -11,22 +11,6 @@ M.defaults = {
   },
   terminal = {
     provider = "auto",
-    window = "vsplit",
-    vsplit = {
-      side = "right",
-      size_pct = 40,
-    },
-    hsplit = {
-      side = "bottom",
-      size_pct = 30,
-    },
-    float = {
-      width_pct = 80,
-      height_pct = 80,
-      border = "rounded",
-      title = " Codex ",
-      title_pos = "center",
-    },
     auto_close = false,
     startup = {
       timeout_ms = 2000,
@@ -45,6 +29,24 @@ M.defaults = {
       },
     },
     provider_opts = {
+      native = {
+        window = "vsplit",
+        vsplit = {
+          side = "right",
+          size_pct = 40,
+        },
+        hsplit = {
+          side = "bottom",
+          size_pct = 30,
+        },
+        float = {
+          width_pct = 80,
+          height_pct = 80,
+          border = "rounded",
+          title = " Codex ",
+          title_pos = "center",
+        },
+      },
       snacks = {},
     },
   },
@@ -56,6 +58,8 @@ M.defaults = {
 
 local valid_providers = { auto = true, snacks = true, native = true }
 local valid_windows = { vsplit = true, hsplit = true, float = true }
+local valid_provider_opt_keys = { native = true, snacks = true }
+local valid_native_provider_opt_keys = { window = true, vsplit = true, hsplit = true, float = true }
 local valid_terminal_keymap_actions = {
   toggle = true,
   clear_input = true,
@@ -131,15 +135,41 @@ function M.validate(config)
   collect_unknown_keys(config.terminal, M.defaults.terminal, "terminal", unknown)
 
   local nested_terminal_tables = {
-    { key = "vsplit", defaults = M.defaults.terminal.vsplit },
-    { key = "hsplit", defaults = M.defaults.terminal.hsplit },
-    { key = "float", defaults = M.defaults.terminal.float },
+    { key = "provider_opts", defaults = valid_provider_opt_keys },
     { key = "startup", defaults = M.defaults.terminal.startup },
   }
   for _, entry in ipairs(nested_terminal_tables) do
     local value = config.terminal[entry.key]
     if type(value) == "table" then
       collect_unknown_keys(value, entry.defaults, "terminal." .. entry.key, unknown)
+    end
+  end
+  if type(config.terminal.provider_opts) == "table" then
+    local native_opts = config.terminal.provider_opts.native
+    if type(native_opts) == "table" then
+      collect_unknown_keys(
+        native_opts,
+        valid_native_provider_opt_keys,
+        "terminal.provider_opts.native",
+        unknown
+      )
+
+      local nested_native_tables = {
+        { key = "vsplit", defaults = M.defaults.terminal.provider_opts.native.vsplit },
+        { key = "hsplit", defaults = M.defaults.terminal.provider_opts.native.hsplit },
+        { key = "float", defaults = M.defaults.terminal.provider_opts.native.float },
+      }
+      for _, entry in ipairs(nested_native_tables) do
+        local value = native_opts[entry.key]
+        if type(value) == "table" then
+          collect_unknown_keys(
+            value,
+            entry.defaults,
+            "terminal.provider_opts.native." .. entry.key,
+            unknown
+          )
+        end
+      end
     end
   end
   if #unknown > 0 then
@@ -176,12 +206,12 @@ function M.validate(config)
 
   vim.validate({
     provider = { config.terminal.provider, "string" },
-    window = { config.terminal.window, "string" },
-    vsplit = { config.terminal.vsplit, "table" },
-    hsplit = { config.terminal.hsplit, "table" },
-    float = { config.terminal.float, "table" },
     ["terminal.keymaps"] = { config.terminal.keymaps, "table" },
+    ["terminal.provider_opts"] = { config.terminal.provider_opts, "table" },
+    ["terminal.provider_opts.native"] = { config.terminal.provider_opts.native, "table" },
+    ["terminal.provider_opts.snacks"] = { config.terminal.provider_opts.snacks, "table" },
   })
+  local native_opts = config.terminal.provider_opts.native
 
   for action, lhs in pairs(config.terminal.keymaps) do
     if not valid_terminal_keymap_actions[action] then
@@ -232,11 +262,11 @@ function M.validate(config)
     )
   end
 
-  if not valid_windows[config.terminal.window] then
+  if not valid_windows[native_opts.window] then
     error(
       string.format(
-        "codex: invalid terminal.window %q, expected one of: vsplit, hsplit, float",
-        config.terminal.window
+        "codex: invalid terminal.provider_opts.native.window %q, expected one of: vsplit, hsplit, float",
+        native_opts.window
       )
     )
   end
@@ -251,51 +281,57 @@ function M.validate(config)
   end
 
   vim.validate({
-    ["terminal.vsplit.side"] = { config.terminal.vsplit.side, "string" },
-    ["terminal.vsplit.size_pct"] = { config.terminal.vsplit.size_pct, "number" },
-    ["terminal.hsplit.side"] = { config.terminal.hsplit.side, "string" },
-    ["terminal.hsplit.size_pct"] = { config.terminal.hsplit.size_pct, "number" },
-    ["terminal.float.width_pct"] = { config.terminal.float.width_pct, "number" },
-    ["terminal.float.height_pct"] = { config.terminal.float.height_pct, "number" },
-    ["terminal.float.border"] = { config.terminal.float.border, "string" },
-    ["terminal.float.title"] = { config.terminal.float.title, "string" },
-    ["terminal.float.title_pos"] = { config.terminal.float.title_pos, "string" },
+    ["terminal.provider_opts.native.window"] = { native_opts.window, "string" },
+    ["terminal.provider_opts.native.vsplit"] = { native_opts.vsplit, "table" },
+    ["terminal.provider_opts.native.vsplit.side"] = { native_opts.vsplit.side, "string" },
+    ["terminal.provider_opts.native.vsplit.size_pct"] = { native_opts.vsplit.size_pct, "number" },
+    ["terminal.provider_opts.native.hsplit"] = { native_opts.hsplit, "table" },
+    ["terminal.provider_opts.native.hsplit.side"] = { native_opts.hsplit.side, "string" },
+    ["terminal.provider_opts.native.hsplit.size_pct"] = { native_opts.hsplit.size_pct, "number" },
+    ["terminal.provider_opts.native.float"] = { native_opts.float, "table" },
+    ["terminal.provider_opts.native.float.width_pct"] = { native_opts.float.width_pct, "number" },
+    ["terminal.provider_opts.native.float.height_pct"] = { native_opts.float.height_pct, "number" },
+    ["terminal.provider_opts.native.float.border"] = { native_opts.float.border, "string" },
+    ["terminal.provider_opts.native.float.title"] = { native_opts.float.title, "string" },
+    ["terminal.provider_opts.native.float.title_pos"] = { native_opts.float.title_pos, "string" },
     ["terminal.startup"] = { config.terminal.startup, "table" },
     ["terminal.startup.timeout_ms"] = { config.terminal.startup.timeout_ms, "number" },
     ["terminal.startup.retry_interval_ms"] = { config.terminal.startup.retry_interval_ms, "number" },
     ["terminal.startup.grace_ms"] = { config.terminal.startup.grace_ms, "number" },
   })
 
-  if config.terminal.vsplit.side ~= "left" and config.terminal.vsplit.side ~= "right" then
-    error("codex: terminal.vsplit.side must be 'left' or 'right'")
+  if native_opts.vsplit.side ~= "left" and native_opts.vsplit.side ~= "right" then
+    error("codex: terminal.provider_opts.native.vsplit.side must be 'left' or 'right'")
   end
 
-  if config.terminal.vsplit.size_pct < 10 or config.terminal.vsplit.size_pct > 90 then
-    error("codex: terminal.vsplit.size_pct must be between 10 and 90")
+  if native_opts.vsplit.size_pct < 10 or native_opts.vsplit.size_pct > 90 then
+    error("codex: terminal.provider_opts.native.vsplit.size_pct must be between 10 and 90")
   end
 
-  if config.terminal.hsplit.side ~= "top" and config.terminal.hsplit.side ~= "bottom" then
-    error("codex: terminal.hsplit.side must be 'top' or 'bottom'")
+  if native_opts.hsplit.side ~= "top" and native_opts.hsplit.side ~= "bottom" then
+    error("codex: terminal.provider_opts.native.hsplit.side must be 'top' or 'bottom'")
   end
 
-  if config.terminal.hsplit.size_pct < 10 or config.terminal.hsplit.size_pct > 90 then
-    error("codex: terminal.hsplit.size_pct must be between 10 and 90")
+  if native_opts.hsplit.size_pct < 10 or native_opts.hsplit.size_pct > 90 then
+    error("codex: terminal.provider_opts.native.hsplit.size_pct must be between 10 and 90")
   end
 
-  if config.terminal.float.width_pct < 10 or config.terminal.float.width_pct > 100 then
-    error("codex: terminal.float.width_pct must be between 10 and 100")
+  if native_opts.float.width_pct < 10 or native_opts.float.width_pct > 100 then
+    error("codex: terminal.provider_opts.native.float.width_pct must be between 10 and 100")
   end
 
-  if config.terminal.float.height_pct < 10 or config.terminal.float.height_pct > 100 then
-    error("codex: terminal.float.height_pct must be between 10 and 100")
+  if native_opts.float.height_pct < 10 or native_opts.float.height_pct > 100 then
+    error("codex: terminal.provider_opts.native.float.height_pct must be between 10 and 100")
   end
 
   if
-    config.terminal.float.title_pos ~= "left"
-    and config.terminal.float.title_pos ~= "center"
-    and config.terminal.float.title_pos ~= "right"
+    native_opts.float.title_pos ~= "left"
+    and native_opts.float.title_pos ~= "center"
+    and native_opts.float.title_pos ~= "right"
   then
-    error("codex: terminal.float.title_pos must be 'left', 'center', or 'right'")
+    error(
+      "codex: terminal.provider_opts.native.float.title_pos must be 'left', 'center', or 'right'"
+    )
   end
 
   if config.terminal.startup.timeout_ms < 1 then

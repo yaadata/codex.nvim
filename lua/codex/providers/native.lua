@@ -82,28 +82,30 @@ local function open_hsplit(side)
 end
 
 --- Open a vsplit, hsplit, or float window and place the buffer inside it.
----@param term_config codex.TerminalConfig
+---@param native_opts codex.NativeProviderOpts|table
 ---@param bufnr integer
 ---@return integer winid
-local function open_window_for_buf(term_config, bufnr)
-  if term_config.window == "vsplit" then
-    local vsplit = term_config.vsplit or {}
+local function open_window_for_buf(native_opts, bufnr)
+  local window = native_opts.window or "vsplit"
+
+  if window == "vsplit" then
+    local vsplit = native_opts.vsplit or {}
     local winid = open_vsplit(vsplit.side or "right")
     vim.api.nvim_win_set_buf(winid, bufnr)
     vim.api.nvim_win_set_width(winid, pct_size(vim.o.columns, vsplit.size_pct or 40))
     return winid
   end
 
-  if term_config.window == "hsplit" then
-    local hsplit = term_config.hsplit or {}
+  if window == "hsplit" then
+    local hsplit = native_opts.hsplit or {}
     local winid = open_hsplit(hsplit.side or "bottom")
     vim.api.nvim_win_set_buf(winid, bufnr)
     vim.api.nvim_win_set_height(winid, pct_size(vim.o.lines, hsplit.size_pct or 30))
     return winid
   end
 
-  if term_config.window == "float" then
-    local float = term_config.float or {}
+  if window == "float" then
+    local float = native_opts.float or {}
     local width = pct_size(vim.o.columns, float.width_pct or 80)
     local height = pct_size(vim.o.lines, float.height_pct or 80)
     local row = math.max(0, math.floor((vim.o.lines - height) / 2))
@@ -122,25 +124,28 @@ local function open_window_for_buf(term_config, bufnr)
     })
   end
 
-  error("codex: unsupported terminal.window in native provider: " .. tostring(term_config.window))
+  error(
+    "codex: unsupported terminal.provider_opts.native.window in native provider: "
+      .. tostring(window)
+  )
 end
 
 --- Create a new scratch buffer and open a window for it.
----@param term_config codex.TerminalConfig
+---@param native_opts codex.NativeProviderOpts|table
 ---@return integer bufnr
 ---@return integer winid
-local function create_window(term_config)
+local function create_window(native_opts)
   local bufnr = vim.api.nvim_create_buf(false, true)
-  local winid = open_window_for_buf(term_config, bufnr)
+  local winid = open_window_for_buf(native_opts, bufnr)
   return bufnr, winid
 end
 
 --- Re-open a window for an existing terminal buffer that has no visible window.
----@param term_config codex.TerminalConfig
+---@param native_opts codex.NativeProviderOpts|table
 ---@param bufnr integer
 ---@return integer winid
-local function reshow_window(term_config, bufnr)
-  return open_window_for_buf(term_config, bufnr)
+local function reshow_window(native_opts, bufnr)
+  return open_window_for_buf(native_opts, bufnr)
 end
 
 --- Close the window and delete the buffer attached to a handle.
@@ -245,8 +250,10 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local launch = config.launch or {}
   local cwd = launch.cwd or vim.fn.getcwd()
   local term_config = config.terminal
+  local provider_opts = term_config.provider_opts or {}
+  local native_opts = provider_opts.native or {}
   local prev_win = vim.api.nvim_get_current_win()
-  local bufnr, winid = create_window(term_config)
+  local bufnr, winid = create_window(native_opts)
 
   local startup = term_config.startup or {}
   local handle = {
@@ -276,7 +283,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   handle.jobid = jobid
 
   vim.bo[bufnr].buflisted = false
-  set_terminal_keymaps(bufnr, term_config.keymaps, term_config.window)
+  set_terminal_keymaps(bufnr, term_config.keymaps, native_opts.window)
 
   if focus then
     vim.cmd("startinsert")
@@ -391,7 +398,10 @@ function M.toggle(handle, cmd, args, env, config)
   end
 
   -- Buffer exists but no window — re-show it
-  handle.winid = reshow_window(config.terminal, handle.bufnr)
+  local term_config = config.terminal or {}
+  local provider_opts = term_config.provider_opts or {}
+  local native_opts = provider_opts.native or {}
+  handle.winid = reshow_window(native_opts, handle.bufnr)
   vim.cmd("startinsert")
   return handle
 end

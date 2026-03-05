@@ -156,7 +156,7 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
-  it("registers directional split navigation keymaps for vsplit", function()
+  it("registers directional split navigation keymaps for split win.position", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
       package.loaded["snacks"] = {
         terminal = function()
@@ -167,9 +167,12 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
-          window = "vsplit",
+          provider_opts = {
+            snacks = {
+              win = { position = "left" },
+            },
+          },
           startup = { grace_ms = 0 },
-          provider_opts = {},
         },
       }, true, nil)
 
@@ -185,7 +188,7 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
-  it("does not register directional split navigation keymaps for float", function()
+  it("does not register directional split navigation keymaps for float win.position", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
       package.loaded["snacks"] = {
         terminal = function()
@@ -196,12 +199,12 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
-          window = "float",
-          float = {
-            border = "rounded",
+          provider_opts = {
+            snacks = {
+              win = { position = "float", border = "rounded" },
+            },
           },
           startup = { grace_ms = 0 },
-          provider_opts = {},
         },
       }, true, nil)
 
@@ -260,8 +263,11 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
-          window = "vsplit",
-          vsplit = { side = "right", size_pct = 40 },
+          provider_opts = {
+            snacks = {
+              win = { position = "right", width = 0.4 },
+            },
+          },
           keymaps = {
             nav = {
               left = "<A-h>",
@@ -271,7 +277,6 @@ describe("codex.providers.snacks", function()
             },
           },
           startup = { grace_ms = 0 },
-          provider_opts = {},
         },
       }, true, nil)
 
@@ -294,13 +299,15 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
-          window = "vsplit",
-          vsplit = { side = "right", size_pct = 40 },
+          provider_opts = {
+            snacks = {
+              win = { position = "right", width = 0.4 },
+            },
+          },
           keymaps = {
             nav = false,
           },
           startup = { grace_ms = 0 },
-          provider_opts = {},
         },
       }, true, nil)
 
@@ -655,7 +662,7 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
-  it("passes vsplit config to snacks when window is vsplit", function()
+  it("passes snacks win options through provider_opts", function()
     with_stubbed_vim_api(function()
       local captured_opts = nil
       package.loaded["snacks"] = {
@@ -668,13 +675,15 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
-          window = "vsplit",
-          vsplit = {
-            side = "left",
-            size_pct = 40,
-          },
           startup = { grace_ms = 0 },
-          provider_opts = {},
+          provider_opts = {
+            snacks = {
+              win = {
+                position = "left",
+                width = 0.4,
+              },
+            },
+          },
         },
       }, false, nil)
 
@@ -683,7 +692,7 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
-  it("passes hsplit config to snacks when window is hsplit", function()
+  it("passes snacks horizontal win options through provider_opts", function()
     with_stubbed_vim_api(function()
       local captured_opts = nil
       package.loaded["snacks"] = {
@@ -696,13 +705,15 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
-          window = "hsplit",
-          hsplit = {
-            side = "bottom",
-            size_pct = 30,
-          },
           startup = { grace_ms = 0 },
-          provider_opts = {},
+          provider_opts = {
+            snacks = {
+              win = {
+                position = "bottom",
+                height = 0.3,
+              },
+            },
+          },
         },
       }, false, nil)
 
@@ -711,7 +722,7 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
-  it("passes float border config to snacks when window is float", function()
+  it("passes snacks float win options through provider_opts", function()
     with_stubbed_vim_api(function()
       local captured_opts = nil
       package.loaded["snacks"] = {
@@ -724,12 +735,15 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
-          window = "float",
-          float = {
-            border = "rounded",
-          },
           startup = { grace_ms = 0 },
-          provider_opts = {},
+          provider_opts = {
+            snacks = {
+              win = {
+                position = "float",
+                border = "rounded",
+              },
+            },
+          },
         },
       }, false, nil)
 
@@ -762,7 +776,7 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
-  it("uses default vsplit win config when vsplit sub-table is nil", function()
+  it("does not set opts.win when snacks win options are omitted", function()
     with_stubbed_vim_api(function()
       local captured_opts = nil
       package.loaded["snacks"] = {
@@ -775,62 +789,12 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
-          window = "vsplit",
           startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, false, nil)
 
-      assert.equals("right", captured_opts.win.position)
-      assert.equals(0.4, captured_opts.win.width)
-    end)
-  end)
-
-  it("uses default hsplit win config when hsplit sub-table is nil", function()
-    with_stubbed_vim_api(function()
-      local captured_opts = nil
-      package.loaded["snacks"] = {
-        terminal = function(_, opts)
-          captured_opts = opts
-          return { buf = 42 }
-        end,
-      }
-
-      local provider = require("codex.providers.snacks")
-      provider.open("codex", {}, {}, {
-        terminal = {
-          window = "hsplit",
-          startup = { grace_ms = 0 },
-          provider_opts = {},
-        },
-      }, false, nil)
-
-      assert.equals("bottom", captured_opts.win.position)
-      assert.equals(0.3, captured_opts.win.height)
-    end)
-  end)
-
-  it("uses default float win config when float sub-table is nil", function()
-    with_stubbed_vim_api(function()
-      local captured_opts = nil
-      package.loaded["snacks"] = {
-        terminal = function(_, opts)
-          captured_opts = opts
-          return { buf = 42 }
-        end,
-      }
-
-      local provider = require("codex.providers.snacks")
-      provider.open("codex", {}, {}, {
-        terminal = {
-          window = "float",
-          startup = { grace_ms = 0 },
-          provider_opts = {},
-        },
-      }, false, nil)
-
-      assert.equals("float", captured_opts.win.position)
-      assert.equals("rounded", captured_opts.win.border)
+      assert.is_nil(captured_opts.win)
     end)
   end)
 end)

@@ -4,22 +4,6 @@ local function make_config(overrides)
       cwd = nil,
     },
     terminal = {
-      window = "vsplit",
-      vsplit = {
-        side = "right",
-        size_pct = 40,
-      },
-      hsplit = {
-        side = "bottom",
-        size_pct = 30,
-      },
-      float = {
-        width_pct = 80,
-        height_pct = 80,
-        border = "rounded",
-        title = " Codex ",
-        title_pos = "center",
-      },
       auto_close = false,
       startup = {
         timeout_ms = 2000,
@@ -34,6 +18,26 @@ local function make_config(overrides)
           down = "<C-j>",
           up = "<C-k>",
           right = "<C-l>",
+        },
+      },
+      provider_opts = {
+        native = {
+          window = "vsplit",
+          vsplit = {
+            side = "right",
+            size_pct = 40,
+          },
+          hsplit = {
+            side = "bottom",
+            size_pct = 30,
+          },
+          float = {
+            width_pct = 80,
+            height_pct = 80,
+            border = "rounded",
+            title = " Codex ",
+            title_pos = "center",
+          },
         },
       },
     },
@@ -296,8 +300,12 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
-          window = "vsplit",
-          vsplit = { side = "right", size_pct = 40 },
+          provider_opts = {
+            native = {
+              window = "vsplit",
+              vsplit = { side = "right", size_pct = 40 },
+            },
+          },
         },
       })
 
@@ -451,7 +459,11 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
-          window = "vsplit",
+          provider_opts = {
+            native = {
+              window = "vsplit",
+            },
+          },
         },
       })
 
@@ -474,7 +486,11 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
-          window = "hsplit",
+          provider_opts = {
+            native = {
+              window = "hsplit",
+            },
+          },
         },
       })
 
@@ -489,7 +505,11 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
-          window = "float",
+          provider_opts = {
+            native = {
+              window = "float",
+            },
+          },
         },
       })
 
@@ -556,8 +576,12 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
-          window = "hsplit",
-          hsplit = { side = "bottom", size_pct = 30 },
+          provider_opts = {
+            native = {
+              window = "hsplit",
+              hsplit = { side = "bottom", size_pct = 30 },
+            },
+          },
         },
       })
 
@@ -574,13 +598,17 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
-          window = "float",
-          float = {
-            width_pct = 80,
-            height_pct = 60,
-            border = "single",
-            title = " Codex Test ",
-            title_pos = "left",
+          provider_opts = {
+            native = {
+              window = "float",
+              float = {
+                width_pct = 80,
+                height_pct = 60,
+                border = "single",
+                title = " Codex Test ",
+                title_pos = "left",
+              },
+            },
           },
         },
       })
@@ -608,8 +636,12 @@ describe("codex.providers.native", function()
 
       local split_cfg = make_config({
         terminal = {
-          window = "vsplit",
-          vsplit = { side = "left", size_pct = 0 },
+          provider_opts = {
+            native = {
+              window = "vsplit",
+              vsplit = { side = "left", size_pct = 0 },
+            },
+          },
         },
       })
       provider.open("codex", {}, {}, split_cfg, true)
@@ -617,13 +649,17 @@ describe("codex.providers.native", function()
 
       local float_cfg = make_config({
         terminal = {
-          window = "float",
-          float = {
-            width_pct = 0,
-            height_pct = 0,
-            border = "rounded",
-            title = " Codex ",
-            title_pos = "center",
+          provider_opts = {
+            native = {
+              window = "float",
+              float = {
+                width_pct = 0,
+                height_pct = 0,
+                border = "rounded",
+                title = " Codex ",
+                title_pos = "center",
+              },
+            },
           },
         },
       })
@@ -802,8 +838,12 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local initial_cfg = make_config({
         terminal = {
-          window = "vsplit",
-          vsplit = { side = "right", size_pct = 40 },
+          provider_opts = {
+            native = {
+              window = "vsplit",
+              vsplit = { side = "right", size_pct = 40 },
+            },
+          },
         },
       })
       local handle = provider.open("codex", {}, {}, initial_cfg, true)
@@ -814,13 +854,17 @@ describe("codex.providers.native", function()
 
       local float_cfg = make_config({
         terminal = {
-          window = "float",
-          float = {
-            width_pct = 80,
-            height_pct = 80,
-            border = "double",
-            title = " Reopen ",
-            title_pos = "right",
+          provider_opts = {
+            native = {
+              window = "float",
+              float = {
+                width_pct = 80,
+                height_pct = 80,
+                border = "double",
+                title = " Reopen ",
+                title_pos = "right",
+              },
+            },
           },
         },
       })
@@ -859,11 +903,15 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
-          window = "vsplit",
-          vsplit = vim.NIL,
+          provider_opts = {
+            native = {
+              window = "vsplit",
+              vsplit = vim.NIL,
+            },
+          },
         },
       })
-      cfg.terminal.vsplit = nil
+      cfg.terminal.provider_opts.native.vsplit = nil
 
       local handle = provider.open("codex", {}, {}, cfg, false)
 
@@ -879,11 +927,15 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
-          window = "hsplit",
-          hsplit = vim.NIL,
+          provider_opts = {
+            native = {
+              window = "hsplit",
+              hsplit = vim.NIL,
+            },
+          },
         },
       })
-      cfg.terminal.hsplit = nil
+      cfg.terminal.provider_opts.native.hsplit = nil
 
       local handle = provider.open("codex", {}, {}, cfg, false)
 
@@ -899,11 +951,15 @@ describe("codex.providers.native", function()
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
-          window = "float",
-          float = vim.NIL,
+          provider_opts = {
+            native = {
+              window = "float",
+              float = vim.NIL,
+            },
+          },
         },
       })
-      cfg.terminal.float = nil
+      cfg.terminal.provider_opts.native.float = nil
 
       provider.open("codex", {}, {}, cfg, true)
 

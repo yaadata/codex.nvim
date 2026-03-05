@@ -71,21 +71,28 @@ opts = {
   },
   terminal = {
     provider = "auto", -- auto | snacks | native
-    window = "vsplit", -- vsplit | hsplit | float
-    vsplit = {
-      side = "right", -- left | right
-      size_pct = 40, -- 10-90
-    },
-    hsplit = {
-      side = "bottom", -- top | bottom
-      size_pct = 30, -- 10-90
-    },
-    float = {
-      width_pct = 80, -- 10-100
-      height_pct = 80, -- 10-100
-      border = "rounded",
-      title = " Codex ",
-      title_pos = "center", -- left | center | right
+    provider_opts = {
+      native = {
+        window = "vsplit", -- vsplit | hsplit | float
+        vsplit = {
+          side = "right", -- left | right
+          size_pct = 40, -- 10-90
+        },
+        hsplit = {
+          side = "bottom", -- top | bottom
+          size_pct = 30, -- 10-90
+        },
+        float = {
+          width_pct = 80, -- 10-100
+          height_pct = 80, -- 10-100
+          border = "rounded",
+          title = " Codex ",
+          title_pos = "center", -- left | center | right
+        },
+      },
+      snacks = {
+        -- pass-through for snacks.terminal(..., opts)
+      },
     },
     auto_close = false, -- close terminal buffer automatically when process exits
     startup = {
@@ -307,8 +314,10 @@ require("codex").setup({
 `terminal.keymaps.close` triggers an intentional Codex session close.
 `terminal.auto_close` controls whether provider windows auto-close only after
 the terminal process exits. `terminal.keymaps.nav` is applied only for split
-windows (`vsplit`/`hsplit`). Set `terminal.keymaps.nav = false` to disable all
-navigation keymaps, or set individual directions to `false`.
+windows: `provider_opts.native.window = "vsplit"|"hsplit"` for native, or
+`provider_opts.snacks.win.position = "left"|"right"|"top"|"bottom"` for snacks.
+Set `terminal.keymaps.nav = false` to disable all navigation keymaps, or set
+individual directions to `false`.
 
 ## Lua API
 

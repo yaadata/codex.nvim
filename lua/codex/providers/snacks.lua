@@ -64,9 +64,9 @@ end
 --- Register buffer-local terminal-mode keymaps for toggle, close, and navigation.
 ---@param bufnr integer
 ---@param keymaps codex.TerminalKeymapConfig|nil
----@param window_type codex.WindowType|nil
+---@param split_nav_enabled boolean
 ---@return nil
-local function set_terminal_keymaps(bufnr, keymaps, window_type)
+local function set_terminal_keymaps(bufnr, keymaps, split_nav_enabled)
   local maps = vim.tbl_deep_extend("force", {
     toggle = "<C-c>",
     clear_input = "<M-BS>",
@@ -114,7 +114,7 @@ local function set_terminal_keymaps(bufnr, keymaps, window_type)
     })
   end
 
-  if (window_type == "vsplit" or window_type == "hsplit") and maps.nav then
+  if split_nav_enabled and maps.nav then
     local nav = {
       { maps.nav.left, "<C-\\><C-n><C-w>h", "Codex: Move to left window" },
       { maps.nav.down, "<C-\\><C-n><C-w>j", "Codex: Move to below window" },
@@ -135,6 +135,13 @@ local function set_terminal_keymaps(bufnr, keymaps, window_type)
   end
 end
 
+--- Return true when a snacks win.position value maps to split-style navigation.
+---@param position string|nil
+---@return boolean
+local function is_split_position(position)
+  return position == "left" or position == "right" or position == "top" or position == "bottom"
+end
+
 --- Open a terminal via snacks.terminal and return its handle.
 ---@param cmd string
 ---@param args string[]
@@ -148,7 +155,8 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local full_cmd = build_cmd(cmd, args)
   local launch = config.launch or {}
   local cwd = launch.cwd or vim.fn.getcwd()
-  local snacks_opts = config.terminal.provider_opts.snacks or {}
+  local provider_opts = config.terminal.provider_opts or {}
+  local snacks_opts = provider_opts.snacks or {}
 
   local base_opts = {
     cmd = full_cmd,
@@ -156,25 +164,6 @@ function M.open(cmd, args, env, config, focus, on_exit)
     interactive = true,
     auto_close = config.terminal.auto_close == true,
   }
-  if config.terminal.window == "float" then
-    local float = config.terminal.float or {}
-    base_opts.win = {
-      position = "float",
-      border = float.border or "rounded",
-    }
-  elseif config.terminal.window == "vsplit" then
-    local vsplit = config.terminal.vsplit or {}
-    base_opts.win = {
-      position = vsplit.side or "right",
-      width = (vsplit.size_pct or 40) / 100,
-    }
-  elseif config.terminal.window == "hsplit" then
-    local hsplit = config.terminal.hsplit or {}
-    base_opts.win = {
-      position = hsplit.side or "bottom",
-      height = (hsplit.size_pct or 30) / 100,
-    }
-  end
   if next(env) ~= nil then
     base_opts.env = env
   end
@@ -195,7 +184,11 @@ function M.open(cmd, args, env, config, focus, on_exit)
   }
 
   if type(terminal.buf) == "number" then
-    set_terminal_keymaps(terminal.buf, config.terminal.keymaps, config.terminal.window)
+    local split_nav_enabled = false
+    if type(opts.win) == "table" then
+      split_nav_enabled = is_split_position(opts.win.position)
+    end
+    set_terminal_keymaps(terminal.buf, config.terminal.keymaps, split_nav_enabled)
   end
 
   if on_exit and terminal.buf then

@@ -20,16 +20,16 @@ describe("codex.config", function()
       assert.is_false(config.defaults.launch.auto_start)
       assert.is_nil(config.defaults.launch.cwd)
       assert.equals("auto", config.defaults.terminal.provider)
-      assert.equals("vsplit", config.defaults.terminal.window)
-      assert.equals("right", config.defaults.terminal.vsplit.side)
-      assert.equals(40, config.defaults.terminal.vsplit.size_pct)
-      assert.equals("bottom", config.defaults.terminal.hsplit.side)
-      assert.equals(30, config.defaults.terminal.hsplit.size_pct)
-      assert.equals(80, config.defaults.terminal.float.width_pct)
-      assert.equals(80, config.defaults.terminal.float.height_pct)
-      assert.equals("rounded", config.defaults.terminal.float.border)
-      assert.equals(" Codex ", config.defaults.terminal.float.title)
-      assert.equals("center", config.defaults.terminal.float.title_pos)
+      assert.equals("vsplit", config.defaults.terminal.provider_opts.native.window)
+      assert.equals("right", config.defaults.terminal.provider_opts.native.vsplit.side)
+      assert.equals(40, config.defaults.terminal.provider_opts.native.vsplit.size_pct)
+      assert.equals("bottom", config.defaults.terminal.provider_opts.native.hsplit.side)
+      assert.equals(30, config.defaults.terminal.provider_opts.native.hsplit.size_pct)
+      assert.equals(80, config.defaults.terminal.provider_opts.native.float.width_pct)
+      assert.equals(80, config.defaults.terminal.provider_opts.native.float.height_pct)
+      assert.equals("rounded", config.defaults.terminal.provider_opts.native.float.border)
+      assert.equals(" Codex ", config.defaults.terminal.provider_opts.native.float.title)
+      assert.equals("center", config.defaults.terminal.provider_opts.native.float.title_pos)
       assert.equals(2000, config.defaults.terminal.startup.timeout_ms)
       assert.equals(50, config.defaults.terminal.startup.retry_interval_ms)
       assert.equals(700, config.defaults.terminal.startup.grace_ms)
@@ -63,18 +63,22 @@ describe("codex.config", function()
           cmd = "/usr/local/bin/codex",
         },
         terminal = {
-          window = "hsplit",
-          vsplit = { side = "left" },
-          hsplit = { size_pct = 50 },
+          provider_opts = {
+            native = {
+              window = "hsplit",
+              vsplit = { side = "left" },
+              hsplit = { size_pct = 50 },
+            },
+          },
           keymaps = { close = "<C-d>" },
         },
       })
       assert.equals("/usr/local/bin/codex", cfg.launch.cmd)
-      assert.equals("hsplit", cfg.terminal.window)
-      assert.equals("left", cfg.terminal.vsplit.side)
-      assert.equals(40, cfg.terminal.vsplit.size_pct)
-      assert.equals("bottom", cfg.terminal.hsplit.side)
-      assert.equals(50, cfg.terminal.hsplit.size_pct)
+      assert.equals("hsplit", cfg.terminal.provider_opts.native.window)
+      assert.equals("left", cfg.terminal.provider_opts.native.vsplit.side)
+      assert.equals(40, cfg.terminal.provider_opts.native.vsplit.size_pct)
+      assert.equals("bottom", cfg.terminal.provider_opts.native.hsplit.side)
+      assert.equals(50, cfg.terminal.provider_opts.native.hsplit.size_pct)
       assert.equals("<C-c>", cfg.terminal.keymaps.toggle)
       assert.equals("<M-BS>", cfg.terminal.keymaps.clear_input)
       assert.equals("<C-d>", cfg.terminal.keymaps.close)
@@ -137,52 +141,62 @@ describe("codex.config", function()
       end, "codex: unknown log config key(s): log.extra")
     end)
 
-    it("rejects invalid window type", function()
-      assert.has_error(function()
-        config.apply({ terminal = { window = "tabs" } })
-      end, 'codex: invalid terminal.window "tabs", expected one of: vsplit, hsplit, float')
+    it("rejects invalid native window type", function()
+      assert.has_error(
+        function()
+          config.apply({ terminal = { provider_opts = { native = { window = "tabs" } } } })
+        end,
+        'codex: invalid terminal.provider_opts.native.window "tabs", expected one of: vsplit, hsplit, float'
+      )
     end)
 
-    it("rejects invalid vsplit.side", function()
+    it("rejects invalid native vsplit.side", function()
       assert.has_error(function()
-        config.apply({ terminal = { vsplit = { side = "top" } } })
-      end, "codex: terminal.vsplit.side must be 'left' or 'right'")
+        config.apply({ terminal = { provider_opts = { native = { vsplit = { side = "top" } } } } })
+      end, "codex: terminal.provider_opts.native.vsplit.side must be 'left' or 'right'")
     end)
 
-    it("rejects vsplit.size_pct below 10", function()
+    it("rejects native vsplit.size_pct below 10", function()
       assert.has_error(function()
-        config.apply({ terminal = { vsplit = { size_pct = 5 } } })
-      end, "codex: terminal.vsplit.size_pct must be between 10 and 90")
+        config.apply({ terminal = { provider_opts = { native = { vsplit = { size_pct = 5 } } } } })
+      end, "codex: terminal.provider_opts.native.vsplit.size_pct must be between 10 and 90")
     end)
 
-    it("rejects hsplit.side", function()
+    it("rejects native hsplit.side", function()
       assert.has_error(function()
-        config.apply({ terminal = { hsplit = { side = "left" } } })
-      end, "codex: terminal.hsplit.side must be 'top' or 'bottom'")
+        config.apply({ terminal = { provider_opts = { native = { hsplit = { side = "left" } } } } })
+      end, "codex: terminal.provider_opts.native.hsplit.side must be 'top' or 'bottom'")
     end)
 
-    it("rejects hsplit.size_pct above 90", function()
+    it("rejects native hsplit.size_pct above 90", function()
       assert.has_error(function()
-        config.apply({ terminal = { hsplit = { size_pct = 95 } } })
-      end, "codex: terminal.hsplit.size_pct must be between 10 and 90")
+        config.apply({ terminal = { provider_opts = { native = { hsplit = { size_pct = 95 } } } } })
+      end, "codex: terminal.provider_opts.native.hsplit.size_pct must be between 10 and 90")
     end)
 
-    it("rejects float.width_pct below 10", function()
+    it("rejects native float.width_pct below 10", function()
       assert.has_error(function()
-        config.apply({ terminal = { float = { width_pct = 5 } } })
-      end, "codex: terminal.float.width_pct must be between 10 and 100")
+        config.apply({ terminal = { provider_opts = { native = { float = { width_pct = 5 } } } } })
+      end, "codex: terminal.provider_opts.native.float.width_pct must be between 10 and 100")
     end)
 
-    it("rejects float.height_pct above 100", function()
+    it("rejects native float.height_pct above 100", function()
       assert.has_error(function()
-        config.apply({ terminal = { float = { height_pct = 150 } } })
-      end, "codex: terminal.float.height_pct must be between 10 and 100")
+        config.apply({
+          terminal = { provider_opts = { native = { float = { height_pct = 150 } } } },
+        })
+      end, "codex: terminal.provider_opts.native.float.height_pct must be between 10 and 100")
     end)
 
-    it("rejects invalid float.title_pos", function()
-      assert.has_error(function()
-        config.apply({ terminal = { float = { title_pos = "middle" } } })
-      end, "codex: terminal.float.title_pos must be 'left', 'center', or 'right'")
+    it("rejects invalid native float.title_pos", function()
+      assert.has_error(
+        function()
+          config.apply({
+            terminal = { provider_opts = { native = { float = { title_pos = "middle" } } } },
+          })
+        end,
+        "codex: terminal.provider_opts.native.float.title_pos must be 'left', 'center', or 'right'"
+      )
     end)
 
     it("rejects startup.timeout_ms below 1", function()
@@ -222,6 +236,12 @@ describe("codex.config", function()
       end, "codex: unknown terminal config key(s): terminal.widnow")
     end)
 
+    it("rejects removed terminal window key", function()
+      assert.has_error(function()
+        config.apply({ terminal = { window = "vsplit" } })
+      end, "codex: unknown terminal config key(s): terminal.window")
+    end)
+
     it("rejects a typo in terminal.startup key names", function()
       assert.has_error(function()
         config.apply({ terminal = { startup = { retri_interval_ms = 25 } } })
@@ -258,28 +278,28 @@ describe("codex.config", function()
       end, "codex: launch.cwd must be a string or nil")
     end)
 
-    it("rejects non-table terminal.vsplit", function()
+    it("rejects non-table terminal.provider_opts", function()
       local cfg = make_valid_config()
-      cfg.terminal.vsplit = "bad"
+      cfg.terminal.provider_opts = "bad"
       assert_error_contains(function()
         config.validate(cfg)
-      end, "vsplit: expected table")
+      end, "terminal.provider_opts: expected table")
     end)
 
-    it("rejects non-table terminal.hsplit", function()
+    it("rejects non-table terminal.provider_opts.native", function()
       local cfg = make_valid_config()
-      cfg.terminal.hsplit = "bad"
+      cfg.terminal.provider_opts.native = "bad"
       assert_error_contains(function()
         config.validate(cfg)
-      end, "hsplit: expected table")
+      end, "terminal.provider_opts.native: expected table")
     end)
 
-    it("rejects non-table terminal.float", function()
+    it("rejects non-table terminal.provider_opts.snacks", function()
       local cfg = make_valid_config()
-      cfg.terminal.float = "bad"
+      cfg.terminal.provider_opts.snacks = "bad"
       assert_error_contains(function()
         config.validate(cfg)
-      end, "float: expected table")
+      end, "terminal.provider_opts.snacks: expected table")
     end)
 
     it("rejects non-table terminal.keymaps", function()
@@ -292,10 +312,10 @@ describe("codex.config", function()
 
     it("rejects bad nested field types", function()
       local cfg = make_valid_config()
-      cfg.terminal.float.title = 123
+      cfg.terminal.provider_opts.native.float.title = 123
       assert_error_contains(function()
         config.validate(cfg)
-      end, "terminal.float.title")
+      end, "terminal.provider_opts.native.float.title")
     end)
 
     it("rejects unknown terminal keymap actions", function()

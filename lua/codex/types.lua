@@ -61,14 +61,21 @@
 
 ---@class codex.TerminalConfig
 ---@field provider codex.ProviderName
+---@field auto_close boolean
+---@field startup codex.StartupConfig
+---@field keymaps codex.TerminalKeymapConfig
+---@field provider_opts codex.ProviderOptsConfig
+
+---@class codex.NativeProviderOpts
 ---@field window codex.WindowType
 ---@field vsplit codex.VsplitConfig
 ---@field hsplit codex.HsplitConfig
 ---@field float codex.FloatConfig
----@field auto_close boolean
----@field startup codex.StartupConfig
----@field keymaps codex.TerminalKeymapConfig
----@field provider_opts table<string, table>
+
+---@class codex.ProviderOptsConfig
+---@field native codex.NativeProviderOpts
+---@diagnostic disable-next-line: undefined-doc-name
+---@field snacks snacks.terminal.Opts|table<string, any>
 
 ---@class codex.LaunchConfig
 ---@field cmd string
