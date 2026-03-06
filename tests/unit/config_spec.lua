@@ -1,4 +1,5 @@
 local config = require("codex.config")
+local keymaps = require("codex.keymaps")
 
 describe("codex.config", function()
   local function assert_error_contains(fn, expected)
@@ -33,13 +34,7 @@ describe("codex.config", function()
       assert.equals(2000, config.defaults.terminal.startup.timeout_ms)
       assert.equals(50, config.defaults.terminal.startup.retry_interval_ms)
       assert.equals(700, config.defaults.terminal.startup.grace_ms)
-      assert.equals("<C-c>", config.defaults.terminal.keymaps.toggle)
-      assert.equals("<M-BS>", config.defaults.terminal.keymaps.clear_input)
-      assert.is_false(config.defaults.terminal.keymaps.close)
-      assert.equals("<C-h>", config.defaults.terminal.keymaps.nav.left)
-      assert.equals("<C-j>", config.defaults.terminal.keymaps.nav.down)
-      assert.equals("<C-k>", config.defaults.terminal.keymaps.nav.up)
-      assert.equals("<C-l>", config.defaults.terminal.keymaps.nav.right)
+      assert.same({}, config.defaults.terminal.keymaps)
       assert.equals("warn", config.defaults.log.level)
       assert.is_false(config.defaults.log.verbose)
     end)
@@ -70,7 +65,12 @@ describe("codex.config", function()
               hsplit = { size_pct = 50 },
             },
           },
-          keymaps = { close = "<C-d>" },
+          keymaps = {
+            ["<C-d>"] = {
+              mode = "t",
+              action = keymaps.builtins.close,
+            },
+          },
         },
       })
       assert.equals("/usr/local/bin/codex", cfg.launch.cmd)
@@ -79,13 +79,8 @@ describe("codex.config", function()
       assert.equals(40, cfg.terminal.provider_opts.native.vsplit.size_pct)
       assert.equals("bottom", cfg.terminal.provider_opts.native.hsplit.side)
       assert.equals(50, cfg.terminal.provider_opts.native.hsplit.size_pct)
-      assert.equals("<C-c>", cfg.terminal.keymaps.toggle)
-      assert.equals("<M-BS>", cfg.terminal.keymaps.clear_input)
-      assert.equals("<C-d>", cfg.terminal.keymaps.close)
-      assert.equals("<C-h>", cfg.terminal.keymaps.nav.left)
-      assert.equals("<C-j>", cfg.terminal.keymaps.nav.down)
-      assert.equals("<C-k>", cfg.terminal.keymaps.nav.up)
-      assert.equals("<C-l>", cfg.terminal.keymaps.nav.right)
+      assert.equals("t", cfg.terminal.keymaps["<C-d>"].mode)
+      assert.equals(keymaps.builtins.close, cfg.terminal.keymaps["<C-d>"].action)
       -- non-overridden values preserved
       assert.equals("auto", cfg.terminal.provider)
     end)
@@ -318,62 +313,151 @@ describe("codex.config", function()
       end, "terminal.provider_opts.native.float.title")
     end)
 
-    it("rejects unknown terminal keymap actions", function()
-      assert.has_error(
-        function()
-          config.apply({
-            terminal = {
-              keymaps = {
-                hide = "<C-x>",
-              },
+    it("accepts keymaps with builtin actions and omitted desc", function()
+      assert.is_true(config.validate(config.apply({
+        terminal = {
+          keymaps = {
+            ["<C-c>"] = {
+              mode = "t",
+              action = keymaps.builtins.toggle,
             },
-          })
-        end,
-        'codex: invalid terminal.keymaps action "hide", expected one of: toggle, clear_input, close, nav'
-      )
+          },
+        },
+      })))
     end)
 
-    it("rejects unknown terminal nav keymap actions", function()
-      assert.has_error(
-        function()
-          config.apply({
-            terminal = {
-              keymaps = {
-                nav = {
-                  north = "<C-k>",
-                },
-              },
+    it("accepts keymaps with custom actions when desc is provided", function()
+      assert.is_true(config.validate(config.apply({
+        terminal = {
+          keymaps = {
+            ["<leader>ot"] = {
+              mode = { "n", "v" },
+              action = function() end,
+              desc = "Codex: custom test action",
             },
-          })
-        end,
-        'codex: invalid terminal.keymaps.nav action "north", expected one of: left, down, up, right'
-      )
+          },
+        },
+      })))
     end)
 
-    it("rejects terminal nav keymap values that are not string|false", function()
+    it("rejects non-string terminal.keymaps keys", function()
+      local cfg = make_valid_config()
+      cfg.terminal.keymaps[1] = {
+        mode = "t",
+        action = keymaps.builtins.toggle,
+      }
+      assert.has_error(function()
+        config.validate(cfg)
+      end, "codex: terminal.keymaps keys must be non-empty strings")
+    end)
+
+    it("rejects terminal keymap bindings that are not tables", function()
       assert.has_error(function()
         config.apply({
           terminal = {
             keymaps = {
-              nav = {
-                left = 42,
-              },
+              ["<C-c>"] = true,
             },
           },
         })
-      end, "codex: terminal.keymaps.nav.left must be a string or false")
+      end, 'codex: terminal.keymaps["<C-c>"] must be a table with fields: mode, action, desc?')
     end)
 
-    it("rejects terminal keymap values that are not string|false", function()
+    it("rejects unknown terminal keymap binding keys", function()
       assert.has_error(function()
         config.apply({
           terminal = {
             keymaps = {
-              toggle = 42,
+              ["<C-c>"] = {
+                mode = "t",
+                action = keymaps.builtins.toggle,
+                foo = true,
+              },
             },
           },
         })
-      end, "codex: terminal.keymaps.toggle must be a string or false")
+      end, 'codex: unknown terminal keymap key(s): terminal.keymaps["<C-c>"].foo')
+    end)
+
+    it("rejects missing or invalid terminal keymap mode", function()
+      assert.has_error(function()
+        config.apply({
+          terminal = {
+            keymaps = {
+              ["<C-c>"] = {
+                action = keymaps.builtins.toggle,
+              },
+            },
+          },
+        })
+      end, 'codex: terminal.keymaps["<C-c>"].mode must be a string or list of strings')
+
+      assert.has_error(function()
+        config.apply({
+          terminal = {
+            keymaps = {
+              ["<C-c>"] = {
+                mode = { "t", 1 },
+                action = keymaps.builtins.toggle,
+              },
+            },
+          },
+        })
+      end, 'codex: terminal.keymaps["<C-c>"].mode[2] must be a string')
+    end)
+
+    it("rejects missing or invalid terminal keymap action", function()
+      assert.has_error(function()
+        config.apply({
+          terminal = {
+            keymaps = {
+              ["<C-c>"] = {
+                mode = "t",
+              },
+            },
+          },
+        })
+      end, 'terminal.keymaps["<C-c>"].action: expected function, got nil')
+
+      assert.has_error(function()
+        config.apply({
+          terminal = {
+            keymaps = {
+              ["<C-c>"] = {
+                mode = "t",
+                action = true,
+              },
+            },
+          },
+        })
+      end, 'terminal.keymaps["<C-c>"].action: expected function, got boolean')
+    end)
+
+    it("rejects missing desc for custom terminal keymap actions", function()
+      assert.has_error(function()
+        config.apply({
+          terminal = {
+            keymaps = {
+              ["<leader>ot"] = {
+                mode = "n",
+                action = function() end,
+              },
+            },
+          },
+        })
+      end, 'codex: terminal.keymaps["<leader>ot"].desc is required for custom actions')
+    end)
+
+    it("rejects legacy terminal keymap action-based schema", function()
+      assert.has_error(function()
+        config.apply({
+          terminal = {
+            keymaps = {
+              toggle = "<C-c>",
+            },
+          },
+        })
+      end, 'codex: terminal.keymaps["toggle"] must be a table with fields: mode, action, desc?')
     end)
 
     it("rejects removed global keymaps config key", function()

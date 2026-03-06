@@ -1,3 +1,25 @@
+local builtins = require("codex.keymaps").builtins
+
+local function default_terminal_keymaps()
+  return {
+    ["<C-c>"] = { mode = "t", action = builtins.toggle },
+    ["<M-BS>"] = { mode = "t", action = builtins.clear_input },
+    ["<C-h>"] = { mode = "t", action = builtins.nav_left },
+    ["<C-j>"] = { mode = "t", action = builtins.nav_down },
+    ["<C-k>"] = { mode = "t", action = builtins.nav_up },
+    ["<C-l>"] = { mode = "t", action = builtins.nav_right },
+  }
+end
+
+local function find_keymap(calls, lhs)
+  for _, call in ipairs(calls) do
+    if call.lhs == lhs then
+      return call
+    end
+  end
+  return nil
+end
+
 local function with_stubbed_vim_api(run)
   local original_create_autocmd = vim.api.nvim_create_autocmd
   local original_get_current_buf = vim.api.nvim_get_current_buf
@@ -127,7 +149,13 @@ describe("codex.providers.snacks", function()
         "codex",
         {},
         {},
-        { terminal = { startup = { grace_ms = 0 }, provider_opts = {} } },
+        {
+          terminal = {
+            keymaps = default_terminal_keymaps(),
+            startup = { grace_ms = 0 },
+            provider_opts = {},
+          },
+        },
         true,
         function(cb_handle)
           table.insert(exited, cb_handle)
@@ -138,17 +166,9 @@ describe("codex.providers.snacks", function()
       assert.equals("TermClose", autocmds[1].event)
       assert.equals(42, autocmds[1].spec.buffer)
       assert.is_true(autocmds[1].spec.once)
-      assert.equals(2, #keymap_set_calls)
-      assert.equals("t", keymap_set_calls[1].mode)
-      assert.equals("<C-c>", keymap_set_calls[1].lhs)
-      assert.is_function(keymap_set_calls[1].rhs)
-      assert.equals(42, keymap_set_calls[1].opts.buffer)
-      assert.is_true(keymap_set_calls[1].opts.silent)
-      assert.is_true(keymap_set_calls[1].opts.nowait)
-      assert.equals("Codex: Toggle terminal", keymap_set_calls[1].opts.desc)
-      assert.equals("t", keymap_set_calls[2].mode)
-      assert.equals("<M-BS>", keymap_set_calls[2].lhs)
-      assert.equals("Codex: Clear input", keymap_set_calls[2].opts.desc)
+      assert.equals(6, #keymap_set_calls)
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-c>"))
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<M-BS>"))
 
       autocmds[1].spec.callback()
       assert.equals(1, #exited)
@@ -156,7 +176,29 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
-  it("registers directional split navigation keymaps for split win.position", function()
+  it("does not register terminal keymaps by default", function()
+    with_stubbed_vim_api(function(_, keymap_set_calls)
+      package.loaded["snacks"] = {
+        terminal = function()
+          return { buf = 42 }
+        end,
+      }
+
+      local provider = require("codex.providers.snacks")
+      provider.open(
+        "codex",
+        {},
+        {},
+        { terminal = { startup = { grace_ms = 0 }, provider_opts = {} } },
+        true,
+        nil
+      )
+
+      assert.equals(0, #keymap_set_calls)
+    end)
+  end)
+
+  it("registers configured builtin terminal keymaps", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
       package.loaded["snacks"] = {
         terminal = function()
@@ -167,28 +209,23 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
-          provider_opts = {
-            snacks = {
-              win = { position = "left" },
-            },
-          },
+          keymaps = default_terminal_keymaps(),
           startup = { grace_ms = 0 },
+          provider_opts = {},
         },
       }, true, nil)
 
       assert.equals(6, #keymap_set_calls)
-      assert.equals("<C-h>", keymap_set_calls[3].lhs)
-      assert.equals("<C-\\><C-n><C-w>h", keymap_set_calls[3].rhs)
-      assert.equals("<C-j>", keymap_set_calls[4].lhs)
-      assert.equals("<C-\\><C-n><C-w>j", keymap_set_calls[4].rhs)
-      assert.equals("<C-k>", keymap_set_calls[5].lhs)
-      assert.equals("<C-\\><C-n><C-w>k", keymap_set_calls[5].rhs)
-      assert.equals("<C-l>", keymap_set_calls[6].lhs)
-      assert.equals("<C-\\><C-n><C-w>l", keymap_set_calls[6].rhs)
+      local toggle_map = find_keymap(keymap_set_calls, "<C-c>")
+      local clear_map = find_keymap(keymap_set_calls, "<M-BS>")
+      assert.is_not_nil(toggle_map)
+      assert.equals("Codex: Toggle terminal", toggle_map.opts.desc)
+      assert.is_not_nil(clear_map)
+      assert.equals("Codex: Clear input", clear_map.opts.desc)
     end)
   end)
 
-  it("does not register directional split navigation keymaps for float win.position", function()
+  it("registers directional navigation keymaps even for float win.position", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
       package.loaded["snacks"] = {
         terminal = function()
@@ -204,22 +241,25 @@ describe("codex.providers.snacks", function()
               win = { position = "float", border = "rounded" },
             },
           },
+          keymaps = {
+            ["<C-h>"] = { mode = "t", action = builtins.nav_left },
+            ["<C-j>"] = { mode = "t", action = builtins.nav_down },
+            ["<C-k>"] = { mode = "t", action = builtins.nav_up },
+            ["<C-l>"] = { mode = "t", action = builtins.nav_right },
+          },
           startup = { grace_ms = 0 },
         },
       }, true, nil)
 
-      assert.equals(2, #keymap_set_calls)
-      assert.equals("<C-c>", keymap_set_calls[1].lhs)
-      assert.equals("<M-BS>", keymap_set_calls[2].lhs)
-
-      local forbidden = { ["<C-h>"] = true, ["<C-j>"] = true, ["<C-k>"] = true, ["<C-l>"] = true }
-      for _, map in ipairs(keymap_set_calls) do
-        assert.is_nil(forbidden[map.lhs])
-      end
+      assert.equals(4, #keymap_set_calls)
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-h>"))
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-j>"))
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-k>"))
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-l>"))
     end)
   end)
 
-  it("registers configured terminal toggle and close keymaps", function()
+  it("registers custom terminal keymap keys for builtin actions", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
       package.loaded["snacks"] = {
         terminal = function()
@@ -231,8 +271,9 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           keymaps = {
-            toggle = "<C-t>",
-            close = "<C-x>",
+            ["<C-t>"] = { mode = "t", action = builtins.toggle },
+            ["<C-x>"] = { mode = "t", action = builtins.close },
+            ["<M-BS>"] = { mode = "t", action = builtins.clear_input },
           },
           startup = { grace_ms = 0 },
           provider_opts = {},
@@ -240,80 +281,9 @@ describe("codex.providers.snacks", function()
       }, true, nil)
 
       assert.equals(3, #keymap_set_calls)
-      assert.equals("t", keymap_set_calls[1].mode)
-      assert.equals("<C-t>", keymap_set_calls[1].lhs)
-      assert.equals("Codex: Toggle terminal", keymap_set_calls[1].opts.desc)
-      assert.equals("t", keymap_set_calls[2].mode)
-      assert.equals("<M-BS>", keymap_set_calls[2].lhs)
-      assert.equals("Codex: Clear input", keymap_set_calls[2].opts.desc)
-      assert.equals("t", keymap_set_calls[3].mode)
-      assert.equals("<C-x>", keymap_set_calls[3].lhs)
-      assert.equals("Codex: Close terminal", keymap_set_calls[3].opts.desc)
-    end)
-  end)
-
-  it("uses configured directional split navigation keymaps", function()
-    with_stubbed_vim_api(function(_, keymap_set_calls)
-      package.loaded["snacks"] = {
-        terminal = function()
-          return { buf = 42 }
-        end,
-      }
-
-      local provider = require("codex.providers.snacks")
-      provider.open("codex", {}, {}, {
-        terminal = {
-          provider_opts = {
-            snacks = {
-              win = { position = "right", width = 0.4 },
-            },
-          },
-          keymaps = {
-            nav = {
-              left = "<A-h>",
-              down = "<A-j>",
-              up = "<A-k>",
-              right = "<A-l>",
-            },
-          },
-          startup = { grace_ms = 0 },
-        },
-      }, true, nil)
-
-      assert.equals(6, #keymap_set_calls)
-      assert.equals("<A-h>", keymap_set_calls[3].lhs)
-      assert.equals("<A-j>", keymap_set_calls[4].lhs)
-      assert.equals("<A-k>", keymap_set_calls[5].lhs)
-      assert.equals("<A-l>", keymap_set_calls[6].lhs)
-    end)
-  end)
-
-  it("allows disabling directional split navigation keymaps", function()
-    with_stubbed_vim_api(function(_, keymap_set_calls)
-      package.loaded["snacks"] = {
-        terminal = function()
-          return { buf = 42 }
-        end,
-      }
-
-      local provider = require("codex.providers.snacks")
-      provider.open("codex", {}, {}, {
-        terminal = {
-          provider_opts = {
-            snacks = {
-              win = { position = "right", width = 0.4 },
-            },
-          },
-          keymaps = {
-            nav = false,
-          },
-          startup = { grace_ms = 0 },
-        },
-      }, true, nil)
-
-      assert.equals(2, #keymap_set_calls)
-      assert.equals("<C-c>", keymap_set_calls[1].lhs)
-      assert.equals("<M-BS>", keymap_set_calls[2].lhs)
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-t>"))
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-x>"))
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<M-BS>"))
     end)
   end)
 
@@ -335,15 +305,14 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           keymaps = {
-            toggle = "<C-t>",
-            close = "<C-x>",
+            ["<C-x>"] = { mode = "t", action = builtins.close },
           },
           startup = { grace_ms = 0 },
           provider_opts = {},
         },
       }, true, nil)
 
-      local close_map = keymap_set_calls[3]
+      local close_map = find_keymap(keymap_set_calls, "<C-x>")
       close_map.rhs()
 
       assert.equals(1, #scheduled)
@@ -374,16 +343,17 @@ describe("codex.providers.snacks", function()
       }
 
       local provider = require("codex.providers.snacks")
-      provider.open(
-        "codex",
-        {},
-        {},
-        { terminal = { startup = { grace_ms = 0 }, provider_opts = {} } },
-        true,
-        nil
-      )
+      provider.open("codex", {}, {}, {
+        terminal = {
+          keymaps = {
+            ["<M-BS>"] = { mode = "t", action = builtins.clear_input },
+          },
+          startup = { grace_ms = 0 },
+          provider_opts = {},
+        },
+      }, true, nil)
 
-      local clear_map = keymap_set_calls[2]
+      local clear_map = find_keymap(keymap_set_calls, "<M-BS>")
       clear_map.rhs()
 
       assert.equals(1, clear_input_calls)
@@ -413,7 +383,7 @@ describe("codex.providers.snacks", function()
       )
 
       assert.equals(0, #autocmds)
-      assert.equals(2, #keymap_set_calls)
+      assert.equals(0, #keymap_set_calls)
     end)
   end)
 

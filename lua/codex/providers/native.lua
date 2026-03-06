@@ -1,4 +1,5 @@
 local log = require("codex.logger")
+local keymaps = require("codex.keymaps")
 
 local M = {}
 
@@ -163,80 +164,6 @@ local function cleanup_window_and_buffer(handle)
   handle.bufnr = nil
 end
 
---- Register buffer-local terminal-mode keymaps for toggle, close, and navigation.
----@param bufnr integer
----@param keymaps codex.TerminalKeymapConfig|nil
----@param window_type codex.WindowType|nil
----@return nil
-local function set_terminal_keymaps(bufnr, keymaps, window_type)
-  local maps = vim.tbl_deep_extend("force", {
-    toggle = "<C-c>",
-    clear_input = "<M-BS>",
-    close = false,
-    nav = {
-      left = "<C-h>",
-      down = "<C-j>",
-      up = "<C-k>",
-      right = "<C-l>",
-    },
-  }, keymaps or {})
-
-  if maps.toggle then
-    vim.keymap.set("t", maps.toggle, function()
-      require("codex").toggle()
-    end, {
-      buffer = bufnr,
-      silent = true,
-      nowait = true,
-      desc = "Codex: Toggle terminal",
-    })
-  end
-
-  if maps.clear_input then
-    vim.keymap.set("t", maps.clear_input, function()
-      require("codex").clear_input()
-    end, {
-      buffer = bufnr,
-      silent = true,
-      nowait = true,
-      desc = "Codex: Clear input",
-    })
-  end
-
-  if maps.close then
-    vim.keymap.set("t", maps.close, function()
-      vim.schedule(function()
-        require("codex").close()
-      end)
-    end, {
-      buffer = bufnr,
-      silent = true,
-      nowait = true,
-      desc = "Codex: Close terminal",
-    })
-  end
-
-  if (window_type == "vsplit" or window_type == "hsplit") and maps.nav then
-    local nav = {
-      { maps.nav.left, "<C-\\><C-n><C-w>h", "Codex: Move to left window" },
-      { maps.nav.down, "<C-\\><C-n><C-w>j", "Codex: Move to below window" },
-      { maps.nav.up, "<C-\\><C-n><C-w>k", "Codex: Move to above window" },
-      { maps.nav.right, "<C-\\><C-n><C-w>l", "Codex: Move to right window" },
-    }
-
-    for _, map in ipairs(nav) do
-      if map[1] then
-        vim.keymap.set("t", map[1], map[2], {
-          buffer = bufnr,
-          silent = true,
-          nowait = true,
-          desc = map[3],
-        })
-      end
-    end
-  end
-end
-
 --- Spawn a terminal process in a new window and return its handle.
 ---@param cmd string
 ---@param args string[]
@@ -283,7 +210,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   handle.jobid = jobid
 
   vim.bo[bufnr].buflisted = false
-  set_terminal_keymaps(bufnr, term_config.keymaps, native_opts.window)
+  keymaps.apply_terminal(bufnr, term_config.keymaps)
 
   if focus then
     vim.cmd("startinsert")

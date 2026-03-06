@@ -47,17 +47,12 @@
 ---@field retry_interval_ms number
 ---@field grace_ms number
 
----@class codex.NavKeymapConfig
----@field left string|false
----@field down string|false
----@field up string|false
----@field right string|false
+---@class codex.TerminalKeymapBinding
+---@field mode string|string[]
+---@field action fun()
+---@field desc? string
 
----@class codex.TerminalKeymapConfig
----@field toggle string|false
----@field clear_input string|false
----@field close string|false
----@field nav codex.NavKeymapConfig|false
+---@alias codex.TerminalKeymapConfig table<string, codex.TerminalKeymapBinding>
 
 ---@class codex.TerminalConfig
 ---@field provider codex.ProviderName

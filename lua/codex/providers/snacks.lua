@@ -1,4 +1,5 @@
 local log = require("codex.logger")
+local keymaps = require("codex.keymaps")
 
 local M = {}
 
@@ -61,87 +62,6 @@ local function build_cmd(cmd, args)
   return table.concat(parts, " ")
 end
 
---- Register buffer-local terminal-mode keymaps for toggle, close, and navigation.
----@param bufnr integer
----@param keymaps codex.TerminalKeymapConfig|nil
----@param split_nav_enabled boolean
----@return nil
-local function set_terminal_keymaps(bufnr, keymaps, split_nav_enabled)
-  local maps = vim.tbl_deep_extend("force", {
-    toggle = "<C-c>",
-    clear_input = "<M-BS>",
-    close = false,
-    nav = {
-      left = "<C-h>",
-      down = "<C-j>",
-      up = "<C-k>",
-      right = "<C-l>",
-    },
-  }, keymaps or {})
-
-  if maps.toggle then
-    vim.keymap.set("t", maps.toggle, function()
-      require("codex").toggle()
-    end, {
-      buffer = bufnr,
-      silent = true,
-      nowait = true,
-      desc = "Codex: Toggle terminal",
-    })
-  end
-
-  if maps.clear_input then
-    vim.keymap.set("t", maps.clear_input, function()
-      require("codex").clear_input()
-    end, {
-      buffer = bufnr,
-      silent = true,
-      nowait = true,
-      desc = "Codex: Clear input",
-    })
-  end
-
-  if maps.close then
-    vim.keymap.set("t", maps.close, function()
-      vim.schedule(function()
-        require("codex").close()
-      end)
-    end, {
-      buffer = bufnr,
-      silent = true,
-      nowait = true,
-      desc = "Codex: Close terminal",
-    })
-  end
-
-  if split_nav_enabled and maps.nav then
-    local nav = {
-      { maps.nav.left, "<C-\\><C-n><C-w>h", "Codex: Move to left window" },
-      { maps.nav.down, "<C-\\><C-n><C-w>j", "Codex: Move to below window" },
-      { maps.nav.up, "<C-\\><C-n><C-w>k", "Codex: Move to above window" },
-      { maps.nav.right, "<C-\\><C-n><C-w>l", "Codex: Move to right window" },
-    }
-
-    for _, map in ipairs(nav) do
-      if map[1] then
-        vim.keymap.set("t", map[1], map[2], {
-          buffer = bufnr,
-          silent = true,
-          nowait = true,
-          desc = map[3],
-        })
-      end
-    end
-  end
-end
-
---- Return true when a snacks win.position value maps to split-style navigation.
----@param position string|nil
----@return boolean
-local function is_split_position(position)
-  return position == "left" or position == "right" or position == "top" or position == "bottom"
-end
-
 --- Open a terminal via snacks.terminal and return its handle.
 ---@param cmd string
 ---@param args string[]
@@ -184,11 +104,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   }
 
   if type(terminal.buf) == "number" then
-    local split_nav_enabled = false
-    if type(opts.win) == "table" then
-      split_nav_enabled = is_split_position(opts.win.position)
-    end
-    set_terminal_keymaps(terminal.buf, config.terminal.keymaps, split_nav_enabled)
+    keymaps.apply_terminal(terminal.buf, config.terminal.keymaps)
   end
 
   if on_exit and terminal.buf then

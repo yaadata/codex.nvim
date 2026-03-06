@@ -1,3 +1,25 @@
+local builtins = require("codex.keymaps").builtins
+
+local function default_terminal_keymaps()
+  return {
+    ["<C-c>"] = { mode = "t", action = builtins.toggle },
+    ["<M-BS>"] = { mode = "t", action = builtins.clear_input },
+    ["<C-h>"] = { mode = "t", action = builtins.nav_left },
+    ["<C-j>"] = { mode = "t", action = builtins.nav_down },
+    ["<C-k>"] = { mode = "t", action = builtins.nav_up },
+    ["<C-l>"] = { mode = "t", action = builtins.nav_right },
+  }
+end
+
+local function find_keymap(calls, lhs)
+  for _, call in ipairs(calls) do
+    if call.lhs == lhs then
+      return call
+    end
+  end
+  return nil
+end
+
 local function make_config(overrides)
   local base = {
     launch = {
@@ -10,16 +32,7 @@ local function make_config(overrides)
         retry_interval_ms = 50,
         grace_ms = 700,
       },
-      keymaps = {
-        toggle = "<C-c>",
-        close = false,
-        nav = {
-          left = "<C-h>",
-          down = "<C-j>",
-          up = "<C-k>",
-          right = "<C-l>",
-        },
-      },
+      keymaps = {},
       provider_opts = {
         native = {
           window = "vsplit",
@@ -342,57 +355,64 @@ describe("codex.providers.native", function()
     end)
   end)
 
-  it("maps terminal <C-c> to codex toggle for the terminal buffer", function()
+  it("does not register terminal keymaps by default", function()
     with_stubbed_native_env(function(state)
       local provider = require("codex.providers.native")
-      local cfg = make_config()
+      provider.open("codex", {}, {}, make_config(), false)
+      assert.equals(0, #state.keymap_set_calls)
+    end)
+  end)
+
+  it("registers configured builtin terminal keymaps", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          keymaps = default_terminal_keymaps(),
+        },
+      })
 
       provider.open("codex", {}, {}, cfg, false)
 
       assert.equals(6, #state.keymap_set_calls)
-      local toggle_map = state.keymap_set_calls[1]
-      local clear_map = state.keymap_set_calls[2]
+      local toggle_map = find_keymap(state.keymap_set_calls, "<C-c>")
+      local clear_map = find_keymap(state.keymap_set_calls, "<M-BS>")
+      local nav_left = find_keymap(state.keymap_set_calls, "<C-h>")
+
+      assert.is_not_nil(toggle_map)
       assert.equals("t", toggle_map.mode)
-      assert.equals("<C-c>", toggle_map.lhs)
       assert.is_function(toggle_map.rhs)
       assert.equals(2, toggle_map.opts.buffer)
       assert.is_true(toggle_map.opts.silent)
       assert.is_true(toggle_map.opts.nowait)
       assert.equals("Codex: Toggle terminal", toggle_map.opts.desc)
-      assert.equals("t", clear_map.mode)
-      assert.equals("<M-BS>", clear_map.lhs)
-      assert.is_function(clear_map.rhs)
+
+      assert.is_not_nil(clear_map)
       assert.equals("Codex: Clear input", clear_map.opts.desc)
+      assert.is_not_nil(nav_left)
+      assert.equals("Codex: Move to left window", nav_left.opts.desc)
     end)
   end)
 
-  it("maps configured terminal toggle and close keymaps", function()
+  it("registers custom terminal keymap keys for builtin actions", function()
     with_stubbed_native_env(function(state)
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
           keymaps = {
-            toggle = "<C-t>",
-            close = "<C-x>",
+            ["<C-t>"] = { mode = "t", action = builtins.toggle },
+            ["<C-x>"] = { mode = "t", action = builtins.close },
+            ["<M-BS>"] = { mode = "t", action = builtins.clear_input },
           },
         },
       })
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(7, #state.keymap_set_calls)
-      local toggle_map = state.keymap_set_calls[1]
-      local clear_map = state.keymap_set_calls[2]
-      local close_map = state.keymap_set_calls[3]
-      assert.equals("t", toggle_map.mode)
-      assert.equals("<C-t>", toggle_map.lhs)
-      assert.equals("Codex: Toggle terminal", toggle_map.opts.desc)
-      assert.equals("t", clear_map.mode)
-      assert.equals("<M-BS>", clear_map.lhs)
-      assert.equals("Codex: Clear input", clear_map.opts.desc)
-      assert.equals("t", close_map.mode)
-      assert.equals("<C-x>", close_map.lhs)
-      assert.equals("Codex: Close terminal", close_map.opts.desc)
+      assert.equals(3, #state.keymap_set_calls)
+      assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-t>"))
+      assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-x>"))
+      assert.is_not_nil(find_keymap(state.keymap_set_calls, "<M-BS>"))
     end)
   end)
 
@@ -408,15 +428,14 @@ describe("codex.providers.native", function()
       local cfg = make_config({
         terminal = {
           keymaps = {
-            toggle = "<C-t>",
-            close = "<C-x>",
+            ["<C-x>"] = { mode = "t", action = builtins.close },
           },
         },
       })
 
       provider.open("codex", {}, {}, cfg, false)
 
-      local close_map = state.keymap_set_calls[3]
+      local close_map = find_keymap(state.keymap_set_calls, "<C-x>")
       close_map.rhs()
 
       assert.equals(1, #scheduled)
@@ -441,9 +460,21 @@ describe("codex.providers.native", function()
       }
 
       local provider = require("codex.providers.native")
-      provider.open("codex", {}, {}, make_config(), false)
+      provider.open(
+        "codex",
+        {},
+        {},
+        make_config({
+          terminal = {
+            keymaps = {
+              ["<M-BS>"] = { mode = "t", action = builtins.clear_input },
+            },
+          },
+        }),
+        false
+      )
 
-      local clear_map = state.keymap_set_calls[2]
+      local clear_map = find_keymap(state.keymap_set_calls, "<M-BS>")
       clear_map.rhs()
 
       assert.equals(1, clear_input_calls)
@@ -454,53 +485,7 @@ describe("codex.providers.native", function()
     end)
   end)
 
-  it("registers directional split navigation keymaps for vsplit", function()
-    with_stubbed_native_env(function(state)
-      local provider = require("codex.providers.native")
-      local cfg = make_config({
-        terminal = {
-          provider_opts = {
-            native = {
-              window = "vsplit",
-            },
-          },
-        },
-      })
-
-      provider.open("codex", {}, {}, cfg, false)
-
-      assert.equals(6, #state.keymap_set_calls)
-      assert.equals("<C-h>", state.keymap_set_calls[3].lhs)
-      assert.equals("<C-\\><C-n><C-w>h", state.keymap_set_calls[3].rhs)
-      assert.equals("<C-j>", state.keymap_set_calls[4].lhs)
-      assert.equals("<C-\\><C-n><C-w>j", state.keymap_set_calls[4].rhs)
-      assert.equals("<C-k>", state.keymap_set_calls[5].lhs)
-      assert.equals("<C-\\><C-n><C-w>k", state.keymap_set_calls[5].rhs)
-      assert.equals("<C-l>", state.keymap_set_calls[6].lhs)
-      assert.equals("<C-\\><C-n><C-w>l", state.keymap_set_calls[6].rhs)
-    end)
-  end)
-
-  it("registers directional split navigation keymaps for hsplit", function()
-    with_stubbed_native_env(function(state)
-      local provider = require("codex.providers.native")
-      local cfg = make_config({
-        terminal = {
-          provider_opts = {
-            native = {
-              window = "hsplit",
-            },
-          },
-        },
-      })
-
-      provider.open("codex", {}, {}, cfg, false)
-
-      assert.equals(6, #state.keymap_set_calls)
-    end)
-  end)
-
-  it("does not register directional split navigation keymaps for float", function()
+  it("registers directional navigation keymaps even for float windows", function()
     with_stubbed_native_env(function(state)
       local provider = require("codex.providers.native")
       local cfg = make_config({
@@ -510,64 +495,22 @@ describe("codex.providers.native", function()
               window = "float",
             },
           },
-        },
-      })
-
-      provider.open("codex", {}, {}, cfg, false)
-
-      assert.equals(2, #state.keymap_set_calls)
-      assert.equals("<C-c>", state.keymap_set_calls[1].lhs)
-      assert.equals("<M-BS>", state.keymap_set_calls[2].lhs)
-
-      local forbidden = { ["<C-h>"] = true, ["<C-j>"] = true, ["<C-k>"] = true, ["<C-l>"] = true }
-      for _, map in ipairs(state.keymap_set_calls) do
-        assert.is_nil(forbidden[map.lhs])
-      end
-    end)
-  end)
-
-  it("uses configured directional split navigation keymaps", function()
-    with_stubbed_native_env(function(state)
-      local provider = require("codex.providers.native")
-      local cfg = make_config({
-        terminal = {
           keymaps = {
-            nav = {
-              left = "<A-h>",
-              down = "<A-j>",
-              up = "<A-k>",
-              right = "<A-l>",
-            },
+            ["<C-h>"] = { mode = "t", action = builtins.nav_left },
+            ["<C-j>"] = { mode = "t", action = builtins.nav_down },
+            ["<C-k>"] = { mode = "t", action = builtins.nav_up },
+            ["<C-l>"] = { mode = "t", action = builtins.nav_right },
           },
         },
       })
 
       provider.open("codex", {}, {}, cfg, false)
 
-      assert.equals(6, #state.keymap_set_calls)
-      assert.equals("<A-h>", state.keymap_set_calls[3].lhs)
-      assert.equals("<A-j>", state.keymap_set_calls[4].lhs)
-      assert.equals("<A-k>", state.keymap_set_calls[5].lhs)
-      assert.equals("<A-l>", state.keymap_set_calls[6].lhs)
-    end)
-  end)
-
-  it("allows disabling directional split navigation keymaps", function()
-    with_stubbed_native_env(function(state)
-      local provider = require("codex.providers.native")
-      local cfg = make_config({
-        terminal = {
-          keymaps = {
-            nav = false,
-          },
-        },
-      })
-
-      provider.open("codex", {}, {}, cfg, false)
-
-      assert.equals(2, #state.keymap_set_calls)
-      assert.equals("<C-c>", state.keymap_set_calls[1].lhs)
-      assert.equals("<M-BS>", state.keymap_set_calls[2].lhs)
+      assert.equals(4, #state.keymap_set_calls)
+      assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-h>"))
+      assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-j>"))
+      assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-k>"))
+      assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-l>"))
     end)
   end)
 

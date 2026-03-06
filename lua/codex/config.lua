@@ -1,4 +1,5 @@
 local M = {}
+local keymaps = require("codex.keymaps")
 
 ---@type codex.Config
 M.defaults = {
@@ -18,15 +19,7 @@ M.defaults = {
       grace_ms = 700,
     },
     keymaps = {
-      toggle = "<C-c>",
-      clear_input = "<M-BS>",
-      close = false,
-      nav = {
-        left = "<C-h>",
-        down = "<C-j>",
-        up = "<C-k>",
-        right = "<C-l>",
-      },
+      -- User-defined terminal-local keymaps (empty by default).
     },
     provider_opts = {
       native = {
@@ -60,15 +53,7 @@ local valid_providers = { auto = true, snacks = true, native = true }
 local valid_windows = { vsplit = true, hsplit = true, float = true }
 local valid_provider_opt_keys = { native = true, snacks = true }
 local valid_native_provider_opt_keys = { window = true, vsplit = true, hsplit = true, float = true }
-local valid_terminal_keymap_actions = {
-  toggle = true,
-  clear_input = true,
-  close = true,
-  nav = true,
-}
-local valid_terminal_keymap_action_list = "toggle, clear_input, close, nav"
-local valid_nav_keymap_actions = { left = true, down = true, up = true, right = true }
-local valid_nav_keymap_action_list = "left, down, up, right"
+local valid_terminal_keymap_binding_keys = { mode = true, action = true, desc = true }
 local valid_log_levels = { debug = true, info = true, warn = true, error = true }
 local valid_launch_keys = {
   cmd = true,
@@ -90,6 +75,67 @@ local function collect_unknown_keys(source, known, prefix, unknown)
   for key in pairs(source) do
     if known[key] == nil then
       table.insert(unknown, prefix .. "." .. key)
+    end
+  end
+end
+
+---@param config codex.Config
+---@return nil
+local function validate_terminal_keymaps(config)
+  for lhs, binding in pairs(config.terminal.keymaps) do
+    if type(lhs) ~= "string" or lhs == "" then
+      error("codex: terminal.keymaps keys must be non-empty strings")
+    end
+
+    if type(binding) ~= "table" then
+      error(
+        string.format(
+          "codex: terminal.keymaps[%q] must be a table with fields: mode, action, desc?",
+          lhs
+        )
+      )
+    end
+
+    local binding_prefix = string.format("terminal.keymaps[%q]", lhs)
+    local unknown_binding_keys = {}
+    collect_unknown_keys(
+      binding,
+      valid_terminal_keymap_binding_keys,
+      binding_prefix,
+      unknown_binding_keys
+    )
+    if #unknown_binding_keys > 0 then
+      table.sort(unknown_binding_keys)
+      error("codex: unknown terminal keymap key(s): " .. table.concat(unknown_binding_keys, ", "))
+    end
+
+    vim.validate({
+      [binding_prefix .. ".action"] = { binding.action, "function" },
+    })
+
+    if type(binding.desc) ~= "string" and binding.desc ~= nil then
+      error(string.format("codex: %s.desc must be a string or nil", binding_prefix))
+    end
+
+    local mode_type = type(binding.mode)
+    if mode_type ~= "string" and mode_type ~= "table" then
+      error(string.format("codex: %s.mode must be a string or list of strings", binding_prefix))
+    end
+
+    if mode_type == "table" then
+      if vim.tbl_isempty(binding.mode) then
+        error(string.format("codex: %s.mode must not be an empty list", binding_prefix))
+      end
+
+      for index, mode in ipairs(binding.mode) do
+        if type(mode) ~= "string" then
+          error(string.format("codex: %s.mode[%d] must be a string", binding_prefix, index))
+        end
+      end
+    end
+
+    if binding.desc == nil and not keymaps.is_builtin_action(binding.action) then
+      error(string.format("codex: %s.desc is required for custom actions", binding_prefix))
     end
   end
 end
@@ -213,45 +259,7 @@ function M.validate(config)
   })
   local native_opts = config.terminal.provider_opts.native
 
-  for action, lhs in pairs(config.terminal.keymaps) do
-    if not valid_terminal_keymap_actions[action] then
-      error(
-        string.format(
-          "codex: invalid terminal.keymaps action %q, expected one of: %s",
-          action,
-          valid_terminal_keymap_action_list
-        )
-      )
-    end
-
-    if action == "nav" then
-      if lhs ~= false and type(lhs) ~= "table" then
-        error("codex: terminal.keymaps.nav must be a table or false")
-      end
-
-      if type(lhs) == "table" then
-        for direction, direction_lhs in pairs(lhs) do
-          if not valid_nav_keymap_actions[direction] then
-            error(
-              string.format(
-                "codex: invalid terminal.keymaps.nav action %q, expected one of: %s",
-                direction,
-                valid_nav_keymap_action_list
-              )
-            )
-          end
-
-          if direction_lhs ~= false and type(direction_lhs) ~= "string" then
-            error(
-              string.format("codex: terminal.keymaps.nav.%s must be a string or false", direction)
-            )
-          end
-        end
-      end
-    elseif lhs ~= false and type(lhs) ~= "string" then
-      error(string.format("codex: terminal.keymaps.%s must be a string or false", action))
-    end
-  end
+  validate_terminal_keymaps(config)
 
   if not valid_providers[config.terminal.provider] then
     error(

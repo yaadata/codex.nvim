@@ -100,17 +100,7 @@ opts = {
       retry_interval_ms = 50, -- retry interval while waiting for startup readiness
       grace_ms = 700, -- minimum delay after terminal open before first send
     },
-    keymaps = {
-      toggle = "<C-c>", -- terminal-mode toggle for Codex window
-      clear_input = "<M-BS>", -- clear the current terminal input line
-      close = false, -- set a string (e.g. "<C-x>") to close Codex session
-      nav = {
-        left = "<C-h>", -- split windows only; set false to disable
-        down = "<C-j>", -- split windows only; set false to disable
-        up = "<C-k>", -- split windows only; set false to disable
-        right = "<C-l>", -- split windows only; set false to disable
-      },
-    },
+    keymaps = {}, -- terminal-local keymaps are opt-in; no defaults are registered
   },
 }
 ```
@@ -289,6 +279,8 @@ Terminal-local keymaps inside the Codex terminal buffer are configured
 separately via `terminal.keymaps`:
 
 ```lua
+local km = require("codex.keymaps").builtins
+
 require("codex").setup({
   log = {
     level = "warn",
@@ -296,28 +288,26 @@ require("codex").setup({
   },
   terminal = {
     keymaps = {
-      toggle = "<C-c>",
-      clear_input = "<M-BS>",
-      close = "<C-x>",
-      nav = {
-        left = "<A-h>",
-        down = "<A-j>",
-        up = "<A-k>",
-        right = "<A-l>",
-      },
+      ["<C-c>"] = { mode = { "t", "n" }, action = km.toggle },
+      ["<M-BS>"] = { mode = { "t", "n" }, action = km.clear_input },
+      ["<C-x>"] = { mode = { "t", "n" }, action = km.close },
+      ["<A-h>"] = { mode = { "t", "n" }, action = km.nav_left },
+      ["<A-j>"] = { mode = { "t", "n" }, action = km.nav_down },
+      ["<A-k>"] = { mode = { "t", "n" }, action = km.nav_up },
+      ["<A-l>"] = { mode = { "t", "n" }, action = km.nav_right },
     },
   },
 })
 ```
 
-`terminal.keymaps.clear_input` clears the current terminal input line.
-`terminal.keymaps.close` triggers an intentional Codex session close.
+Each entry uses `{ mode, action, desc? }`, where:
+
+- `mode` is a string or list of modes accepted by `vim.keymap.set`.
+- `action` is a function (for builtins, use `require("codex.keymaps").builtins`).
+- `desc` is optional for builtin actions (auto-filled), required for custom actions.
+
 `terminal.auto_close` controls whether provider windows auto-close only after
-the terminal process exits. `terminal.keymaps.nav` is applied only for split
-windows: `provider_opts.native.window = "vsplit"|"hsplit"` for native, or
-`provider_opts.snacks.win.position = "left"|"right"|"top"|"bottom"` for snacks.
-Set `terminal.keymaps.nav = false` to disable all navigation keymaps, or set
-individual directions to `false`.
+the terminal process exits.
 
 ## Lua API
 
@@ -329,6 +319,8 @@ individual directions to `false`.
 - `require("codex").focus()` focus active session.
 - `require("codex").send(text)` send raw text.
 - `require("codex").clear_input()` clear current prompt input.
+- `require("codex.keymaps").builtins` builtin terminal keymap actions:
+  `toggle`, `clear_input`, `close`, `nav_left`, `nav_down`, `nav_up`, `nav_right`.
 - `require("codex").send_command(slash_cmd)` send slash command text.
 - `require("codex").set_model()` send `/model`.
 - `require("codex").show_status()` send `/status`.
