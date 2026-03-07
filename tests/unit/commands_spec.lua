@@ -25,8 +25,10 @@ describe("codex.nvim command registration", function()
 
   it("registers Codex phase 1/2/3/4 commands with expected options", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]ct     =========
       require("codex.nvim.commands").register()
 
+      -- ========= [A]ssert  =========
       assert.is_not_nil(registered.Codex)
       assert.is_not_nil(registered.CodexFocus)
       assert.is_not_nil(registered.CodexClose)
@@ -121,6 +123,7 @@ describe("codex.nvim command registration", function()
 
   it("dispatches :Codex to toggle", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local calls = { toggle = 0, open = {} }
 
       package.loaded["codex"] = {
@@ -131,10 +134,12 @@ describe("codex.nvim command registration", function()
           table.insert(calls.open, focus)
         end,
       }
-
       require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
       registered.Codex.callback({ bang = false })
 
+      -- ========= [A]ssert  =========
       assert.equals(1, calls.toggle)
       assert.equals(0, #calls.open)
     end)
@@ -142,6 +147,7 @@ describe("codex.nvim command registration", function()
 
   it("dispatches :Codex! to open(true)", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local calls = { toggle = 0, open = {} }
 
       package.loaded["codex"] = {
@@ -154,8 +160,10 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+      -- ========= [A]ct     =========
       registered.Codex.callback({ bang = true })
 
+      -- ========= [A]ssert  =========
       assert.equals(0, calls.toggle)
       assert.equals(1, #calls.open)
       assert.is_true(calls.open[1])
@@ -164,6 +172,7 @@ describe("codex.nvim command registration", function()
 
   it("dispatches :CodexFocus to focus", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local focus_calls = 0
 
       package.loaded["codex"] = {
@@ -173,14 +182,18 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
       registered.CodexFocus.callback()
 
+      -- ========= [A]ssert  =========
       assert.equals(1, focus_calls)
     end)
   end)
 
   it("dispatches :CodexClose to close", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local close_calls = 0
 
       package.loaded["codex"] = {
@@ -190,14 +203,18 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
       registered.CodexClose.callback()
 
+      -- ========= [A]ssert  =========
       assert.equals(1, close_calls)
     end)
   end)
 
   it("dispatches :CodexClearInput to clear_input", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local clear_input_calls = 0
 
       package.loaded["codex"] = {
@@ -207,14 +224,18 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
       registered.CodexClearInput.callback()
 
+      -- ========= [A]ssert  =========
       assert.equals(1, clear_input_calls)
     end)
   end)
 
   it("dispatches :CodexSend with range options", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local calls = {}
 
       package.loaded["codex"] = {
@@ -224,8 +245,11 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
       registered.CodexSend.callback({ line1 = 2, line2 = 6 })
 
+      -- ========= [A]ssert  =========
       assert.equals(1, #calls)
       assert.same({ line1 = 2, line2 = 6 }, calls[1])
     end)
@@ -233,6 +257,7 @@ describe("codex.nvim command registration", function()
 
   it("dispatches :CodexSend with visual_mode when range matches visual marks", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local original_get_current_buf = vim.api.nvim_get_current_buf
       local original_get_mark = vim.api.nvim_buf_get_mark
       local original_visualmode = vim.fn.visualmode
@@ -261,12 +286,12 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+      -- ========= [A]ct     =========
       registered.CodexSend.callback({ line1 = 2, line2 = 6, range = 2 })
-
       vim.api.nvim_get_current_buf = original_get_current_buf
       vim.api.nvim_buf_get_mark = original_get_mark
       vim.fn.visualmode = original_visualmode
-
+      -- ========= [A]ssert  =========
       assert.equals(1, #calls)
       assert.same({ line1 = 2, line2 = 6, visual_mode = string.char(22) }, calls[1])
     end)
@@ -274,6 +299,7 @@ describe("codex.nvim command registration", function()
 
   it("dispatches :CodexAddBuffer to send_buffer", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local calls = 0
 
       package.loaded["codex"] = {
@@ -283,14 +309,18 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
       registered.CodexAddBuffer.callback()
 
+      -- ========= [A]ssert  =========
       assert.equals(1, calls)
     end)
   end)
 
   it("dispatches :CodexMentionFile with explicit argument", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local paths = {}
 
       package.loaded["codex"] = {
@@ -300,8 +330,11 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
       registered.CodexMentionFile.callback({ args = "/tmp/test.lua" })
 
+      -- ========= [A]ssert  =========
       assert.equals(1, #paths)
       assert.equals("/tmp/test.lua", paths[1])
     end)
@@ -309,6 +342,7 @@ describe("codex.nvim command registration", function()
 
   it("dispatches :CodexMentionFile without argument as nil", function()
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local called = false
       local received_path = "unset"
 
@@ -320,14 +354,20 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
       registered.CodexMentionFile.callback({ args = "" })
 
+      -- ========= [A]ssert  =========
       assert.is_true(called)
       assert.is_nil(received_path)
     end)
   end)
 
   it("dispatches :CodexMentionDirectory with explicit argument", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local paths = {}
 
@@ -346,6 +386,9 @@ describe("codex.nvim command registration", function()
   end)
 
   it("dispatches :CodexMentionDirectory without argument as nil", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local called = false
       local received_path = "unset"
@@ -366,6 +409,9 @@ describe("codex.nvim command registration", function()
   end)
 
   it("dispatches :CodexResume and :CodexResume! with expected last flag", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local calls = {}
 
@@ -386,6 +432,9 @@ describe("codex.nvim command registration", function()
   end)
 
   it("dispatches :CodexModel to set_model", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local calls = 0
 
@@ -403,6 +452,9 @@ describe("codex.nvim command registration", function()
   end)
 
   it("dispatches :CodexStatus to show_status", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local calls = 0
 
@@ -420,6 +472,9 @@ describe("codex.nvim command registration", function()
   end)
 
   it("dispatches :CodexPermissions to show_permissions", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local calls = 0
 
@@ -437,6 +492,9 @@ describe("codex.nvim command registration", function()
   end)
 
   it("dispatches :CodexCompact to compact", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local calls = 0
 
@@ -454,6 +512,9 @@ describe("codex.nvim command registration", function()
   end)
 
   it("dispatches :CodexReview without args as nil instructions", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local called = 0
       local received = "unset"
@@ -474,6 +535,9 @@ describe("codex.nvim command registration", function()
   end)
 
   it("dispatches :CodexReview with args to review(instructions)", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local calls = {}
 
@@ -492,6 +556,9 @@ describe("codex.nvim command registration", function()
   end)
 
   it("dispatches :CodexDiff to show_diff", function()
+    -- ========= [A]rrange =========
+    -- ========= [A]ct     =========
+    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local calls = 0
 

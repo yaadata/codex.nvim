@@ -9,11 +9,14 @@ describe("codex.init public api mention_directory", function()
   end)
 
   it("mention_directory sends /mention with explicit directory path", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.mention_directory("/tmp/")
     local mention_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/mention ../../tmp/"
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
@@ -31,11 +34,14 @@ describe("codex.init public api mention_directory", function()
   it(
     "mention_directory appends trailing separator when explicit directory path omits it",
     function()
+      -- ========= [A]rrange =========
       local env = setup_with_deps()
 
+      -- ========= [A]ct     =========
       local ok = env.codex.mention_directory("/tmp")
       local mention_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/mention ../../tmp/"
 
+      -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.equals("../../tmp/", env.formatter.mention_paths[1])
       assert.equals(1, #env.provider.send_calls)
@@ -59,6 +65,7 @@ describe("codex.init public api mention_directory", function()
   end)
 
   it("mention_directory returns error when path is unavailable", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps({
       _deps = {
         vim = vim.tbl_deep_extend("force", make_fake_vim(), {
@@ -77,8 +84,10 @@ describe("codex.init public api mention_directory", function()
       },
     })
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.mention_directory(nil)
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals("current buffer has no directory path", err)
     assert.equals(0, #env.provider.send_calls)
@@ -89,6 +98,7 @@ describe("codex.init public api mention_directory", function()
   end)
 
   it("mention_directory restores previously typed prompt text after submit", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -96,8 +106,10 @@ describe("codex.init public api mention_directory", function()
     end
     env.fake_vim._set_buf_lines(77, { "> asdfadsfadsf" })
 
+    -- ========= [A]ct     =========
     local ok = env.codex.mention_directory("/tmp/")
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.send_calls)
     assert.equals(1, #env.fake_vim._deferred)
@@ -112,6 +124,7 @@ describe("codex.init public api mention_directory", function()
   end)
 
   it("mention_directory runs post_execute after deferred restore completes", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -120,12 +133,14 @@ describe("codex.init public api mention_directory", function()
     env.fake_vim._set_buf_lines(77, { "> keep me" })
     local callback_calls = {}
 
+    -- ========= [A]ct     =========
     local ok = env.codex.mention_directory("/tmp/", {
       post_execute = function(callback_ok, callback_err)
         table.insert(callback_calls, { ok = callback_ok, err = callback_err })
       end,
     })
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(0, #callback_calls)
 
@@ -139,15 +154,18 @@ describe("codex.init public api mention_directory", function()
   end)
 
   it("mention_directory submits via channel when post_execute is present", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     local callback_calls = {}
 
+    -- ========= [A]ct     =========
     local ok = env.codex.mention_directory("/tmp/", {
       post_execute = function(callback_ok, callback_err)
         table.insert(callback_calls, { ok = callback_ok, err = callback_err })
       end,
     })
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.send_calls)
     assert.equals(1, #env.fake_vim._deferred)
@@ -163,6 +181,7 @@ describe("codex.init public api mention_directory", function()
   end)
 
   it("mention_directory runs post_execute when path resolution fails", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps({
       _deps = {
         vim = vim.tbl_deep_extend("force", make_fake_vim(), {
@@ -182,12 +201,14 @@ describe("codex.init public api mention_directory", function()
     })
     local callback_calls = {}
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.mention_directory(nil, {
       post_execute = function(callback_ok, callback_err)
         table.insert(callback_calls, { ok = callback_ok, err = callback_err })
       end,
     })
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals("current buffer has no directory path", err)
     assert.equals(1, #callback_calls)
@@ -196,6 +217,7 @@ describe("codex.init public api mention_directory", function()
   end)
 
   it("mention_directory runs post_execute when initial mention send fails", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.provider.send_fn = function(_, text)
       if text:match("/mention ") then
@@ -205,12 +227,14 @@ describe("codex.init public api mention_directory", function()
     end
     local callback_calls = {}
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.mention_directory("/tmp/", {
       post_execute = function(callback_ok, callback_err)
         table.insert(callback_calls, { ok = callback_ok, err = callback_err })
       end,
     })
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals("boom", err)
     assert.equals(1, #callback_calls)
@@ -219,6 +243,7 @@ describe("codex.init public api mention_directory", function()
   end)
 
   it("mention_directory returns provider send errors with command context", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.provider.send_fn = function(_, text)
       if text:match("/mention ") then
@@ -227,8 +252,10 @@ describe("codex.init public api mention_directory", function()
       return true
     end
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.mention_directory("/tmp/")
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals("boom", err)
     assert.matches("failed to send command /mention: boom", env.logger.errors[1])

@@ -26,27 +26,43 @@ describe("provider contract", function()
 
       for _, method in ipairs(required_methods) do
         it("exports " .. method .. " as a function", function()
-          assert.is_function(provider[method], entry.name .. " is missing " .. method)
+          -- ========= [A]ct     =========
+          local exported = provider[method]
+
+          -- ========= [A]ssert  =========
+          assert.is_function(exported, entry.name .. " is missing " .. method)
         end)
       end
 
       it("is_available returns a boolean", function()
+        -- ========= [A]ct     =========
         local result = provider.is_available()
+
+        -- ========= [A]ssert  =========
         assert.is_boolean(result)
       end)
 
       it("is_alive returns a boolean for nil handle", function()
+        -- ========= [A]ct     =========
         local result = provider.is_alive(nil)
+
+        -- ========= [A]ssert  =========
         assert.is_boolean(result)
       end)
 
       it("is_ready returns a boolean for nil handle", function()
+        -- ========= [A]ct     =========
         local result = provider.is_ready(nil)
+
+        -- ========= [A]ssert  =========
         assert.is_boolean(result)
       end)
 
       it("get_bufnr returns nil for nil handle", function()
+        -- ========= [A]ct     =========
         local result = provider.get_bufnr(nil)
+
+        -- ========= [A]ssert  =========
         assert.is_nil(result)
       end)
     end)

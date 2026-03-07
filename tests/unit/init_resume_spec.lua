@@ -7,6 +7,7 @@ describe("codex.init public api resume", function()
   end)
 
   it("wrapper commands do not warn for symbol-only prompt markers", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -15,8 +16,10 @@ describe("codex.init public api resume", function()
     env.fake_vim._set_buf_lines(77, { ">> " })
     env.fake_vim._set_buf_cursor(77, 1702, 1, 0)
 
+    -- ========= [A]ct     =========
     local ok = env.codex.resume()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(0, #env.fake_vim._setreg_calls)
     assert.equals(0, #env.logger.warns)
@@ -26,14 +29,17 @@ describe("codex.init public api resume", function()
   end)
 
   it("resume warns when capture is unavailable for an alive-session buffer", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
       return nil
     end
 
+    -- ========= [A]ct     =========
     local ok = env.codex.resume()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(0, #env.fake_vim._setreg_calls)
     assert.equals(1, #env.logger.warns)
@@ -44,12 +50,15 @@ describe("codex.init public api resume", function()
   end)
 
   it("resume sends /resume when an active session exists", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     local active_handle = env.store.get_active().handle
 
+    -- ========= [A]ct     =========
     local ok = env.codex.resume()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.equals(3, #env.provider.focus_calls)
@@ -65,6 +74,7 @@ describe("codex.init public api resume", function()
   end)
 
   it("resume copies existing prompt input to unnamed register before dispatching", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -72,8 +82,10 @@ describe("codex.init public api resume", function()
     end
     env.fake_vim._set_buf_lines(77, { "> asdf" })
 
+    -- ========= [A]ct     =========
     local ok = env.codex.resume()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.fake_vim._setreg_calls)
     assert.equals('"', env.fake_vim._setreg_calls[1].reg)
@@ -87,10 +99,13 @@ describe("codex.init public api resume", function()
   end)
 
   it("resume opens `codex resume` when no active session exists", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.resume()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.same({ "resume" }, env.provider.open_calls[1].args)
@@ -99,10 +114,13 @@ describe("codex.init public api resume", function()
   end)
 
   it("resume opens `codex resume --last` when last=true and no active session exists", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.resume({ last = true })
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.same({ "resume", "--last" }, env.provider.open_calls[1].args)
@@ -110,11 +128,14 @@ describe("codex.init public api resume", function()
   end)
 
   it("resume ignores last flag when dispatching to active session slash command", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
 
+    -- ========= [A]ct     =========
     local ok = env.codex.resume({ last = true })
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/resume", env.provider.send_calls[1].text)
@@ -122,13 +143,16 @@ describe("codex.init public api resume", function()
   end)
 
   it("resume closes stale session before opening resume process", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     local stale_handle = env.store.get_active().handle
     stale_handle.alive = false
 
+    -- ========= [A]ct     =========
     local ok = env.codex.resume()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(2, #env.provider.open_calls)
     assert.equals(1, #env.provider.close_calls)

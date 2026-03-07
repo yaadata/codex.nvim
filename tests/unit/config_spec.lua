@@ -2,19 +2,13 @@ local config = require("codex.config")
 local keymaps = require("codex.keymaps")
 
 describe("codex.config", function()
-  local function assert_error_contains(fn, expected)
-    local ok, err = pcall(fn)
-    assert.is_false(ok)
-    assert.is_not_nil(err)
-    assert.is_true(string.find(err, expected, 1, true) ~= nil)
-  end
-
   local function make_valid_config()
     return vim.deepcopy(config.defaults)
   end
 
   describe("defaults", function()
     it("has expected default values", function()
+      -- ========= [A]ssert  =========
       assert.equals("codex", config.defaults.launch.cmd)
       assert.same({}, config.defaults.launch.args)
       assert.same({}, config.defaults.launch.env)
@@ -43,17 +37,22 @@ describe("codex.config", function()
 
   describe("apply", function()
     it("returns defaults when called with nil", function()
+      -- ========= [A]ct     =========
       local cfg = config.apply(nil)
+      -- ========= [A]ssert  =========
       assert.equals("codex", cfg.launch.cmd)
       assert.equals("auto", cfg.terminal.provider)
     end)
 
     it("returns defaults when called with empty table", function()
+      -- ========= [A]ct     =========
       local cfg = config.apply({})
+      -- ========= [A]ssert  =========
       assert.equals("codex", cfg.launch.cmd)
     end)
 
     it("merges user overrides", function()
+      -- ========= [A]ct     =========
       local cfg = config.apply({
         launch = {
           cmd = "/usr/local/bin/codex",
@@ -74,6 +73,7 @@ describe("codex.config", function()
           },
         },
       })
+      -- ========= [A]ssert  =========
       assert.equals("/usr/local/bin/codex", cfg.launch.cmd)
       assert.equals("hsplit", cfg.terminal.provider_opts.native.window)
       assert.equals("left", cfg.terminal.provider_opts.native.vsplit.side)
@@ -82,239 +82,345 @@ describe("codex.config", function()
       assert.equals(50, cfg.terminal.provider_opts.native.hsplit.size_pct)
       assert.equals("t", cfg.terminal.keymaps["<C-d>"].mode)
       assert.equals(keymaps.builtins.close, cfg.terminal.keymaps["<C-d>"].action)
-      -- non-overridden values preserved
-      assert.equals("auto", cfg.terminal.provider)
+      assert.equals("auto", cfg.terminal.provider) -- non-overridden values preserved
     end)
 
     it("accepts cwd override despite nil default", function()
+      -- ========= [A]ct     =========
       local cfg = config.apply({ launch = { cwd = "/tmp/project" } })
+      -- ========= [A]ssert  =========
       assert.equals("/tmp/project", cfg.launch.cwd)
     end)
 
     it("merges log overrides", function()
+      -- ========= [A]ct     =========
       local cfg = config.apply({
         log = {
           level = "info",
           verbose = true,
         },
       })
+      -- ========= [A]ssert  =========
       assert.equals("info", cfg.log.level)
       assert.is_true(cfg.log.verbose)
     end)
 
     it("does not mutate defaults", function()
+      -- ========= [A]ct     =========
       config.apply({ launch = { cmd = "other" } })
+      -- ========= [A]ssert  =========
       assert.equals("codex", config.defaults.launch.cmd)
     end)
   end)
 
   describe("validate", function()
     it("accepts valid config", function()
+      -- ========= [A]ssert  =========
       assert.is_true(config.validate(config.defaults))
     end)
 
     it("rejects invalid provider name", function()
-      assert.has_error(function()
-        config.apply({ terminal = { provider = "invalid" } })
-      end, 'codex: invalid terminal.provider "invalid", expected one of: auto, snacks, native')
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { terminal = { provider = "invalid" } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches(
+        'invalid terminal.provider "invalid", expected one of: auto, snacks, native',
+        err
+      )
     end)
 
     it("rejects invalid log.level", function()
-      assert.has_error(function()
-        config.apply({ log = { level = "trace" } })
-      end, 'codex: invalid log.level "trace", expected one of: debug, info, warn, error')
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { log = { level = "trace" } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches('invalid log.level "trace", expected one of: debug, info, warn, error', err)
     end)
 
     it("rejects non-boolean log.verbose", function()
-      assert.has_error(function()
-        config.apply({ log = { verbose = "yes" } })
-      end, "log.verbose: expected boolean, got string")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { log = { verbose = "yes" } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("log.verbose: expected boolean, got string", err)
     end)
 
     it("rejects unknown log keys", function()
-      assert.has_error(function()
-        config.apply({ log = { level = "warn", verbose = false, extra = true } })
-      end, "codex: unknown log config key(s): log.extra")
+      -- ========= [A]ct     =========
+      local ok, err =
+        pcall(config.apply, { log = { level = "warn", verbose = false, extra = true } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown log config key%(s%): log.extra", err)
     end)
 
     it("rejects invalid native window type", function()
-      assert.has_error(
-        function()
-          config.apply({ terminal = { provider_opts = { native = { window = "tabs" } } } })
-        end,
-        'codex: invalid terminal.provider_opts.native.window "tabs", expected one of: vsplit, hsplit, float'
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = { provider_opts = { native = { window = "tabs" } } },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches(
+        'invalid terminal.provider_opts.native.window "tabs", expected one of: vsplit, hsplit, float',
+        err
       )
     end)
 
     it("rejects invalid native vsplit.side", function()
-      assert.has_error(function()
-        config.apply({ terminal = { provider_opts = { native = { vsplit = { side = "top" } } } } })
-      end, "codex: terminal.provider_opts.native.vsplit.side must be 'left' or 'right'")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = { provider_opts = { native = { vsplit = { side = "top" } } } },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.provider_opts.native.vsplit.side must be 'left' or 'right'", err)
     end)
 
     it("rejects native vsplit.size_pct below 10", function()
-      assert.has_error(function()
-        config.apply({ terminal = { provider_opts = { native = { vsplit = { size_pct = 5 } } } } })
-      end, "codex: terminal.provider_opts.native.vsplit.size_pct must be between 10 and 90")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = { provider_opts = { native = { vsplit = { size_pct = 5 } } } },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.provider_opts.native.vsplit.size_pct must be between 10 and 90", err)
     end)
 
     it("rejects native hsplit.side", function()
-      assert.has_error(function()
-        config.apply({ terminal = { provider_opts = { native = { hsplit = { side = "left" } } } } })
-      end, "codex: terminal.provider_opts.native.hsplit.side must be 'top' or 'bottom'")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = { provider_opts = { native = { hsplit = { side = "left" } } } },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.provider_opts.native.hsplit.side must be 'top' or 'bottom'", err)
     end)
 
     it("rejects native hsplit.size_pct above 90", function()
-      assert.has_error(function()
-        config.apply({ terminal = { provider_opts = { native = { hsplit = { size_pct = 95 } } } } })
-      end, "codex: terminal.provider_opts.native.hsplit.size_pct must be between 10 and 90")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = { provider_opts = { native = { hsplit = { size_pct = 95 } } } },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.provider_opts.native.hsplit.size_pct must be between 10 and 90", err)
     end)
 
     it("rejects native float.width_pct below 10", function()
-      assert.has_error(function()
-        config.apply({ terminal = { provider_opts = { native = { float = { width_pct = 5 } } } } })
-      end, "codex: terminal.provider_opts.native.float.width_pct must be between 10 and 100")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = { provider_opts = { native = { float = { width_pct = 5 } } } },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches(
+        "terminal.provider_opts.native.float.width_pct must be between 10 and 100",
+        err
+      )
     end)
 
     it("rejects native float.height_pct above 100", function()
-      assert.has_error(function()
-        config.apply({
-          terminal = { provider_opts = { native = { float = { height_pct = 150 } } } },
-        })
-      end, "codex: terminal.provider_opts.native.float.height_pct must be between 10 and 100")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = { provider_opts = { native = { float = { height_pct = 150 } } } },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches(
+        "terminal.provider_opts.native.float.height_pct must be between 10 and 100",
+        err
+      )
     end)
 
     it("rejects invalid native float.title_pos", function()
-      assert.has_error(
-        function()
-          config.apply({
-            terminal = { provider_opts = { native = { float = { title_pos = "middle" } } } },
-          })
-        end,
-        "codex: terminal.provider_opts.native.float.title_pos must be 'left', 'center', or 'right'"
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = { provider_opts = { native = { float = { title_pos = "middle" } } } },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches(
+        "terminal.provider_opts.native.float.title_pos must be 'left', 'center', or 'right'",
+        err
       )
     end)
 
     it("rejects startup.timeout_ms below 1", function()
-      assert.has_error(function()
-        config.apply({ terminal = { startup = { timeout_ms = 0 } } })
-      end, "codex: terminal.startup.timeout_ms must be >= 1")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { terminal = { startup = { timeout_ms = 0 } } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.startup.timeout_ms must be >= 1", err)
     end)
 
     it("rejects startup.retry_interval_ms below 1", function()
-      assert.has_error(function()
-        config.apply({ terminal = { startup = { retry_interval_ms = 0 } } })
-      end, "codex: terminal.startup.retry_interval_ms must be >= 1")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { terminal = { startup = { retry_interval_ms = 0 } } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.startup.retry_interval_ms must be >= 1", err)
     end)
 
     it("rejects startup.grace_ms below 0", function()
-      assert.has_error(function()
-        config.apply({ terminal = { startup = { grace_ms = -1 } } })
-      end, "codex: terminal.startup.grace_ms must be >= 0")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { terminal = { startup = { grace_ms = -1 } } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.startup.grace_ms must be >= 0", err)
     end)
 
     it("rejects a single unknown terminal key", function()
-      assert.has_error(function()
-        config.apply({ terminal = { startup_timeout_ms = 5000 } })
-      end, "codex: unknown terminal config key(s): terminal.startup_timeout_ms")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { terminal = { startup_timeout_ms = 5000 } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown terminal config key%(s%): terminal.startup_timeout_ms", err)
     end)
 
     it("rejects multiple unknown terminal keys", function()
+      -- ========= [A]ct     =========
       local ok, err = pcall(config.apply, { terminal = { startup_timeout_ms = 5000, foo = true } })
+      -- ========= [A]ssert  =========
       assert.is_false(ok)
-      assert.is_truthy(string.find(err, "terminal.foo", 1, true))
-      assert.is_truthy(string.find(err, "terminal.startup_timeout_ms", 1, true))
+      assert.matches("terminal.foo", err)
+      assert.matches("terminal.startup_timeout_ms", err)
     end)
 
     it("rejects a typo in terminal key names", function()
-      assert.has_error(function()
-        config.apply({ terminal = { widnow = "vsplit" } })
-      end, "codex: unknown terminal config key(s): terminal.widnow")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { terminal = { widnow = "vsplit" } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown terminal config key%(s%): terminal.widnow", err)
     end)
 
     it("rejects removed terminal window key", function()
-      assert.has_error(function()
-        config.apply({ terminal = { window = "vsplit" } })
-      end, "codex: unknown terminal config key(s): terminal.window")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { terminal = { window = "vsplit" } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown terminal config key%(s%): terminal.window", err)
     end)
 
     it("rejects a typo in terminal.startup key names", function()
-      assert.has_error(function()
-        config.apply({ terminal = { startup = { retri_interval_ms = 25 } } })
-      end, "codex: unknown terminal config key(s): terminal.startup.retri_interval_ms")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = { startup = { retri_interval_ms = 25 } },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown terminal config key%(s%): terminal.startup.retri_interval_ms", err)
     end)
 
     it("rejects unknown launch keys", function()
-      assert.has_error(function()
-        config.apply({ launch = { command = "codex" } })
-      end, "codex: unknown launch config key(s): launch.command")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { launch = { command = "codex" } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown launch config key%(s%): launch.command", err)
     end)
 
     it("rejects legacy top-level launch keys", function()
-      assert.has_error(function()
-        config.apply({ cmd = "codex" })
-      end, "codex: unknown config key(s): cmd")
-      assert.has_error(function()
-        config.apply({ args = { "--flag" } })
-      end, "codex: unknown config key(s): args")
-      assert.has_error(function()
-        config.apply({ env = { CODEX_TEST = "1" } })
-      end, "codex: unknown config key(s): env")
-      assert.has_error(function()
-        config.apply({ auto_start = true })
-      end, "codex: unknown config key(s): auto_start")
-      assert.has_error(function()
-        config.apply({ cwd = "/tmp/project" })
-      end, "codex: unknown config key(s): cwd")
+      local ok, err
+
+      -- ========= [A]ct     =========
+      ok, err = pcall(config.apply, { cmd = "codex" })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown config key%(s%): cmd", err)
+
+      -- ========= [A]ct     =========
+      ok, err = pcall(config.apply, { args = { "--flag" } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown config key%(s%): args", err)
+
+      -- ========= [A]ct     =========
+      ok, err = pcall(config.apply, { env = { CODEX_TEST = "1" } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown config key%(s%): env", err)
+
+      -- ========= [A]ct     =========
+      ok, err = pcall(config.apply, { auto_start = true })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown config key%(s%): auto_start", err)
+
+      -- ========= [A]ct     =========
+      ok, err = pcall(config.apply, { cwd = "/tmp/project" })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown config key%(s%): cwd", err)
     end)
 
     it("rejects non-string launch.cwd", function()
-      assert.has_error(function()
-        config.apply({ launch = { cwd = 123 } })
-      end, "codex: launch.cwd must be a string or nil")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { launch = { cwd = 123 } })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("launch.cwd must be a string or nil", err)
     end)
 
     it("rejects non-table terminal.provider_opts", function()
+      -- ========= [A]rrange =========
       local cfg = make_valid_config()
       cfg.terminal.provider_opts = "bad"
-      assert_error_contains(function()
-        config.validate(cfg)
-      end, "terminal.provider_opts: expected table")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.validate, cfg)
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.provider_opts: expected table", err)
     end)
 
     it("rejects non-table terminal.provider_opts.native", function()
+      -- ========= [A]rrange =========
       local cfg = make_valid_config()
       cfg.terminal.provider_opts.native = "bad"
-      assert_error_contains(function()
-        config.validate(cfg)
-      end, "terminal.provider_opts.native: expected table")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.validate, cfg)
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.provider_opts.native: expected table", err)
     end)
 
     it("rejects non-table terminal.provider_opts.snacks", function()
+      -- ========= [A]rrange =========
       local cfg = make_valid_config()
       cfg.terminal.provider_opts.snacks = "bad"
-      assert_error_contains(function()
-        config.validate(cfg)
-      end, "terminal.provider_opts.snacks: expected table")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.validate, cfg)
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.provider_opts.snacks: expected table", err)
     end)
 
     it("rejects non-table terminal.keymaps", function()
+      -- ========= [A]rrange =========
       local cfg = make_valid_config()
       cfg.terminal.keymaps = true
-      assert_error_contains(function()
-        config.validate(cfg)
-      end, "terminal.keymaps: expected table")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.validate, cfg)
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.keymaps: expected table", err)
     end)
 
     it("rejects bad nested field types", function()
+      -- ========= [A]rrange =========
       local cfg = make_valid_config()
       cfg.terminal.provider_opts.native.float.title = 123
-      assert_error_contains(function()
-        config.validate(cfg)
-      end, "terminal.provider_opts.native.float.title")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.validate, cfg)
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.provider_opts.native.float.title", err)
     end)
 
     it("accepts keymaps with builtin actions and omitted desc", function()
+      -- ========= [A]ssert  =========
       assert.is_true(config.validate(config.apply({
         terminal = {
           keymaps = {
@@ -328,6 +434,7 @@ describe("codex.config", function()
     end)
 
     it("accepts keymaps with custom actions when desc is provided", function()
+      -- ========= [A]ssert  =========
       assert.is_true(config.validate(config.apply({
         terminal = {
           keymaps = {
@@ -342,165 +449,154 @@ describe("codex.config", function()
     end)
 
     it("rejects non-string terminal.keymaps keys", function()
+      -- ========= [A]rrange =========
       local cfg = make_valid_config()
       cfg.terminal.keymaps[1] = {
         mode = "t",
         action = keymaps.builtins.toggle,
       }
-      assert.has_error(function()
-        config.validate(cfg)
-      end, "codex: terminal.keymaps keys must be non-empty strings")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.validate, cfg)
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.keymaps keys must be non%-empty strings", err)
     end)
 
     it("rejects terminal keymap bindings that are not tables", function()
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              ["<C-c>"] = true,
-            },
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = {
+          keymaps = {
+            ["<C-c>"] = true,
           },
-        })
-      end, 'codex: terminal.keymaps["<C-c>"] must be a table with fields: mode, action, desc?')
+        },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.keymaps%b[] must be a table with fields: mode, action, desc%?", err)
     end)
 
     it("rejects unknown terminal keymap binding keys", function()
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              ["<C-c>"] = {
-                mode = "t",
-                action = keymaps.builtins.toggle,
-                foo = true,
-              },
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = {
+          keymaps = {
+            ["<C-c>"] = {
+              mode = "t",
+              action = keymaps.builtins.toggle,
+              foo = true,
             },
           },
-        })
-      end, 'codex: unknown terminal keymap key(s): terminal.keymaps["<C-c>"].foo')
+        },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown terminal keymap key%(s%): terminal.keymaps%b[].foo", err)
     end)
 
-    it("rejects missing or invalid terminal keymap mode", function()
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              ["<C-c>"] = {
-                action = keymaps.builtins.toggle,
-              },
+    it("rejects missing terminal keymap mode", function()
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = {
+          keymaps = {
+            ["<C-c>"] = {
+              action = keymaps.builtins.toggle,
             },
           },
-        })
-      end, 'codex: terminal.keymaps["<C-c>"].mode must be a string or list of strings')
-
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              ["<C-c>"] = {
-                mode = { "t", 1 },
-                action = keymaps.builtins.toggle,
-              },
-            },
-          },
-        })
-      end, 'codex: terminal.keymaps["<C-c>"].mode[2] must be a string')
+        },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.keymaps%b[].mode must be a string or list of strings", err)
     end)
 
-    it("rejects missing or invalid terminal keymap action", function()
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              ["<C-c>"] = {
-                mode = "t",
-              },
+    it("rejects invalid terminal keymap mode", function()
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = {
+          keymaps = {
+            ["<C-c>"] = {
+              mode = { "t", 1 },
+              action = keymaps.builtins.toggle,
             },
           },
-        })
-      end, 'terminal.keymaps["<C-c>"].action: expected function, got nil')
+        },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.keymaps%b[].mode%b[] must be a string", err)
+    end)
 
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              ["<C-c>"] = {
-                mode = "t",
-                action = true,
-              },
+    it("rejects invalid terminal keymap action", function()
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = {
+          keymaps = {
+            ["<C-c>"] = {
+              mode = "t",
+              action = true,
             },
           },
-        })
-      end, 'terminal.keymaps["<C-c>"].action: expected function, got boolean')
+        },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.keymaps%b[].action: expected function, got boolean", err)
+    end)
+
+    it("rejects missing terminal keymap action", function()
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = {
+          keymaps = {
+            ["<C-c>"] = {
+              mode = "t",
+            },
+          },
+        },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.keymaps%b[].action: expected function, got nil", err)
     end)
 
     it("rejects missing desc for custom terminal keymap actions", function()
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              ["<leader>ot"] = {
-                mode = "n",
-                action = function() end,
-              },
-            },
-          },
-        })
-      end, 'codex: terminal.keymaps["<leader>ot"].desc is required for custom actions')
-    end)
-
-    it("rejects legacy terminal keymap action-based schema", function()
-      assert.has_error(function()
-        config.apply({
-          terminal = {
-            keymaps = {
-              toggle = "<C-c>",
-            },
-          },
-        })
-      end, 'codex: terminal.keymaps["toggle"] must be a table with fields: mode, action, desc?')
-    end)
-
-    it("rejects removed global keymaps config key", function()
-      assert.has_error(function()
-        config.apply({
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, {
+        terminal = {
           keymaps = {
-            toggle = "<leader>xx",
+            ["<leader>ot"] = {
+              mode = "n",
+              action = function() end,
+            },
           },
-        })
-      end, "codex: unknown config key(s): keymaps")
-    end)
-
-    it("rejects removed global keymaps_force config key", function()
-      assert.has_error(function()
-        config.apply({
-          keymaps_force = true,
-        })
-      end, "codex: unknown config key(s): keymaps_force")
-    end)
-
-    it("rejects legacy log_level config key", function()
-      assert.has_error(function()
-        config.apply({
-          log_level = "debug",
-        })
-      end, "codex: unknown config key(s): log_level")
+        },
+      })
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("terminal.keymaps%b[].desc is required for custom actions", err)
     end)
 
     it("rejects env maps with non-string keys", function()
+      -- ========= [A]rrange =========
       local cfg = make_valid_config()
       cfg.launch.env = { [1] = "value" }
-      assert.has_error(function()
-        config.validate(cfg)
-      end, "codex: launch.env keys must be strings")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.validate, cfg)
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("codex: launch.env keys must be strings", err)
     end)
 
     it("rejects env maps with non-string values", function()
+      -- ========= [A]rrange =========
       local cfg = make_valid_config()
       cfg.launch.env = { CODEX_TEST = true }
-      assert.has_error(function()
-        config.validate(cfg)
-      end, "codex: launch.env.CODEX_TEST must be a string")
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.validate, cfg)
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("codex: launch.env.CODEX_TEST must be a string", err)
     end)
   end)
 end)

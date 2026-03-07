@@ -7,10 +7,13 @@ describe("codex.init public api send_buffer", function()
   end)
 
   it("send_buffer formats and sends the buffer payload", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_buffer()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
@@ -24,11 +27,14 @@ describe("codex.init public api send_buffer", function()
   end)
 
   it("send_buffer warns and returns false for invalid selection path", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.selection.buffer_err = env.selection.errors.INVALID_FILEPATH
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.send_buffer()
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals(env.selection.errors.INVALID_FILEPATH, err)
     assert.equals(0, #env.provider.send_calls)
@@ -40,11 +46,14 @@ describe("codex.init public api send_buffer", function()
   end)
 
   it("send_buffer warns and returns false for unnamed buffers", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.selection.buffer_err = env.selection.errors.NO_FILEPATH
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.send_buffer()
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals(env.selection.errors.NO_FILEPATH, err)
     assert.equals(0, #env.provider.send_calls)
@@ -53,11 +62,14 @@ describe("codex.init public api send_buffer", function()
   end)
 
   it("send_buffer warns and returns false when buffer does not exist", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.selection.buffer_err = env.selection.errors.BUFFER_NOT_FOUND
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.send_buffer()
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals(env.selection.errors.BUFFER_NOT_FOUND, err)
     assert.equals(0, #env.provider.send_calls)
@@ -66,30 +78,40 @@ describe("codex.init public api send_buffer", function()
   end)
 
   it("send_buffer forwards opts to filepath extractor", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     env.codex.send_buffer({ bufnr = 42 })
 
+    -- ========= [A]ssert  =========
     assert.same({ bufnr = 42 }, env.selection.buffer_calls[1].opts)
   end)
 
   it("send_buffer forwards explicit path to filepath extractor", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     env.codex.send_buffer({ path = "/tmp/example.lua" })
 
+    -- ========= [A]ssert  =========
     assert.same({ path = "/tmp/example.lua" }, env.selection.buffer_calls[1].opts)
   end)
 
   it("send_buffer forwards both path and bufnr when both are provided", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     env.codex.send_buffer({ bufnr = 42, path = "/tmp/example.lua" })
 
+    -- ========= [A]ssert  =========
     assert.same({ bufnr = 42, path = "/tmp/example.lua" }, env.selection.buffer_calls[1].opts)
   end)
 
   it("send_buffer keeps editor focus when opts.focus=false and opens without focus", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     local current_win = 11
 
@@ -107,8 +129,10 @@ describe("codex.init public api send_buffer", function()
       return true
     end
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_buffer({ focus = false })
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.is_false(env.provider.open_calls[1].focus)
@@ -118,11 +142,14 @@ describe("codex.init public api send_buffer", function()
   end)
 
   it("send_buffer keeps editor focus with active session when opts.focus=false", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_buffer({ focus = false })
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.equals(1, #env.provider.send_calls)
@@ -130,10 +157,13 @@ describe("codex.init public api send_buffer", function()
   end)
 
   it("send_buffer accepts bufnr with opts.focus=false", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     env.codex.send_buffer({ bufnr = 42, focus = false })
 
+    -- ========= [A]ssert  =========
     assert.same({ bufnr = 42 }, env.selection.buffer_calls[1].opts)
   end)
 end)

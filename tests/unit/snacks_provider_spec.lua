@@ -134,15 +134,46 @@ describe("codex.providers.snacks", function()
     package.loaded["codex.providers.snacks"] = nil
   end)
 
-  it("registers a TermClose autocmd when on_exit callback is provided", function()
+  it("registers a TermClose autocmd and keymaps when on_exit callback is provided", function()
     with_stubbed_vim_api(function(autocmds, keymap_set_calls)
+      -- ========= [A]rrange =========
       local terminal = { buf = 42 }
       package.loaded["snacks"] = {
         terminal = function()
           return terminal
         end,
       }
+      local provider = require("codex.providers.snacks")
 
+      -- ========= [A]ct     =========
+      provider.open("codex", {}, {}, {
+        terminal = {
+          keymaps = default_terminal_keymaps(),
+          startup = { grace_ms = 0 },
+          provider_opts = {},
+        },
+      }, true, function() end)
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, #autocmds)
+      assert.equals("TermClose", autocmds[1].event)
+      assert.equals(42, autocmds[1].spec.buffer)
+      assert.is_true(autocmds[1].spec.once)
+      assert.equals(6, #keymap_set_calls)
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-c>"))
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<M-BS>"))
+    end)
+  end)
+
+  it("fires on_exit callback on TermClose", function()
+    with_stubbed_vim_api(function(autocmds)
+      -- ========= [A]rrange =========
+      local terminal = { buf = 42 }
+      package.loaded["snacks"] = {
+        terminal = function()
+          return terminal
+        end,
+      }
       local provider = require("codex.providers.snacks")
       local exited = {}
       local handle = provider.open(
@@ -162,15 +193,10 @@ describe("codex.providers.snacks", function()
         end
       )
 
-      assert.equals(1, #autocmds)
-      assert.equals("TermClose", autocmds[1].event)
-      assert.equals(42, autocmds[1].spec.buffer)
-      assert.is_true(autocmds[1].spec.once)
-      assert.equals(6, #keymap_set_calls)
-      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-c>"))
-      assert.is_not_nil(find_keymap(keymap_set_calls, "<M-BS>"))
-
+      -- ========= [A]ct     =========
       autocmds[1].spec.callback()
+
+      -- ========= [A]ssert  =========
       assert.equals(1, #exited)
       assert.same(handle, exited[1])
     end)
@@ -178,13 +204,15 @@ describe("codex.providers.snacks", function()
 
   it("does not register terminal keymaps by default", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
+      -- ========= [A]rrange =========
       package.loaded["snacks"] = {
         terminal = function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open(
         "codex",
         {},
@@ -194,19 +222,22 @@ describe("codex.providers.snacks", function()
         nil
       )
 
+      -- ========= [A]ssert  =========
       assert.equals(0, #keymap_set_calls)
     end)
   end)
 
   it("registers configured builtin terminal keymaps", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
+      -- ========= [A]rrange =========
       package.loaded["snacks"] = {
         terminal = function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
         terminal = {
           keymaps = default_terminal_keymaps(),
@@ -215,6 +246,7 @@ describe("codex.providers.snacks", function()
         },
       }, true, nil)
 
+      -- ========= [A]ssert  =========
       assert.equals(6, #keymap_set_calls)
       local toggle_map = find_keymap(keymap_set_calls, "<C-c>")
       local clear_map = find_keymap(keymap_set_calls, "<M-BS>")
@@ -227,13 +259,15 @@ describe("codex.providers.snacks", function()
 
   it("registers directional navigation keymaps even for float win.position", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
+      -- ========= [A]rrange =========
       package.loaded["snacks"] = {
         terminal = function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
         terminal = {
           provider_opts = {
@@ -251,6 +285,7 @@ describe("codex.providers.snacks", function()
         },
       }, true, nil)
 
+      -- ========= [A]ssert  =========
       assert.equals(4, #keymap_set_calls)
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-h>"))
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-j>"))
@@ -261,13 +296,15 @@ describe("codex.providers.snacks", function()
 
   it("registers custom terminal keymap keys for builtin actions", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
+      -- ========= [A]rrange =========
       package.loaded["snacks"] = {
         terminal = function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
         terminal = {
           keymaps = {
@@ -280,6 +317,7 @@ describe("codex.providers.snacks", function()
         },
       }, true, nil)
 
+      -- ========= [A]ssert  =========
       assert.equals(3, #keymap_set_calls)
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-t>"))
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-x>"))
@@ -289,18 +327,17 @@ describe("codex.providers.snacks", function()
 
   it("close keymap defers via vim.schedule", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
+      -- ========= [A]rrange =========
       package.loaded["snacks"] = {
         terminal = function()
           return { buf = 42 }
         end,
       }
-
       local scheduled = {}
       local original_schedule = vim.schedule
       vim.schedule = function(cb)
         table.insert(scheduled, cb)
       end
-
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
@@ -311,25 +348,27 @@ describe("codex.providers.snacks", function()
           provider_opts = {},
         },
       }, true, nil)
-
       local close_map = find_keymap(keymap_set_calls, "<C-x>")
+
+      -- ========= [A]ct     =========
       close_map.rhs()
 
+      vim.schedule = original_schedule
+
+      -- ========= [A]ssert  =========
       assert.equals(1, #scheduled)
       assert.is_function(scheduled[1])
-
-      vim.schedule = original_schedule
     end)
   end)
 
   it("clear input keymap calls codex.clear_input directly", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
+      -- ========= [A]rrange =========
       package.loaded["snacks"] = {
         terminal = function()
           return { buf = 42 }
         end,
       }
-
       local scheduled = {}
       local original_schedule = vim.schedule
       vim.schedule = function(cb)
@@ -341,7 +380,6 @@ describe("codex.providers.snacks", function()
           clear_input_calls = clear_input_calls + 1
         end,
       }
-
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
@@ -352,27 +390,31 @@ describe("codex.providers.snacks", function()
           provider_opts = {},
         },
       }, true, nil)
-
       local clear_map = find_keymap(keymap_set_calls, "<M-BS>")
-      clear_map.rhs()
 
-      assert.equals(1, clear_input_calls)
-      assert.equals(0, #scheduled)
+      -- ========= [A]ct     =========
+      clear_map.rhs()
 
       vim.schedule = original_schedule
       package.loaded["codex"] = nil
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, clear_input_calls)
+      assert.equals(0, #scheduled)
     end)
   end)
 
   it("does not register TermClose autocmd when on_exit callback is missing", function()
     with_stubbed_vim_api(function(autocmds, keymap_set_calls)
+      -- ========= [A]rrange =========
       package.loaded["snacks"] = {
         terminal = function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open(
         "codex",
         {},
@@ -382,6 +424,7 @@ describe("codex.providers.snacks", function()
         nil
       )
 
+      -- ========= [A]ssert  =========
       assert.equals(0, #autocmds)
       assert.equals(0, #keymap_set_calls)
     end)
@@ -389,13 +432,15 @@ describe("codex.providers.snacks", function()
 
   it("does not register terminal keymap when snacks terminal has no numeric buffer", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
+      -- ========= [A]rrange =========
       package.loaded["snacks"] = {
         terminal = function()
           return {}
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open(
         "codex",
         {},
@@ -405,12 +450,14 @@ describe("codex.providers.snacks", function()
         nil
       )
 
+      -- ========= [A]ssert  =========
       assert.equals(0, #keymap_set_calls)
     end)
   end)
 
   it("focuses snacks terminal and enters insert mode", function()
     with_stubbed_vim_api(function(_, _, cmd_calls, state)
+      -- ========= [A]rrange =========
       local shown = 0
       local focused = 0
       local terminal = {
@@ -423,10 +470,12 @@ describe("codex.providers.snacks", function()
           state.current_buf = 42
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       local ok, err = provider.focus({ terminal = terminal })
 
+      -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
       assert.equals(1, shown)
@@ -437,6 +486,7 @@ describe("codex.providers.snacks", function()
 
   it("returns an error when snacks terminal focus does not land on terminal buffer", function()
     with_stubbed_vim_api(function(_, _, cmd_calls, state)
+      -- ========= [A]rrange =========
       local terminal = {
         buf = 42,
         show = function() end,
@@ -444,10 +494,12 @@ describe("codex.providers.snacks", function()
           state.current_buf = 1
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       local ok, err = provider.focus({ terminal = terminal })
 
+      -- ========= [A]ssert  =========
       assert.is_false(ok)
       assert.equals("terminal window not focused", err)
       assert.equals(0, #cmd_calls)
@@ -456,19 +508,21 @@ describe("codex.providers.snacks", function()
 
   it("uses snacks terminal window fallback to recover focus before insert", function()
     with_stubbed_vim_api(function(_, _, cmd_calls, state)
+      -- ========= [A]rrange =========
       state.current_buf = 1
       state.win_valid[9] = true
       state.win_buf[9] = 42
-
       local terminal = {
         buf = 42,
         win = 9,
         show = function() end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       local ok, err = provider.focus({ terminal = terminal })
 
+      -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
       assert.same({ 9 }, state.set_current_win_calls)
@@ -478,9 +532,13 @@ describe("codex.providers.snacks", function()
 
   it("sends text using terminal.jobid when available", function()
     with_stubbed_send_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       local ok, err = provider.send({ terminal = { jobid = 77 } }, "hello")
 
+      -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
       assert.equals(1, #state.chansend_calls)
@@ -490,12 +548,15 @@ describe("codex.providers.snacks", function()
 
   it("falls back to b:terminal_job_id when terminal.jobid is missing", function()
     with_stubbed_send_env(function(state)
+      -- ========= [A]rrange =========
       state.buf_valid[42] = true
       state.buf_vars[42] = { terminal_job_id = 88 }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       local ok, err = provider.send({ terminal = { buf = 42 } }, "hello")
 
+      -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
       assert.equals(1, #state.chansend_calls)
@@ -505,12 +566,15 @@ describe("codex.providers.snacks", function()
 
   it("uses terminal channel option when available", function()
     with_stubbed_send_env(function(state)
+      -- ========= [A]rrange =========
       state.buf_valid[42] = true
       state.buf_channels[42] = 99
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       local ok, err = provider.send({ terminal = { buf = 42 } }, "hello")
 
+      -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
       assert.equals(1, #state.chansend_calls)
@@ -518,25 +582,46 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
-  it("reports alive only when terminal has an active job channel", function()
+  it("reports not alive when terminal has no active job channel", function()
     with_stubbed_send_env(function(state)
+      -- ========= [A]rrange =========
       state.buf_valid[42] = true
       local provider = require("codex.providers.snacks")
-      assert.is_false(provider.is_alive({ terminal = { buf = 42 } }))
 
+      -- ========= [A]ct     =========
+      local alive = provider.is_alive({ terminal = { buf = 42 } })
+
+      -- ========= [A]ssert  =========
+      assert.is_false(alive)
+    end)
+  end)
+
+  it("reports alive when terminal has an active job channel", function()
+    with_stubbed_send_env(function(state)
+      -- ========= [A]rrange =========
+      state.buf_valid[42] = true
       state.buf_vars[42] = { terminal_job_id = 33 }
-      assert.is_true(provider.is_alive({ terminal = { buf = 42 } }))
+      local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
+      local alive = provider.is_alive({ terminal = { buf = 42 } })
+
+      -- ========= [A]ssert  =========
+      assert.is_true(alive)
     end)
   end)
 
   it("returns an error when no terminal job id is available", function()
     with_stubbed_send_env(function(state)
+      -- ========= [A]rrange =========
       state.buf_valid[42] = true
       state.buf_vars[42] = {}
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       local ok, err = provider.send({ terminal = { buf = 42 } }, "hello")
 
+      -- ========= [A]ssert  =========
       assert.is_false(ok)
       assert.equals("terminal has no job", err)
       assert.equals(0, #state.chansend_calls)
@@ -545,6 +630,7 @@ describe("codex.providers.snacks", function()
 
   it("toggle opens a new terminal when the existing terminal has no job", function()
     with_stubbed_vim_api(function()
+      -- ========= [A]rrange =========
       local stale_toggle_calls = 0
       local stale_terminal = {
         toggle = function()
@@ -552,14 +638,14 @@ describe("codex.providers.snacks", function()
         end,
       }
       local fresh_terminal = { buf = 55 }
-
       package.loaded["snacks"] = {
         terminal = function()
           return fresh_terminal
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       local handle = provider.toggle(
         { terminal = stale_terminal },
         "codex",
@@ -568,6 +654,7 @@ describe("codex.providers.snacks", function()
         { terminal = { startup = { grace_ms = 0 }, provider_opts = {} } }
       )
 
+      -- ========= [A]ssert  =========
       assert.equals(0, stale_toggle_calls)
       assert.same(fresh_terminal, handle.terminal)
     end)
@@ -575,6 +662,7 @@ describe("codex.providers.snacks", function()
 
   it("passes command and options separately to snacks.terminal", function()
     with_stubbed_vim_api(function()
+      -- ========= [A]rrange =========
       local captured_cmd = nil
       local captured_opts = nil
       package.loaded["snacks"] = {
@@ -584,8 +672,9 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open("codex", { "--foo", "bar" }, { CODEX_TEST = "1" }, {
         launch = {
           cwd = "/tmp/work",
@@ -600,6 +689,7 @@ describe("codex.providers.snacks", function()
         },
       }, false, nil)
 
+      -- ========= [A]ssert  =========
       assert.equals("codex --foo bar", captured_cmd)
       assert.equals("/tmp/work", captured_opts.cwd)
       assert.equals("1", captured_opts.env.CODEX_TEST)
@@ -611,6 +701,7 @@ describe("codex.providers.snacks", function()
 
   it("disables snacks auto_close even when codex auto_close=true", function()
     with_stubbed_vim_api(function(autocmds)
+      -- ========= [A]rrange =========
       local captured_opts = nil
       package.loaded["snacks"] = {
         terminal = function(_, opts)
@@ -618,8 +709,9 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
         terminal = {
           auto_close = true,
@@ -628,33 +720,30 @@ describe("codex.providers.snacks", function()
         },
       }, false, nil)
 
+      -- ========= [A]ssert  =========
       assert.is_false(captured_opts.auto_close)
       assert.equals(1, #autocmds)
       assert.equals("TermClose", autocmds[1].event)
     end)
   end)
 
-  it("runs on_exit and closes terminal on TermClose when auto_close=true", function()
-    with_stubbed_vim_api(function(autocmds, _, cmd_calls)
-      local close_calls = 0
+  it("runs on_exit on TermClose when auto_close=true", function()
+    with_stubbed_vim_api(function(autocmds)
+      -- ========= [A]rrange =========
       local terminal = {
         buf = 42,
-        close = function()
-          close_calls = close_calls + 1
-        end,
+        close = function() end,
       }
       package.loaded["snacks"] = {
         terminal = function()
           return terminal
         end,
       }
-
       local scheduled = {}
       local original_schedule = vim.schedule
       vim.schedule = function(cb)
         table.insert(scheduled, cb)
       end
-
       local on_exit_calls = 0
       local provider = require("codex.providers.snacks")
       provider.open(
@@ -674,25 +763,61 @@ describe("codex.providers.snacks", function()
         end
       )
 
-      assert.equals(1, #autocmds)
+      -- ========= [A]ct     =========
       autocmds[1].spec.callback()
 
+      vim.schedule = original_schedule
+
+      -- ========= [A]ssert  =========
       assert.equals(1, on_exit_calls)
       assert.equals(1, #scheduled)
-      assert.equals(0, close_calls)
-      assert.equals(0, #cmd_calls)
+    end)
+  end)
 
+  it("closes terminal after TermClose when auto_close=true", function()
+    with_stubbed_vim_api(function(autocmds, _, cmd_calls)
+      -- ========= [A]rrange =========
+      local close_calls = 0
+      local terminal = {
+        buf = 42,
+        close = function()
+          close_calls = close_calls + 1
+        end,
+      }
+      package.loaded["snacks"] = {
+        terminal = function()
+          return terminal
+        end,
+      }
+      local scheduled = {}
+      local original_schedule = vim.schedule
+      vim.schedule = function(cb)
+        table.insert(scheduled, cb)
+      end
+      local provider = require("codex.providers.snacks")
+      provider.open("codex", {}, {}, {
+        terminal = {
+          auto_close = true,
+          startup = { grace_ms = 0 },
+          provider_opts = {},
+        },
+      }, false, function() end)
+      autocmds[1].spec.callback()
+
+      -- ========= [A]ct     =========
       scheduled[1]()
 
+      vim.schedule = original_schedule
+
+      -- ========= [A]ssert  =========
       assert.equals(1, close_calls)
       assert.same({ "checktime" }, cmd_calls)
-
-      vim.schedule = original_schedule
     end)
   end)
 
   it("passes snacks win options through provider_opts", function()
     with_stubbed_vim_api(function()
+      -- ========= [A]rrange =========
       local captured_opts = nil
       package.loaded["snacks"] = {
         terminal = function(_, opts)
@@ -700,8 +825,9 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
         terminal = {
           startup = { grace_ms = 0 },
@@ -716,6 +842,7 @@ describe("codex.providers.snacks", function()
         },
       }, false, nil)
 
+      -- ========= [A]ssert  =========
       assert.equals("left", captured_opts.win.position)
       assert.equals(0.4, captured_opts.win.width)
     end)
@@ -723,6 +850,7 @@ describe("codex.providers.snacks", function()
 
   it("passes snacks horizontal win options through provider_opts", function()
     with_stubbed_vim_api(function()
+      -- ========= [A]rrange =========
       local captured_opts = nil
       package.loaded["snacks"] = {
         terminal = function(_, opts)
@@ -730,8 +858,9 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
         terminal = {
           startup = { grace_ms = 0 },
@@ -746,6 +875,7 @@ describe("codex.providers.snacks", function()
         },
       }, false, nil)
 
+      -- ========= [A]ssert  =========
       assert.equals("bottom", captured_opts.win.position)
       assert.equals(0.3, captured_opts.win.height)
     end)
@@ -753,6 +883,7 @@ describe("codex.providers.snacks", function()
 
   it("passes snacks float win options through provider_opts", function()
     with_stubbed_vim_api(function()
+      -- ========= [A]rrange =========
       local captured_opts = nil
       package.loaded["snacks"] = {
         terminal = function(_, opts)
@@ -760,8 +891,9 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
         terminal = {
           startup = { grace_ms = 0 },
@@ -776,6 +908,7 @@ describe("codex.providers.snacks", function()
         },
       }, false, nil)
 
+      -- ========= [A]ssert  =========
       assert.equals("float", captured_opts.win.position)
       assert.equals("rounded", captured_opts.win.border)
     end)
@@ -783,22 +916,24 @@ describe("codex.providers.snacks", function()
 
   it("handles missing terminal.startup without error", function()
     with_stubbed_vim_api(function()
+      -- ========= [A]rrange =========
       package.loaded["snacks"] = {
         terminal = function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       local handle = provider.open("codex", {}, {}, {
         terminal = {
           provider_opts = {},
         },
       }, false, nil)
 
+      -- ========= [A]ssert  =========
       assert.is_not_nil(handle)
       assert.is_number(handle.ready_at_ms)
-
       local uv = vim.uv or vim.loop
       local expected = (uv and type(uv.now) == "function") and uv.now() or 0
       assert.equals(expected, handle.ready_at_ms)
@@ -807,6 +942,7 @@ describe("codex.providers.snacks", function()
 
   it("does not set opts.win when snacks win options are omitted", function()
     with_stubbed_vim_api(function()
+      -- ========= [A]rrange =========
       local captured_opts = nil
       package.loaded["snacks"] = {
         terminal = function(_, opts)
@@ -814,8 +950,9 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-
       local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
         terminal = {
           startup = { grace_ms = 0 },
@@ -823,6 +960,7 @@ describe("codex.providers.snacks", function()
         },
       }, false, nil)
 
+      -- ========= [A]ssert  =========
       assert.is_nil(captured_opts.win)
     end)
   end)

@@ -262,6 +262,26 @@ Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) which
 provides busted-style test primitives: `describe`, `it`, `before_each`,
 `after_each`, and `assert`.
 
+### Test Structure
+
+Every test should use explicit `Arrange / Act / Assert` section comments:
+
+```lua
+it("does something", function()
+  -- ========= [A]rrange =========
+  local subject = make_subject()
+
+  -- ========= [A]ct     =========
+  local ok = subject.run()
+
+  -- ========= [A]ssert  =========
+  assert.is_true(ok)
+end)
+```
+
+- There MUST be only one action under test PER test
+- It is possible that some tests do NOT require an Arrange step.
+
 ### Module Isolation
 
 Clear `package.loaded` in `before_each` to ensure each test starts with a fresh
@@ -375,8 +395,9 @@ When cutting a new release tag:
    `lua/codex/nvim/commands.lua`, delegating to the API function.
 3. **Unit tests** -- Add test cases in the command-focused
    `tests/unit/init_*_spec.lua` files (happy path, error path, auto-open
-   behaviour), and use `tests/unit/helpers/init_spec_helpers.lua` for shared
-   mocks and setup helpers.
+   behaviour), use `tests/unit/helpers/init_spec_helpers.lua` for shared mocks
+   and setup helpers, and include the required `Arrange / Act / Assert` comments
+   in each test.
 4. **Command dispatch tests** -- If the command exercises a new code path beyond
    existing patterns, add targeted tests.
 5. **README update** -- Add the command to the Commands section and the Lua API

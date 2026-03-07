@@ -310,6 +310,7 @@ describe("codex.providers.native", function()
 
   it("opens vsplit windows and restores previous window when focus=false", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -322,7 +323,10 @@ describe("codex.providers.native", function()
         },
       })
 
+      -- ========= [A]ct     =========
       local handle = provider.open("codex", {}, {}, cfg, false)
+
+      -- ========= [A]ssert  =========
       assert.equals(2, handle.bufnr)
       assert.equals(2, handle.winid)
       assert.equals(1, state.current_win)
@@ -334,37 +338,49 @@ describe("codex.providers.native", function()
 
   it("omits termopen env when config env is empty", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
 
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, cfg, false)
 
+      -- ========= [A]ssert  =========
       assert.is_nil(state.termopen_calls[1].opts.env)
     end)
   end)
 
   it("passes termopen env when config env has values", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
       local env = { CODEX_TEST = "1" }
 
+      -- ========= [A]ct     =========
       provider.open("codex", {}, env, cfg, false)
 
+      -- ========= [A]ssert  =========
       assert.same(env, state.termopen_calls[1].opts.env)
     end)
   end)
 
   it("does not register terminal keymaps by default", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
+
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, make_config(), false)
+
+      -- ========= [A]ssert  =========
       assert.equals(0, #state.keymap_set_calls)
     end)
   end)
 
   it("registers configured builtin terminal keymaps", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -372,8 +388,10 @@ describe("codex.providers.native", function()
         },
       })
 
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, cfg, false)
 
+      -- ========= [A]ssert  =========
       assert.equals(6, #state.keymap_set_calls)
       local toggle_map = find_keymap(state.keymap_set_calls, "<C-c>")
       local clear_map = find_keymap(state.keymap_set_calls, "<M-BS>")
@@ -396,6 +414,7 @@ describe("codex.providers.native", function()
 
   it("registers custom terminal keymap keys for builtin actions", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -407,8 +426,10 @@ describe("codex.providers.native", function()
         },
       })
 
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, cfg, false)
 
+      -- ========= [A]ssert  =========
       assert.equals(3, #state.keymap_set_calls)
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-t>"))
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-x>"))
@@ -418,12 +439,12 @@ describe("codex.providers.native", function()
 
   it("close keymap defers via vim.schedule", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local scheduled = {}
       local original_schedule = vim.schedule
       vim.schedule = function(cb)
         table.insert(scheduled, cb)
       end
-
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -432,21 +453,23 @@ describe("codex.providers.native", function()
           },
         },
       })
-
       provider.open("codex", {}, {}, cfg, false)
-
       local close_map = find_keymap(state.keymap_set_calls, "<C-x>")
+
+      -- ========= [A]ct     =========
       close_map.rhs()
 
+      vim.schedule = original_schedule
+
+      -- ========= [A]ssert  =========
       assert.equals(1, #scheduled)
       assert.is_function(scheduled[1])
-
-      vim.schedule = original_schedule
     end)
   end)
 
   it("clear input keymap calls codex.clear_input directly", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local scheduled = {}
       local original_schedule = vim.schedule
       vim.schedule = function(cb)
@@ -458,7 +481,6 @@ describe("codex.providers.native", function()
           clear_input_calls = clear_input_calls + 1
         end,
       }
-
       local provider = require("codex.providers.native")
       provider.open(
         "codex",
@@ -473,20 +495,23 @@ describe("codex.providers.native", function()
         }),
         false
       )
-
       local clear_map = find_keymap(state.keymap_set_calls, "<M-BS>")
-      clear_map.rhs()
 
-      assert.equals(1, clear_input_calls)
-      assert.equals(0, #scheduled)
+      -- ========= [A]ct     =========
+      clear_map.rhs()
 
       vim.schedule = original_schedule
       package.loaded["codex"] = nil
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, clear_input_calls)
+      assert.equals(0, #scheduled)
     end)
   end)
 
   it("registers directional navigation keymaps even for float windows", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -504,8 +529,10 @@ describe("codex.providers.native", function()
         },
       })
 
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, cfg, false)
 
+      -- ========= [A]ssert  =========
       assert.equals(4, #state.keymap_set_calls)
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-h>"))
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-j>"))
@@ -516,6 +543,7 @@ describe("codex.providers.native", function()
 
   it("opens hsplit windows and focuses insert mode when focus=true", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -528,7 +556,10 @@ describe("codex.providers.native", function()
         },
       })
 
+      -- ========= [A]ct     =========
       local handle = provider.open("codex", {}, {}, cfg, true)
+
+      -- ========= [A]ssert  =========
       assert.equals(2, handle.winid)
       assert.equals(15, state.win_height_calls[1].height)
       assert.equals(2, state.current_win)
@@ -538,6 +569,7 @@ describe("codex.providers.native", function()
 
   it("opens float windows with configured options", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -556,7 +588,10 @@ describe("codex.providers.native", function()
         },
       })
 
+      -- ========= [A]ct     =========
       local handle = provider.open("codex", {}, {}, cfg, true)
+
+      -- ========= [A]ssert  =========
       assert.equals(2, handle.winid)
       assert.equals(1, #state.open_win_calls)
 
@@ -573,11 +608,11 @@ describe("codex.providers.native", function()
     end)
   end)
 
-  it("clamps split and float dimensions to at least one", function()
+  it("clamps split dimensions to at least one", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
-
-      local split_cfg = make_config({
+      local cfg = make_config({
         terminal = {
           provider_opts = {
             native = {
@@ -587,10 +622,20 @@ describe("codex.providers.native", function()
           },
         },
       })
-      provider.open("codex", {}, {}, split_cfg, true)
-      assert.equals(1, state.win_width_calls[1].width)
 
-      local float_cfg = make_config({
+      -- ========= [A]ct     =========
+      provider.open("codex", {}, {}, cfg, true)
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, state.win_width_calls[1].width)
+    end)
+  end)
+
+  it("clamps float dimensions to at least one", function()
+    with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
         terminal = {
           provider_opts = {
             native = {
@@ -606,7 +651,11 @@ describe("codex.providers.native", function()
           },
         },
       })
-      provider.open("codex", {}, {}, float_cfg, true)
+
+      -- ========= [A]ct     =========
+      provider.open("codex", {}, {}, cfg, true)
+
+      -- ========= [A]ssert  =========
       local open_call = state.open_win_calls[1]
       assert.equals(1, open_call.opts.width)
       assert.equals(1, open_call.opts.height)
@@ -615,18 +664,20 @@ describe("codex.providers.native", function()
 
   it("does not auto-close native terminal window on exit when auto_close=false", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
           auto_close = false,
         },
       })
-
       local handle = provider.open("codex", {}, {}, cfg, true)
       local bufnr = handle.bufnr
 
+      -- ========= [A]ct     =========
       state.termopen_calls[1].opts.on_exit(nil, 0)
 
+      -- ========= [A]ssert  =========
       assert.equals(0, #state.win_close_calls)
       assert.is_true(state.buf_valid[bufnr])
       assert.is_nil(handle.jobid)
@@ -635,19 +686,21 @@ describe("codex.providers.native", function()
 
   it("auto-closes native terminal window on exit when auto_close=true", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
           auto_close = true,
         },
       })
-
       local handle = provider.open("codex", {}, {}, cfg, true)
       local winid = handle.winid
       local bufnr = handle.bufnr
 
+      -- ========= [A]ct     =========
       state.termopen_calls[1].opts.on_exit(nil, 0)
 
+      -- ========= [A]ssert  =========
       assert.equals(1, #state.win_close_calls)
       assert.equals(winid, state.win_close_calls[1].winid)
       assert.is_false(state.buf_valid[bufnr])
@@ -659,51 +712,50 @@ describe("codex.providers.native", function()
 
   it("does not notify on non-zero exit and still runs on_exit callback", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
           auto_close = true,
         },
       })
-
       local notify_calls = 0
       local original_notify = vim.notify
       vim.notify = function()
         notify_calls = notify_calls + 1
       end
-
-      local ok, err = pcall(function()
-        local exited_handle = nil
-        local handle = provider.open("codex", {}, {}, cfg, true, function(cb_handle)
-          exited_handle = cb_handle
-        end)
-        local winid = handle.winid
-
-        state.termopen_calls[1].opts.on_exit(nil, -1)
-
-        assert.same(handle, exited_handle)
-        assert.equals(1, #state.win_close_calls)
-        assert.equals(winid, state.win_close_calls[1].winid)
-        assert.equals(0, notify_calls)
+      local exited_handle = nil
+      local handle = provider.open("codex", {}, {}, cfg, true, function(cb_handle)
+        exited_handle = cb_handle
       end)
+      local winid = handle.winid
+
+      -- ========= [A]ct     =========
+      state.termopen_calls[1].opts.on_exit(nil, -1)
 
       vim.notify = original_notify
-      if not ok then
-        error(err)
-      end
+
+      -- ========= [A]ssert  =========
+      assert.same(handle, exited_handle)
+      assert.equals(1, #state.win_close_calls)
+      assert.equals(winid, state.win_close_calls[1].winid)
+      assert.equals(0, notify_calls)
     end)
   end)
 
   it("focuses terminal window and enters insert mode", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
-
       state.current_win = 1
       state.startinsert_calls = 0
+
+      -- ========= [A]ct     =========
       local ok, err = provider.focus(handle)
 
+      -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
       assert.equals(handle.winid, state.current_win)
@@ -713,16 +765,19 @@ describe("codex.providers.native", function()
 
   it("focus recovers a stale window id by searching for the terminal buffer", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
       local expected_winid = handle.winid
-
       handle.winid = 999
       state.current_win = 1
       state.startinsert_calls = 0
+
+      -- ========= [A]ct     =========
       local ok, err = provider.focus(handle)
 
+      -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
       assert.equals(expected_winid, handle.winid)
@@ -733,15 +788,18 @@ describe("codex.providers.native", function()
 
   it("focus returns terminal window mismatch when selected window buffer is wrong", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
-
       state.wins[handle.winid].bufnr = 1
       state.current_win = 1
       state.startinsert_calls = 0
+
+      -- ========= [A]ct     =========
       local ok, err = provider.focus(handle)
 
+      -- ========= [A]ssert  =========
       assert.is_false(ok)
       assert.equals("terminal window mismatch", err)
       assert.equals(0, state.startinsert_calls)
@@ -750,14 +808,17 @@ describe("codex.providers.native", function()
 
   it("focus returns an error when setting the terminal window fails", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
-
       state.set_current_win_error = "boom"
       state.startinsert_calls = 0
+
+      -- ========= [A]ct     =========
       local ok, err = provider.focus(handle)
 
+      -- ========= [A]ssert  =========
       assert.is_false(ok)
       assert.matches("^failed to focus terminal window:", err)
       assert.equals(0, state.startinsert_calls)
@@ -766,15 +827,18 @@ describe("codex.providers.native", function()
 
   it("focus returns terminal window not found when no visible terminal window exists", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
-
       state.wins[handle.winid].valid = false
       handle.winid = nil
       state.startinsert_calls = 0
+
+      -- ========= [A]ct     =========
       local ok, err = provider.focus(handle)
 
+      -- ========= [A]ssert  =========
       assert.is_false(ok)
       assert.equals("terminal window not found", err)
       assert.equals(0, state.startinsert_calls)
@@ -783,13 +847,16 @@ describe("codex.providers.native", function()
 
   it("toggle closes the window when already focused", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
-
       state.startinsert_calls = 0
+
+      -- ========= [A]ct     =========
       provider.toggle(handle, "codex", {}, {}, cfg)
 
+      -- ========= [A]ssert  =========
       assert.equals(1, #state.win_close_calls)
       assert.equals(2, state.win_close_calls[1].winid)
       assert.is_false(state.win_close_calls[1].force)
@@ -800,14 +867,17 @@ describe("codex.providers.native", function()
 
   it("toggle focuses existing terminal window from another window", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
-
       state.current_win = 1
       state.startinsert_calls = 0
+
+      -- ========= [A]ct     =========
       provider.toggle(handle, "codex", {}, {}, cfg)
 
+      -- ========= [A]ssert  =========
       assert.equals(2, state.current_win)
       assert.equals(1, state.startinsert_calls)
     end)
@@ -815,6 +885,7 @@ describe("codex.providers.native", function()
 
   it("toggle re-shows buffer using current configured window type", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local initial_cfg = make_config({
         terminal = {
@@ -831,7 +902,6 @@ describe("codex.providers.native", function()
       handle.winid = nil
       state.current_win = 1
       state.startinsert_calls = 0
-
       local float_cfg = make_config({
         terminal = {
           provider_opts = {
@@ -849,8 +919,10 @@ describe("codex.providers.native", function()
         },
       })
 
+      -- ========= [A]ct     =========
       provider.toggle(handle, "codex", {}, {}, float_cfg)
 
+      -- ========= [A]ssert  =========
       assert.equals(1, #state.open_win_calls)
       assert.equals(handle.bufnr, state.open_win_calls[1].bufnr)
       assert.equals("double", state.open_win_calls[1].opts.border)
@@ -864,14 +936,17 @@ describe("codex.providers.native", function()
 
   it("handles missing terminal.startup without error", function()
     with_stubbed_native_env(function()
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config()
       cfg.terminal.startup = nil
 
+      -- ========= [A]ct     =========
       local handle = provider.open("codex", {}, {}, cfg, false)
+
+      -- ========= [A]ssert  =========
       assert.is_not_nil(handle)
       assert.is_number(handle.ready_at_ms)
-
       local uv = vim.uv or vim.loop
       local expected = (uv and type(uv.now) == "function") and uv.now() or 0
       assert.equals(expected, handle.ready_at_ms)
@@ -880,6 +955,7 @@ describe("codex.providers.native", function()
 
   it("uses default vsplit config when vsplit sub-table is nil", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -893,8 +969,10 @@ describe("codex.providers.native", function()
       })
       cfg.terminal.provider_opts.native.vsplit = nil
 
+      -- ========= [A]ct     =========
       local handle = provider.open("codex", {}, {}, cfg, false)
 
+      -- ========= [A]ssert  =========
       assert.equals(2, handle.bufnr)
       assert.equals(2, handle.winid)
       assert.equals("botright vsplit", state.cmd_calls[1])
@@ -904,6 +982,7 @@ describe("codex.providers.native", function()
 
   it("uses default hsplit config when hsplit sub-table is nil", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -917,8 +996,10 @@ describe("codex.providers.native", function()
       })
       cfg.terminal.provider_opts.native.hsplit = nil
 
+      -- ========= [A]ct     =========
       local handle = provider.open("codex", {}, {}, cfg, false)
 
+      -- ========= [A]ssert  =========
       assert.equals(2, handle.bufnr)
       assert.equals(2, handle.winid)
       assert.equals("botright split", state.cmd_calls[1])
@@ -928,6 +1009,7 @@ describe("codex.providers.native", function()
 
   it("uses default float config when float sub-table is nil", function()
     with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -941,8 +1023,10 @@ describe("codex.providers.native", function()
       })
       cfg.terminal.provider_opts.native.float = nil
 
+      -- ========= [A]ct     =========
       provider.open("codex", {}, {}, cfg, true)
 
+      -- ========= [A]ssert  =========
       assert.equals(1, #state.open_win_calls)
       local open_call = state.open_win_calls[1]
       assert.equals(96, open_call.opts.width)

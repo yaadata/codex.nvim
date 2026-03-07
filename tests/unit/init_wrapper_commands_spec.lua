@@ -7,11 +7,14 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("set_model clears input and auto-submits /model", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.set_model()
     local model_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/model"
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(model_payload_expected, env.provider.send_calls[1].text)
     assert.equals(3, #env.fake_vim._replace_termcodes_calls)
@@ -26,46 +29,61 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("show_status dispatches /status", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.show_status()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/status", env.provider.send_calls[1].text)
   end)
 
   it("show_permissions dispatches /permissions", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.show_permissions()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/permissions", env.provider.send_calls[1].text)
   end)
 
   it("compact dispatches /compact", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.compact()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/compact", env.provider.send_calls[1].text)
   end)
 
   it("review dispatches /review when no instructions are provided", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.review()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/review", env.provider.send_calls[1].text)
   end)
 
   it("review dispatches /review with inline instructions", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.review("focus on security")
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(
       "<termcoded:<C-e>><termcoded:<C-u>>/review focus on security",
@@ -74,19 +92,25 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("review treats empty instructions as plain /review", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.review("")
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/review", env.provider.send_calls[1].text)
   end)
 
   it("review opens with focus when no active session exists", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.review()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
@@ -95,20 +119,26 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("show_diff dispatches /diff", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.show_diff()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/diff", env.provider.send_calls[1].text)
   end)
 
   it("wrapper commands are sent atomically and remain ordered for consecutive calls", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
-
     local ok_status = env.codex.show_status()
+
+    -- ========= [A]ct     =========
     local ok_diff = env.codex.show_diff()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok_status)
     assert.is_true(ok_diff)
     assert.equals(2, #env.provider.send_calls)
@@ -119,15 +149,19 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("wrapper commands copy existing prompt input to unnamed register without restoring", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
+
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
       return 77
     end
     env.fake_vim._set_buf_lines(77, { "> draft instructions" })
 
+    -- ========= [A]ct     =========
     local ok = env.codex.review("focus on security")
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.fake_vim._setreg_calls)
     assert.equals('"', env.fake_vim._setreg_calls[1].reg)
@@ -146,7 +180,9 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("wrapper commands clear multiline prompt input before slash dispatch", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
+
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
       return 77
@@ -154,8 +190,10 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_lines(77, { "> first line", "  second line" })
     env.fake_vim._set_buf_cursor(77, 1701, 2, 11)
 
+    -- ========= [A]ct     =========
     local ok = env.codex.show_status()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(2, #env.provider.send_calls)
     assert.equals(
@@ -175,7 +213,9 @@ describe("codex.init public api wrapper commands", function()
   it(
     "wrapper commands capture nearest multiline draft and normalize continuation gutters",
     function()
+      -- ========= [A]rrange =========
       local env = setup_with_deps()
+
       env.codex.open(false)
       env.provider.get_bufnr_fn = function()
         return 77
@@ -189,8 +229,10 @@ describe("codex.init public api wrapper commands", function()
       })
       env.fake_vim._set_buf_cursor(77, 1701, 5, 12)
 
+      -- ========= [A]ct     =========
       local ok = env.codex.compact()
 
+      -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.equals(2, #env.provider.send_calls)
       assert.equals(
@@ -208,6 +250,7 @@ describe("codex.init public api wrapper commands", function()
   )
 
   it("wrapper commands clear full draft when code-fence-like lines are near cursor", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -230,8 +273,10 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_lines(77, draft_lines)
     env.fake_vim._set_buf_cursor(77, 1701, 12, 3)
 
+    -- ========= [A]ct     =========
     local ok = env.codex.compact()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(2, #env.provider.send_calls)
     local expected_clear_prefix = "<termcoded:<C-e>><termcoded:<C-u>>"
@@ -258,7 +303,9 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("wrapper commands warn when setreg fails", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
+
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
       return 77
@@ -268,8 +315,10 @@ describe("codex.init public api wrapper commands", function()
       error("setreg boom")
     end
 
+    -- ========= [A]ct     =========
     local ok = env.codex.show_status()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.logger.warns)
     assert.equals("Could not save existing prompt before clearing", env.logger.warns[1])
@@ -281,7 +330,9 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("wrapper commands do not warn when prompt input is uncertain", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
+
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
       return 77
@@ -289,8 +340,10 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_lines(77, { "> draft instructions" })
     env.fake_vim._set_buf_cursor(77, 1702, 1, 0)
 
+    -- ========= [A]ct     =========
     local ok = env.codex.compact()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(0, #env.fake_vim._setreg_calls)
     assert.equals(0, #env.logger.warns)
@@ -300,7 +353,9 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("wrapper commands do not warn when prompt line has no typed input", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
+
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
       return 77
@@ -308,8 +363,10 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_lines(77, { "> " })
     env.fake_vim._set_buf_cursor(77, 1702, 1, 0)
 
+    -- ========= [A]ct     =========
     local ok = env.codex.compact()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(0, #env.fake_vim._setreg_calls)
     assert.equals(0, #env.logger.warns)
@@ -319,14 +376,18 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("wrapper commands warn when capture is unavailable for an alive-session buffer", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
+
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
       return nil
     end
 
+    -- ========= [A]ct     =========
     local ok = env.codex.show_permissions()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(0, #env.fake_vim._setreg_calls)
     assert.equals(1, #env.logger.warns)
@@ -337,15 +398,19 @@ describe("codex.init public api wrapper commands", function()
   end)
 
   it("wrapper commands use logger.warn when prompt save succeeds", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
+
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
       return 77
     end
     env.fake_vim._set_buf_lines(77, { "> draft instructions" })
 
+    -- ========= [A]ct     =========
     local ok = env.codex.review()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.logger.warns)
     assert.equals("Saved current prompt to unnamed register", env.logger.warns[1])

@@ -24,7 +24,12 @@ describe("codex.providers registry", function()
 
   describe("resolve", function()
     it("resolves 'native' to native provider", function()
+      -- ========= [A]rrange =========
+
+      -- ========= [A]ct     =========
       local provider, name = registry.resolve("native")
+
+      -- ========= [A]ssert  =========
       assert.is_not_nil(provider)
       assert.equals("native", name)
       assert.is_function(provider.open)
@@ -38,13 +43,18 @@ describe("codex.providers registry", function()
     end)
 
     it("resolves 'auto' to native when snacks is unavailable", function()
+      -- ========= [A]rrange =========
+
+      -- ========= [A]ct     =========
       local provider, name = registry.resolve("auto")
+
+      -- ========= [A]ssert  =========
       assert.is_not_nil(provider)
-      -- In test env, snacks is not installed, so should fall back to native
       assert.equals("native", name)
     end)
 
     it("caches auto resolution after first detection", function()
+      -- ========= [A]rrange =========
       local snacks_checks = 0
       local snacks_provider = {
         is_available = function()
@@ -63,19 +73,22 @@ describe("codex.providers registry", function()
         native = native_provider,
       }, function()
         registry.reset()
+        local first_provider, first_name = registry.resolve("auto")
 
-        local provider_1, name_1 = registry.resolve("auto")
-        local provider_2, name_2 = registry.resolve("auto")
+        -- ========= [A]ct     =========
+        local second_provider, second_name = registry.resolve("auto")
 
-        assert.same(native_provider, provider_1)
-        assert.same(provider_1, provider_2)
-        assert.equals("native", name_1)
-        assert.equals(name_1, name_2)
+        -- ========= [A]ssert  =========
+        assert.same(native_provider, first_provider)
+        assert.same(first_provider, second_provider)
+        assert.equals("native", first_name)
+        assert.equals(first_name, second_name)
         assert.equals(1, snacks_checks)
       end)
     end)
 
     it("re-detects auto resolution after registry reset", function()
+      -- ========= [A]rrange =========
       local snacks_checks = 0
       local snacks_provider = {
         is_available = function()
@@ -96,8 +109,11 @@ describe("codex.providers registry", function()
         registry.reset()
         local _, first_name = registry.resolve("auto")
         registry.reset()
+
+        -- ========= [A]ct     =========
         local _, second_name = registry.resolve("auto")
 
+        -- ========= [A]ssert  =========
         assert.equals("native", first_name)
         assert.equals("native", second_name)
         assert.equals(2, snacks_checks)
@@ -105,15 +121,25 @@ describe("codex.providers registry", function()
     end)
 
     it("errors on unknown provider", function()
-      assert.has_error(function()
-        registry.resolve("nonexistent")
-      end)
+      -- ========= [A]rrange =========
+      local provider_name = "nonexistent"
+
+      -- ========= [A]ct     =========
+      local ok = pcall(registry.resolve, provider_name)
+
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
     end)
 
     it("errors on removed provider name", function()
-      assert.has_error(function()
-        registry.resolve("external")
-      end)
+      -- ========= [A]rrange =========
+      local provider_name = "external"
+
+      -- ========= [A]ct     =========
+      local ok = pcall(registry.resolve, provider_name)
+
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
     end)
   end)
 end)

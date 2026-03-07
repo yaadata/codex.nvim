@@ -9,10 +9,13 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection formats and sends the visual payload", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
@@ -27,25 +30,31 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection exits visual mode before dispatching payload", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.fake_vim.fn.mode = function()
       return "v"
     end
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.fake_vim._input_calls)
     assert.equals("<termcoded:<Esc>>", env.fake_vim._input_calls[1].keys)
   end)
 
   it("send_selection schedules a follow-up focus to keep terminal input mode", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps({
       launch = { auto_start = false },
     })
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.focus_calls)
     assert.equals(1, #env.fake_vim._scheduled)
@@ -55,6 +64,7 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection wraps real formatter output in bracketed paste", function()
+    -- ========= [A]rrange =========
     local real_formatter = require("codex.context.formatter")
     local env = setup_with_deps({
       _deps = {
@@ -69,15 +79,18 @@ describe("codex.init public api send_selection", function()
       lines = { "```", "test-unit:" },
     }
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_selection()
     local expected_payload = real_formatter.format_selection(env.selection.result)
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.send_calls)
     assert.equals("\27[200~" .. expected_payload .. "\27[201~", env.provider.send_calls[1].text)
   end)
 
   it("send_selection waits for startup readiness before sending", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps({
       terminal = {
         startup = { timeout_ms = 200, retry_interval_ms = 50 },
@@ -87,8 +100,10 @@ describe("codex.init public api send_selection", function()
       return handle and env.fake_vim._runtime.now >= 100
     end
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
@@ -101,6 +116,7 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection schedules follow-up focus when queued sends flush", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps({
       launch = { auto_start = false },
       terminal = {
@@ -111,8 +127,10 @@ describe("codex.init public api send_selection", function()
       return handle and env.fake_vim._runtime.now >= 100
     end
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(0, #env.fake_vim._scheduled)
 
@@ -127,6 +145,7 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection drops queued payload after startup timeout", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps({
       terminal = {
         startup = { timeout_ms = 120, retry_interval_ms = 50 },
@@ -136,8 +155,10 @@ describe("codex.init public api send_selection", function()
       return false
     end
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(0, #env.provider.send_calls)
     run_deferred(env.fake_vim, 3)
@@ -149,11 +170,14 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection logs and returns false when selection fails", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.selection.err = "no visual selection range found"
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals("no visual selection range found", err)
     assert.equals(0, #env.provider.send_calls)
@@ -164,11 +188,14 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection logs warning and returns false for invalid selection path", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.selection.err = env.selection.errors.INVALID_FILEPATH
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals(env.selection.errors.INVALID_FILEPATH, err)
     assert.equals(0, #env.provider.send_calls)
@@ -180,6 +207,7 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection forwards explicit range options to selection extractor", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.fake_vim.fn.mode = function()
       return "v"
@@ -189,12 +217,15 @@ describe("codex.init public api send_selection", function()
     end
     env.fake_vim._set_buf_cursor(1, 0, 10, 4)
 
+    -- ========= [A]ct     =========
     env.codex.send_selection({ line1 = 3, line2 = 5 })
 
+    -- ========= [A]ssert  =========
     assert.same({ line1 = 3, line2 = 5 }, env.selection.calls[1].opts)
   end)
 
   it("send_selection derives visual range when called in visual mode without opts", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.fake_vim.fn.mode = function()
       return "v"
@@ -204,8 +235,10 @@ describe("codex.init public api send_selection", function()
     end
     env.fake_vim._set_buf_cursor(1, 0, 7, 9)
 
+    -- ========= [A]ct     =========
     env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.same({
       line1 = 4,
       line2 = 7,
@@ -216,6 +249,7 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection derives blockwise mode for visual fallback", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.fake_vim.fn.mode = function()
       return CTRL_V
@@ -225,8 +259,10 @@ describe("codex.init public api send_selection", function()
     end
     env.fake_vim._set_buf_cursor(1, 0, 9, 12)
 
+    -- ========= [A]ct     =========
     env.codex.send_selection()
 
+    -- ========= [A]ssert  =========
     assert.same({
       line1 = 6,
       line2 = 9,

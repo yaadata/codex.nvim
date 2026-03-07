@@ -21,9 +21,13 @@ describe("codex.logger", function()
   end)
 
   it("captures and notifies only entries that pass the level filter", function()
+    -- ========= [A]rrange =========
     logger.info("info message")
+
+    -- ========= [A]ct     =========
     logger.warn("warn %s", "message")
 
+    -- ========= [A]ssert  =========
     assert.equals(1, #notify_calls)
     assert.equals("[codex] warn message", notify_calls[1].msg)
 
@@ -36,11 +40,14 @@ describe("codex.logger", function()
   end)
 
   it("records verbose debug entries without sending notifications", function()
+    -- ========= [A]rrange =========
     logger.set_level("debug")
     logger.set_verbose(true)
 
+    -- ========= [A]ct     =========
     logger.vdebug("detail %d", 7)
 
+    -- ========= [A]ssert  =========
     assert.equals(0, #notify_calls)
     local logs = logger.get_logs()
     assert.equals(1, #logs)
@@ -51,12 +58,15 @@ describe("codex.logger", function()
   end)
 
   it("sorts collected logs by monotonic seq when deferred entries flush later", function()
+    -- ========= [A]rrange =========
     logger.set_level("debug")
     logger.set_verbose(true)
-
     logger.vdebug("first")
+
+    -- ========= [A]ct     =========
     logger.warn("second")
 
+    -- ========= [A]ssert  =========
     local logs = logger.get_logs()
     assert.equals(2, #logs)
     assert.equals("first", logs[1].message)
@@ -65,23 +75,31 @@ describe("codex.logger", function()
   end)
 
   it("drops verbose debug entries when verbose mode is disabled", function()
+    -- ========= [A]rrange =========
     logger.set_level("debug")
     logger.set_verbose(false)
 
+    -- ========= [A]ct     =========
     logger.vdebug("detail")
 
+    -- ========= [A]ssert  =========
     assert.equals(0, #notify_calls)
     assert.equals(0, #logger.get_logs())
   end)
 
   it("keeps only the latest 1000 captured log entries", function()
+    -- ========= [A]rrange =========
     logger.set_level("debug")
     logger.set_verbose(true)
 
-    for i = 1, 1005 do
+    for i = 1, 1004 do
       logger.vdebug("entry %d", i)
     end
 
+    -- ========= [A]ct     =========
+    logger.vdebug("entry %d", 1005)
+
+    -- ========= [A]ssert  =========
     local logs = logger.get_logs()
     assert.equals(1000, #logs)
     assert.equals("entry 6", logs[1].message)
@@ -89,16 +107,25 @@ describe("codex.logger", function()
   end)
 
   it("clears captured logs", function()
+    -- ========= [A]rrange =========
     logger.warn("one")
-    assert.equals(1, #logger.get_logs())
+
+    -- ========= [A]ct     =========
     logger.clear_logs()
+
+    -- ========= [A]ssert  =========
     assert.equals(0, #logger.get_logs())
   end)
 
   it("clears deferred non-critical logs", function()
+    -- ========= [A]rrange =========
     logger.set_level("debug")
     logger.debug("queued")
+
+    -- ========= [A]ct     =========
     logger.clear_logs()
+
+    -- ========= [A]ssert  =========
     assert.equals(0, #logger.get_logs())
   end)
 end)

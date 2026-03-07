@@ -8,10 +8,13 @@ describe("codex.init public api send_command", function()
   end)
 
   it("send_command opens with focus when no active session", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_command("status")
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
@@ -26,12 +29,15 @@ describe("codex.init public api send_command", function()
   end)
 
   it("send_command focuses existing session and sends slash command", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     local active_handle = env.store.get_active().handle
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_command("model")
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(1, #env.provider.open_calls)
     assert.equals(2, #env.provider.focus_calls)
@@ -45,12 +51,15 @@ describe("codex.init public api send_command", function()
   end)
 
   it("send_command normalizes slash prefix and logs send failures", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.provider.send_ok = false
     env.provider.send_err = "boom"
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.send_command("/compact")
 
+    -- ========= [A]ssert  =========
     assert.is_false(ok)
     assert.equals("boom", err)
     assert.equals("/compact", env.provider.send_calls[1].text)
@@ -61,6 +70,7 @@ describe("codex.init public api send_command", function()
   end)
 
   it("send_command does not capture or store existing prompt input", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
     env.provider.get_bufnr_fn = function()
@@ -68,8 +78,10 @@ describe("codex.init public api send_command", function()
     end
     env.fake_vim._set_buf_lines(77, { "> keep this draft" })
 
+    -- ========= [A]ct     =========
     local ok = env.codex.send_command("status")
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals(0, #env.fake_vim._setreg_calls)
     assert.equals(0, #env.fake_vim._notify_calls)
@@ -77,6 +89,7 @@ describe("codex.init public api send_command", function()
   end)
 
   it("send_command queues when terminal is starting and flushes later", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps({
       terminal = {
         startup = { timeout_ms = 200, retry_interval_ms = 50 },
@@ -86,8 +99,10 @@ describe("codex.init public api send_command", function()
       return handle and env.fake_vim._runtime.now >= 100
     end
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.send_command("status")
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.is_nil(err)
     assert.equals(1, #env.provider.open_calls)
@@ -110,6 +125,7 @@ describe("codex.init public api send_command", function()
   end)
 
   it("send_command waits for provider readiness even when process is alive", function()
+    -- ========= [A]rrange =========
     local env = setup_with_deps({
       terminal = {
         startup = { timeout_ms = 300, retry_interval_ms = 50 },
@@ -122,8 +138,10 @@ describe("codex.init public api send_command", function()
       return handle and env.fake_vim._runtime.now >= 150
     end
 
+    -- ========= [A]ct     =========
     local ok, err = env.codex.send_command("status")
 
+    -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.is_nil(err)
     assert.equals(0, #env.provider.send_calls)
