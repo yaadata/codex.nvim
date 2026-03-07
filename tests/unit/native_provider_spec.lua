@@ -657,6 +657,43 @@ describe("codex.providers.native", function()
     end)
   end)
 
+  it("does not notify on non-zero exit and still runs on_exit callback", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({
+        terminal = {
+          auto_close = true,
+        },
+      })
+
+      local notify_calls = 0
+      local original_notify = vim.notify
+      vim.notify = function()
+        notify_calls = notify_calls + 1
+      end
+
+      local ok, err = pcall(function()
+        local exited_handle = nil
+        local handle = provider.open("codex", {}, {}, cfg, true, function(cb_handle)
+          exited_handle = cb_handle
+        end)
+        local winid = handle.winid
+
+        state.termopen_calls[1].opts.on_exit(nil, -1)
+
+        assert.same(handle, exited_handle)
+        assert.equals(1, #state.win_close_calls)
+        assert.equals(winid, state.win_close_calls[1].winid)
+        assert.equals(0, notify_calls)
+      end)
+
+      vim.notify = original_notify
+      if not ok then
+        error(err)
+      end
+    end)
+  end)
+
   it("focuses terminal window and enters insert mode", function()
     with_stubbed_native_env(function(state)
       local provider = require("codex.providers.native")
