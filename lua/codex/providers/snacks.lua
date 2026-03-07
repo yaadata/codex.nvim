@@ -77,12 +77,15 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local cwd = launch.cwd or vim.fn.getcwd()
   local provider_opts = config.terminal.provider_opts or {}
   local snacks_opts = provider_opts.snacks or {}
+  local auto_close = config.terminal.auto_close == true
 
   local base_opts = {
     cmd = full_cmd,
     cwd = cwd,
     interactive = true,
-    auto_close = config.terminal.auto_close == true,
+    -- Keep Snacks auto_close disabled so codex controls TermClose behavior and
+    -- avoids Snacks non-zero exit notifications for intentional closes.
+    auto_close = false,
   }
   if next(env) ~= nil then
     base_opts.env = env
@@ -107,12 +110,26 @@ function M.open(cmd, args, env, config, focus, on_exit)
     keymaps.apply_terminal(terminal.buf, config.terminal.keymaps)
   end
 
-  if on_exit and terminal.buf then
+  if terminal.buf and (on_exit or auto_close) then
     vim.api.nvim_create_autocmd("TermClose", {
       buffer = terminal.buf,
       once = true,
       callback = function()
-        on_exit(handle)
+        if on_exit then
+          on_exit(handle)
+        end
+
+        if auto_close and handle.terminal and handle.terminal.close then
+          vim.schedule(function()
+            local ok, err = pcall(function()
+              handle.terminal:close()
+            end)
+            if not ok then
+              log.debug("snacks: failed to auto-close terminal on TermClose: %s", tostring(err))
+            end
+            pcall(vim.cmd, "checktime")
+          end)
+        end
       end,
     })
   end

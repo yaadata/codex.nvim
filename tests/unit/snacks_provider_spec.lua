@@ -609,8 +609,8 @@ describe("codex.providers.snacks", function()
     end)
   end)
 
-  it("passes auto_close=true when configured", function()
-    with_stubbed_vim_api(function()
+  it("disables snacks auto_close even when codex auto_close=true", function()
+    with_stubbed_vim_api(function(autocmds)
       local captured_opts = nil
       package.loaded["snacks"] = {
         terminal = function(_, opts)
@@ -628,7 +628,66 @@ describe("codex.providers.snacks", function()
         },
       }, false, nil)
 
-      assert.is_true(captured_opts.auto_close)
+      assert.is_false(captured_opts.auto_close)
+      assert.equals(1, #autocmds)
+      assert.equals("TermClose", autocmds[1].event)
+    end)
+  end)
+
+  it("runs on_exit and closes terminal on TermClose when auto_close=true", function()
+    with_stubbed_vim_api(function(autocmds, _, cmd_calls)
+      local close_calls = 0
+      local terminal = {
+        buf = 42,
+        close = function()
+          close_calls = close_calls + 1
+        end,
+      }
+      package.loaded["snacks"] = {
+        terminal = function()
+          return terminal
+        end,
+      }
+
+      local scheduled = {}
+      local original_schedule = vim.schedule
+      vim.schedule = function(cb)
+        table.insert(scheduled, cb)
+      end
+
+      local on_exit_calls = 0
+      local provider = require("codex.providers.snacks")
+      provider.open(
+        "codex",
+        {},
+        {},
+        {
+          terminal = {
+            auto_close = true,
+            startup = { grace_ms = 0 },
+            provider_opts = {},
+          },
+        },
+        false,
+        function()
+          on_exit_calls = on_exit_calls + 1
+        end
+      )
+
+      assert.equals(1, #autocmds)
+      autocmds[1].spec.callback()
+
+      assert.equals(1, on_exit_calls)
+      assert.equals(1, #scheduled)
+      assert.equals(0, close_calls)
+      assert.equals(0, #cmd_calls)
+
+      scheduled[1]()
+
+      assert.equals(1, close_calls)
+      assert.same({ "checktime" }, cmd_calls)
+
+      vim.schedule = original_schedule
     end)
   end)
 
