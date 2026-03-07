@@ -62,7 +62,7 @@ opts = {
     cmd = "codex",
     args = {},
     env = {},
-    auto_start = false,
+    auto_start = true,
     cwd = nil,
   },
   log = {
@@ -94,11 +94,11 @@ opts = {
         -- pass-through for snacks.terminal(..., opts)
       },
     },
-    auto_close = false, -- close terminal buffer automatically when process exits
+    auto_close = true, -- close terminal buffer automatically when process exits
     startup = {
       timeout_ms = 2000, -- max time to wait for startup readiness before dropping queued sends
       retry_interval_ms = 50, -- retry interval while waiting for startup readiness
-      grace_ms = 700, -- minimum delay after terminal open before first send
+      grace_ms = 800, -- minimum delay after terminal open before first send
     },
     keymaps = {}, -- terminal-local keymaps are opt-in; no defaults are registered
   },
@@ -155,7 +155,7 @@ in your lazy.nvim plugin spec `keys`:
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "0.3.0",
+  version = "0.4.1",
   main = "codex",
   cmd = {
     "Codex",

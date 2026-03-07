@@ -40,7 +40,9 @@ describe("codex.init public api send_selection", function()
   end)
 
   it("send_selection schedules a follow-up focus to keep terminal input mode", function()
-    local env = setup_with_deps()
+    local env = setup_with_deps({
+      launch = { auto_start = false },
+    })
 
     local ok = env.codex.send_selection()
 
@@ -100,6 +102,7 @@ describe("codex.init public api send_selection", function()
 
   it("send_selection schedules follow-up focus when queued sends flush", function()
     local env = setup_with_deps({
+      launch = { auto_start = false },
       terminal = {
         startup = { timeout_ms = 200, retry_interval_ms = 50 },
       },

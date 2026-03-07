@@ -7,16 +7,16 @@ M.defaults = {
     cmd = "codex",
     args = {},
     env = {},
-    auto_start = false,
+    auto_start = true,
     cwd = nil,
   },
   terminal = {
     provider = "auto",
-    auto_close = false,
+    auto_close = true,
     startup = {
       timeout_ms = 2000,
       retry_interval_ms = 50,
-      grace_ms = 700,
+      grace_ms = 800,
     },
     keymaps = {
       -- User-defined terminal-local keymaps (empty by default).
