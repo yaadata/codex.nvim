@@ -311,41 +311,10 @@ the terminal process exits.
 
 ## Lua API
 
-- `require("codex").setup(opts)` initialize plugin config/runtime and register
-  commands.
-- `require("codex").open(focus)` open terminal session.
-- `require("codex").close()` close active session.
-- `require("codex").toggle()` toggle terminal visibility.
-- `require("codex").focus()` focus active session.
-- `require("codex").send(text)` send raw text.
-- `require("codex").clear_input()` clear current prompt input.
-- `require("codex.keymaps").builtins` builtin terminal keymap actions:
-  `toggle`, `clear_input`, `close`, `nav_left`, `nav_down`, `nav_up`, `nav_right`.
-- `require("codex").send_command(slash_cmd)` send slash command text.
-- `require("codex").set_model()` send `/model`.
-- `require("codex").show_status()` send `/status`.
-- `require("codex").show_permissions()` send `/permissions`.
-- `require("codex").compact()` send `/compact`.
-- `require("codex").review(instructions)` send `/review`.
-- `require("codex").show_diff()` send `/diff`.
-- `require("codex").resume(opts)` resume (`opts.last` supports `--last`).
-- `require("codex").send_buffer(opts)` send buffer/file path as `@path` with a
-  trailing space. Set `opts.path` to send an explicit file path (takes
-  precedence over `opts.bufnr`), and set `opts.focus = false` to keep editor
-  focus.
-- `require("codex").send_selection(opts)` send visual/range selection with a
-  trailing newline after the fenced block.
-- `require("codex").mention_file(path, opts)` send `/mention` for a file path
-  (`opts.post_execute(ok, err)` runs after mention execution completes).
-- `require("codex").mention_directory(path, opts)` send `/mention` for a
-  directory path (`opts.post_execute(ok, err)` runs after mention execution
-  completes).
-- `require("codex").is_running()` check whether active session is alive.
-- `require("codex").get_config()` return resolved config snapshot.
-- `require("codex").get_logs()` return captured in-memory logs.
-- `require("codex").clear_logs()` clear captured in-memory logs.
+The authoritative Lua API reference lives in
+[`docs/api.md`](docs/api.md).
 
-For command and component interaction details, see
+For `:Codex*` command behavior and component interaction details, see
 [`docs/command-interactions.md`](docs/command-interactions.md).
 
 ## Providers

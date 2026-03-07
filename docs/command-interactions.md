@@ -7,6 +7,8 @@ This document is the canonical reference for how `:Codex*` commands map from
 facade) and then into `session_lifecycle`, `send_dispatch`, `mention`, and
 provider collaborators.
 
+For the authoritative Lua API reference, see [`docs/api.md`](./api.md).
+
 ## Command Mapping
 
 | User Command                    | Entry Function                          | Primary Path                                                                                    |

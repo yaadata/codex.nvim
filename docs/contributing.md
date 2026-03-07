@@ -400,8 +400,9 @@ When cutting a new release tag:
    in each test.
 4. **Command dispatch tests** -- If the command exercises a new code path beyond
    existing patterns, add targeted tests.
-5. **README update** -- Add the command to the Commands section and the Lua API
-   to the Lua API section in `README.md`.
+5. **User docs** -- Add the command to the Commands section in `README.md` and
+   update the authoritative Lua API reference in `docs/api.md` when the public
+   Lua surface changes.
 6. **Types** -- If the command introduces new option types or result types, add
    them to `lua/codex/types.lua`.
 7. **Architecture docs** -- Update `docs/command-interactions.md` for any
