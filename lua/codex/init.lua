@@ -205,6 +205,16 @@ function M.clear_input()
   return provider.send(session.handle, clear_sequence)
 end
 
+---Sends Enter to submit the current terminal input.
+---@return boolean ok
+---@return string|nil err
+function M.submit_input()
+  ensure_setup()
+  return prompt_submit.submit_with_enter_key(get_deps, function()
+    return state.config
+  end, "submit_input")
+end
+
 ---Normalizes and dispatches a slash command payload.
 ---@param slash_cmd string Slash command name with or without a leading `/`.
 ---@return codex.SendResult ok True when command payload is sent.
