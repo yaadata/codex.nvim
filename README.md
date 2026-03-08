@@ -30,8 +30,8 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
     "CodexFocus",
     "CodexClose",
     "CodexClearInput",
-    "CodexSend",
-    "CodexAddBuffer",
+    "CodexSendSelection",
+    "CodexSendFile",
     "CodexMentionFile",
     "CodexMentionDirectory",
     "CodexResume",
@@ -108,8 +108,8 @@ opts = {
 - `:CodexFocus` focuses the terminal (opens it if needed)
 - `:CodexClose` closes the active Codex terminal session
 - `:CodexClearInput` clears the active Codex terminal input line
-- `:CodexSend` sends selected lines with path and range context.
-- `:CodexAddBuffer` sends current buffer path as ACP file reference (`@path`).
+- `:CodexSendSelection` sends the active visual selection with path and range context.
+- `:CodexSendFile` sends current buffer path as ACP file reference (`@path`).
 - `:CodexMentionFile [path]` sends `/mention` for a file path, normalized to
   cwd-relative.
 - `:CodexMentionDirectory [path]` sends `/mention` for a directory path,
@@ -150,8 +150,8 @@ in your lazy.nvim plugin spec `keys`:
     "CodexFocus",
     "CodexClose",
     "CodexClearInput",
-    "CodexSend",
-    "CodexAddBuffer",
+    "CodexSendSelection",
+    "CodexSendFile",
     "CodexMentionFile",
     "CodexMentionDirectory",
     "CodexResume",

@@ -295,7 +295,7 @@ failures downstream.
 APIs that need an active session (`send`, `execute_slash_command`, `focus`,
 `send_selection`, `mention_file`, `mention_directory`) automatically open one
 when needed. The lower-level `send` API opens without focus, while
-command-facing flows (`:CodexSend`, `:CodexMentionFile`) ensure the terminal is
+command-facing flows (`:CodexSendSelection`, `:CodexMentionFile`) ensure the terminal is
 opened with focus before payload dispatch. If the provider handle is not yet
 ready, payloads are queued and retried on a timer
 (`terminal.startup.retry_interval_ms`) until ready or timeout

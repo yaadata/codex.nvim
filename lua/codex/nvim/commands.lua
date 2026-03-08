@@ -44,6 +44,26 @@ local function resolve_visual_mode(opts)
   return nil
 end
 
+--- Build visual-selection opts for the command, or reject non-visual use.
+---@param opts codex.UserCommandOpts
+---@return codex.SelectionOpts|nil
+local function resolve_selection_command_opts(opts)
+  local visual_mode = resolve_visual_mode(opts)
+  if visual_mode == nil then
+    vim.notify(
+      "[codex] :CodexSendSelection is only available from visual mode",
+      vim.log.levels.ERROR
+    )
+    return nil
+  end
+
+  return {
+    line1 = opts.line1,
+    line2 = opts.line2,
+    visual_mode = visual_mode,
+  }
+end
+
 --- Register all :Codex* user commands.
 ---@return nil
 function M.register()
@@ -86,24 +106,19 @@ function M.register()
   })
 
   ---@param opts codex.UserCommandOpts
-  vim.api.nvim_create_user_command("CodexSend", function(opts)
+  vim.api.nvim_create_user_command("CodexSendSelection", function(opts)
     local codex = require("codex")
-    local selection_opts = {
-      line1 = opts.line1,
-      line2 = opts.line2,
-    }
-    local visual_mode = resolve_visual_mode(opts)
-    if visual_mode ~= nil then
-      selection_opts.visual_mode = visual_mode
+    local selection_opts = resolve_selection_command_opts(opts)
+    if selection_opts ~= nil then
+      codex.send_selection(selection_opts)
     end
-    codex.send_selection(selection_opts)
   end, {
     desc = "Send visual selection to Codex with file path and line range",
     nargs = 0,
     range = true,
   })
 
-  vim.api.nvim_create_user_command("CodexAddBuffer", function()
+  vim.api.nvim_create_user_command("CodexSendFile", function()
     local codex = require("codex")
     codex.send_file()
   end, {

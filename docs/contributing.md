@@ -246,7 +246,7 @@ that owns them.
 | Functions | `snake_case`       | `get_visual_selection` |
 | Constants | `UPPER_SNAKE_CASE` | `ERR_NO_FILEPATH`      |
 | Types     | `codex.PascalCase` | `codex.ProviderHandle` |
-| Commands  | `CodexPascalCase`  | `CodexSend`            |
+| Commands  | `CodexPascalCase`  | `CodexSendSelection`   |
 
 ### Comments
 

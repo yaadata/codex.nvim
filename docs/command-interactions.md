@@ -18,8 +18,8 @@ For the authoritative Lua API reference, see [`docs/api.md`](./api.md).
 | `:CodexFocus`                   | `codex.focus()`                         | Focus active session or open one                                                                |
 | `:CodexClose`                   | `codex.close()`                         | Close active session and reset queue                                                            |
 | `:CodexClearInput`              | `codex.clear_input()`                   | Send `<C-c>` to active session                                                                  |
-| `:CodexAddBuffer`               | `codex.send_file(opts)`                 | Collect explicit file path (`opts.path`) or current buffer path, format `@path`, send via queue |
-| `:CodexSend`                    | `codex.send_selection(opts)`            | Collect selection, format, send via queue                                                       |
+| `:CodexSendFile`                | `codex.send_file(opts)`                 | Collect explicit file path (`opts.path`) or current buffer path, format `@path`, send via queue |
+| `:CodexSendSelection`           | `codex.send_selection(opts)`            | Collect the active visual selection, format, send via queue                                     |
 | `:CodexMentionFile [path]`      | `codex.mention_file(path[, opts])`      | Build `/mention` payload for relative file and submit                                           |
 | `:CodexMentionDirectory [path]` | `codex.mention_directory(path[, opts])` | Build `/mention` payload for relative directory (with trailing separator) and submit            |
 | `:CodexResume`                  | `codex.resume({ last = false })`        | In-process `/resume` or launch `codex resume`                                                   |
@@ -141,15 +141,18 @@ init.lua clear_input()
     \- [alive session] -> provider.send(handle, terminal_io.encode_termcode(deps, "<C-c>"))
 ```
 
-### `:CodexSend` (Range or Visual Selection)
+### `:CodexSendSelection` (Visual Selection Only)
 
 ```text
-User runs :CodexSend (e.g. :'<,'>CodexSend)
+User runs :CodexSendSelection from visual mode (e.g. :'<,'>CodexSendSelection)
     |
     v
 commands.lua
-    |- build selection_opts from opts.line1/opts.line2
-    |- resolve_visual_mode(opts) when command range matches visual marks
+    |- resolve_selection_command_opts(opts)
+    |    |- resolve_visual_mode(opts)
+    |    |    |- [no matching visual marks/range] -> notify error and stop
+    |    |    \- [matching marks] -> "v" | "V" | CTRL-V
+    |    \- return { line1, line2, visual_mode }
     \- codex.send_selection(selection_opts)
         |
         v
@@ -169,10 +172,10 @@ init.lua send_selection()
          \- [not ready yet] -> queue + retry loop until ready/timeout
 ```
 
-### `:CodexAddBuffer`
+### `:CodexSendFile`
 
 ```text
-User runs :CodexAddBuffer
+User runs :CodexSendFile
     |
     v
 commands.lua -> codex.send_file()

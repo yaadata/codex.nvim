@@ -18,9 +18,16 @@ local function with_stubbed_command_registration(run)
 end
 
 describe("codex.nvim command registration", function()
+  local original_notify
+
   before_each(function()
     package.loaded["codex"] = nil
     package.loaded["codex.nvim.commands"] = nil
+    original_notify = vim.notify
+  end)
+
+  after_each(function()
+    vim.notify = original_notify
   end)
 
   it("registers Codex commands with expected options", function()
@@ -33,8 +40,8 @@ describe("codex.nvim command registration", function()
       assert.is_not_nil(registered.CodexFocus)
       assert.is_not_nil(registered.CodexClose)
       assert.is_not_nil(registered.CodexClearInput)
-      assert.is_not_nil(registered.CodexSend)
-      assert.is_not_nil(registered.CodexAddBuffer)
+      assert.is_not_nil(registered.CodexSendSelection)
+      assert.is_not_nil(registered.CodexSendFile)
       assert.is_not_nil(registered.CodexMentionFile)
       assert.is_not_nil(registered.CodexMentionDirectory)
       assert.is_not_nil(registered.CodexResume)
@@ -62,16 +69,16 @@ describe("codex.nvim command registration", function()
 
       assert.equals(
         "Send visual selection to Codex with file path and line range",
-        registered.CodexSend.opts.desc
+        registered.CodexSendSelection.opts.desc
       )
-      assert.equals(0, registered.CodexSend.opts.nargs)
-      assert.is_true(registered.CodexSend.opts.range)
+      assert.equals(0, registered.CodexSendSelection.opts.nargs)
+      assert.is_true(registered.CodexSendSelection.opts.range)
 
       assert.equals(
         "Send current buffer path to Codex as ACP reference",
-        registered.CodexAddBuffer.opts.desc
+        registered.CodexSendFile.opts.desc
       )
-      assert.equals(0, registered.CodexAddBuffer.opts.nargs)
+      assert.equals(0, registered.CodexSendFile.opts.nargs)
 
       assert.equals("Mention a file in Codex via /mention", registered.CodexMentionFile.opts.desc)
       assert.equals("?", registered.CodexMentionFile.opts.nargs)
@@ -205,7 +212,7 @@ describe("codex.nvim command registration", function()
     end)
   end)
 
-  it("dispatches :CodexSend with range options", function()
+  it("dispatches :CodexSendSelection with visual range options", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
       local calls = {}
@@ -216,18 +223,37 @@ describe("codex.nvim command registration", function()
         end,
       }
 
+      local original_get_current_buf = vim.api.nvim_get_current_buf
+      local original_get_mark = vim.api.nvim_buf_get_mark
+      local original_visualmode = vim.fn.visualmode
+      vim.api.nvim_get_current_buf = function()
+        return 3
+      end
+      vim.api.nvim_buf_get_mark = function(_, mark)
+        if mark == "<" then
+          return { 2, 0 }
+        end
+        return { 6, 4 }
+      end
+      vim.fn.visualmode = function()
+        return "V"
+      end
+
       require("codex.nvim.commands").register()
 
       -- ========= [A]ct     =========
-      registered.CodexSend.callback({ line1 = 2, line2 = 6 })
+      registered.CodexSendSelection.callback({ line1 = 2, line2 = 6, range = 2 })
+      vim.api.nvim_get_current_buf = original_get_current_buf
+      vim.api.nvim_buf_get_mark = original_get_mark
+      vim.fn.visualmode = original_visualmode
 
       -- ========= [A]ssert  =========
       assert.equals(1, #calls)
-      assert.same({ line1 = 2, line2 = 6 }, calls[1])
+      assert.same({ line1 = 2, line2 = 6, visual_mode = "V" }, calls[1])
     end)
   end)
 
-  it("dispatches :CodexSend with visual_mode when range matches visual marks", function()
+  it("dispatches :CodexSendSelection with visual_mode when range matches visual marks", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
       local original_get_current_buf = vim.api.nvim_get_current_buf
@@ -259,7 +285,7 @@ describe("codex.nvim command registration", function()
 
       require("codex.nvim.commands").register()
       -- ========= [A]ct     =========
-      registered.CodexSend.callback({ line1 = 2, line2 = 6, range = 2 })
+      registered.CodexSendSelection.callback({ line1 = 2, line2 = 6, range = 2 })
       vim.api.nvim_get_current_buf = original_get_current_buf
       vim.api.nvim_buf_get_mark = original_get_mark
       vim.fn.visualmode = original_visualmode
@@ -269,7 +295,38 @@ describe("codex.nvim command registration", function()
     end)
   end)
 
-  it("dispatches :CodexAddBuffer to send_file", function()
+  it("rejects :CodexSendSelection outside visual mode", function()
+    with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
+      local calls = {}
+      local notifications = {}
+
+      package.loaded["codex"] = {
+        send_selection = function(opts)
+          table.insert(calls, opts)
+        end,
+      }
+      vim.notify = function(msg, level)
+        table.insert(notifications, { msg = msg, level = level })
+      end
+
+      require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
+      registered.CodexSendSelection.callback({ line1 = 2, line2 = 6, range = 0 })
+
+      -- ========= [A]ssert  =========
+      assert.equals(0, #calls)
+      assert.equals(1, #notifications)
+      assert.equals(
+        "[codex] :CodexSendSelection is only available from visual mode",
+        notifications[1].msg
+      )
+      assert.equals(vim.log.levels.ERROR, notifications[1].level)
+    end)
+  end)
+
+  it("dispatches :CodexSendFile to send_file", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
       local calls = 0
@@ -283,7 +340,7 @@ describe("codex.nvim command registration", function()
       require("codex.nvim.commands").register()
 
       -- ========= [A]ct     =========
-      registered.CodexAddBuffer.callback()
+      registered.CodexSendFile.callback()
 
       -- ========= [A]ssert  =========
       assert.equals(1, calls)
