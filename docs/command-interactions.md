@@ -24,12 +24,6 @@ For the authoritative Lua API reference, see [`docs/api.md`](./api.md).
 | `:CodexMentionDirectory [path]` | `codex.mention_directory(path[, opts])` | Build `/mention` payload for relative directory (with trailing separator) and submit            |
 | `:CodexResume`                  | `codex.resume({ last = false })`        | In-process `/resume` or launch `codex resume`                                                   |
 | `:CodexResume!`                 | `codex.resume({ last = true })`         | Launch `codex resume --last` when opening new process                                           |
-| `:CodexModel`                   | `codex.set_model()`                     | Mention-style slash wrapper (`/model`): capture->copy->clear->send->auto-submit                 |
-| `:CodexStatus`                  | `codex.show_status()`                   | Mention-style slash wrapper (`/status`): capture->copy->clear->send->auto-submit                |
-| `:CodexPermissions`             | `codex.show_permissions()`              | Mention-style slash wrapper (`/permissions`): capture->copy->clear->send->auto-submit           |
-| `:CodexCompact`                 | `codex.compact()`                       | Mention-style slash wrapper (`/compact`): capture->copy->clear->send->auto-submit               |
-| `:CodexReview [instructions]`   | `codex.review(instructions)`            | Mention-style slash wrapper (`/review ...`): capture->copy->clear->send->auto-submit            |
-| `:CodexDiff`                    | `codex.show_diff()`                     | Mention-style slash wrapper (`/diff`): capture->copy->clear->send->auto-submit                  |
 
 ## Lazy.nvim Command Bootstrap (Recommended)
 
@@ -37,10 +31,10 @@ When configured through lazy.nvim with `cmd = { ... }` and `opts = { ... }`,
 the first `:Codex*` invocation typically follows this flow:
 
 ```text
-User runs :CodexStatus (example)
+User runs :Codex (example)
     |
     v
-lazy.nvim command stub for "CodexStatus"
+lazy.nvim command stub for "Codex"
     |
     v
 lazy loads codex.nvim
@@ -67,6 +61,7 @@ init.lua setup()
     |- send_dispatch.create({ get_deps, get_config, get_send_queue, open_session })
     |- send_queue.new({ process = send_dispatch.process_pending_send_item })
     |- mention.create({ get_deps, get_config, dispatch_send })
+    |- wrapper_command.create({ get_deps, get_config, dispatch_send })
     |- commands.register()
     \- register VimLeavePre cleanup autocmd
 ```
@@ -227,6 +222,48 @@ init.lua mention_file(path[, opts]) / mention_directory(path[, opts]) -> mention
                   \- [opts.post_execute] callback once at terminal completion (success/failure)
 ```
 
+### `execute_slash_command()` (Mention-Style Autosubmit)
+
+`execute_slash_command({ command = ..., args = ... })` runs slash commands with
+the same mention-style pre-clear flow used by in-process `resume`:
+
+```text
+init.lua -> execute_slash_command(opts)
+    |- ensure_setup()
+    \- wrapper_command.execute_slash_command(opts)
+         |- validate opts table
+         |- normalize command + optional args -> command_path ("/<command>")
+         |- [active + alive session] provider.focus(handle) before capture
+         |- capture prompt input (best effort; nearest valid prompt head, strict compact marker parsing)
+         |- [captured input] vim.fn.setreg('"', captured_input)
+         |- payload = clear_line_sequence + command_path
+         \- send_dispatch.dispatch_send(payload, {
+              open_focus = true,
+              pre_focus = true,
+              command_path = command_path,
+              on_sent = function()
+                submit Enter for command_path
+                (multiline capture -> channel send, otherwise feedkeys path)
+              end,
+            })
+```
+
+Notes:
+
+- `opts.command` is required and may include or omit a leading `/`.
+- `opts.args` is optional; empty or whitespace-only args are ignored.
+- Existing prompt input is copied to the unnamed register (`"`), then cleared.
+- Multiline continuation lines are normalized to strip prompt gutter padding
+  before save.
+- Successful non-empty save emits a WARN notification.
+- If an active session buffer cannot be introspected (`unavailable_buffer`)
+  before clear, a WARN notification is emitted.
+- Input is not restored after command submission.
+- Wrapper command submission is atomic per queue item, so rapid consecutive
+  calls keep FIFO command ordering.
+
+Example custom user command wiring lives in [`docs/recipes.md`](./recipes.md).
+
 ### `:CodexResume` and `:CodexResume!`
 
 ```text
@@ -239,77 +276,9 @@ commands.lua -> codex.resume({ last = opts.bang })
 init.lua resume(opts)
     |- ensure_setup()
     |- session_lifecycle.get_active_session_and_provider(deps, config)
-    |- [active + alive session] -> wrapper_command.dispatch_wrapper_command("resume") (in-process /resume)
+    |- [active + alive session] -> execute_slash_command({ command = "resume" })
     \- [no active/alive session]
          |- args = { "resume" }
          |- if opts.last then args += "--last"
          \- session_lifecycle.open_session(deps, config, args, focus=true)
 ```
-
-### Generic `send_command()`
-
-`send_command()` normalizes the slash command, sends `"/<command>"`, then
-submits with Enter in the same queue callback:
-
-```text
-send_dispatch.dispatch_send(payload, {
-  open_focus = true,
-  pre_focus = true,
-  command_path = "/<command>",
-  on_sent = function()
-    prompt_ops.submit_with_enter_key(..., "/<command>")
-  end,
-})
-```
-
-Current command-facing usage:
-
-- No built-in `:Codex*` user command calls `send_command()` directly.
-
-### Wrapper Slash Commands (Mention-Style Autosubmit)
-
-These wrappers (`set_model`, `show_status`, `show_permissions`, `compact`,
-`review`, `show_diff`, and active-session `resume`) use a mention-style
-pre-clear flow with an atomic send + submit path:
-
-```text
-init.lua -> wrapper_command.dispatch_wrapper_command(command)
-    |- ensure_setup()
-    |- normalize -> command_path ("/<command>")
-    |- [active + alive session] provider.focus(handle) before capture
-    |- capture prompt input (best effort; nearest valid prompt head, strict compact marker parsing)
-    |- [captured input] vim.fn.setreg('"', captured_input)
-    |- payload = clear_line_sequence + command_path
-    \- send_dispatch.dispatch_send(payload, {
-         open_focus = true,
-         pre_focus = true,
-         command_path = command_path,
-         on_sent = function()
-           submit Enter for command_path
-           (multiline capture -> channel send, otherwise feedkeys path)
-         end,
-       })
-```
-
-Notes:
-
-- Existing prompt input is copied to the unnamed register (`"`), then cleared.
-- Multiline continuation lines are normalized to strip prompt gutter padding
-  before save/restore.
-- Successful non-empty save emits a WARN notification.
-- If an active session buffer cannot be introspected (`unavailable_buffer`)
-  before clear, a WARN notification is emitted.
-- Input is not restored after command submission.
-- Wrapper command submission is atomic per queue item, so rapid consecutive
-  calls keep FIFO command ordering.
-
-| User Command                  | API Method             | Wrapper Input               | Command Path             |
-| ----------------------------- | ---------------------- | --------------------------- | ------------------------ |
-| `:CodexModel`                 | `set_model()`          | `"model"`                   | `/model`                 |
-| `:CodexStatus`                | `show_status()`        | `"status"`                  | `/status`                |
-| `:CodexPermissions`           | `show_permissions()`   | `"permissions"`             | `/permissions`           |
-| `:CodexCompact`               | `compact()`            | `"compact"`                 | `/compact`               |
-| `:CodexReview`                | `review(nil)`          | `"review"`                  | `/review`                |
-| `:CodexReview <instructions>` | `review(instructions)` | `"review " .. instructions` | `/review <instructions>` |
-| `:CodexDiff`                  | `show_diff()`          | `"diff"`                    | `/diff`                  |
-| `:CodexResume`                | `resume()`             | `"resume"` (active session) | `/resume`                |

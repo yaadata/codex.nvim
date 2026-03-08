@@ -6,7 +6,7 @@ describe("codex.init public api resume", function()
     package.loaded["codex"] = nil
   end)
 
-  it("wrapper commands do not warn for symbol-only prompt markers", function()
+  it("execute_slash_command does not warn for symbol-only prompt markers", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)

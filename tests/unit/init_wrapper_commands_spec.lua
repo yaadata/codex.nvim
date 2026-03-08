@@ -1,17 +1,66 @@
 local helpers = require("tests.unit.helpers.init_spec_helpers")
 local setup_with_deps = helpers.setup_with_deps
+local run_deferred = helpers.run_deferred
 
-describe("codex.init public api wrapper commands", function()
+describe("codex.init public api execute_slash_command", function()
   before_each(function()
     package.loaded["codex"] = nil
   end)
 
-  it("set_model clears input and auto-submits /model", function()
+  it("requires an opts table", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.set_model()
+    local ok, err = env.codex.execute_slash_command()
+
+    -- ========= [A]ssert  =========
+    assert.is_false(ok)
+    assert.equals("execute_slash_command requires an opts table", err)
+  end)
+
+  it("requires opts.command", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+
+    -- ========= [A]ct     =========
+    local ok, err = env.codex.execute_slash_command({})
+
+    -- ========= [A]ssert  =========
+    assert.is_false(ok)
+    assert.equals("execute_slash_command requires opts.command", err)
+  end)
+
+  it("requires a non-empty command", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+
+    -- ========= [A]ct     =========
+    local ok, err = env.codex.execute_slash_command({ command = "   " })
+
+    -- ========= [A]ssert  =========
+    assert.is_false(ok)
+    assert.equals("execute_slash_command requires a non-empty opts.command", err)
+  end)
+
+  it("rejects non-string args", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+
+    -- ========= [A]ct     =========
+    local ok, err = env.codex.execute_slash_command({ command = "review", args = 1 })
+
+    -- ========= [A]ssert  =========
+    assert.is_false(ok)
+    assert.equals("execute_slash_command expects opts.args to be a string", err)
+  end)
+
+  it("clears input and auto-submits /model", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+
+    -- ========= [A]ct     =========
+    local ok = env.codex.execute_slash_command({ command = "model" })
     local model_payload_expected = "<termcoded:<C-e>><termcoded:<C-u>>/model"
 
     -- ========= [A]ssert  =========
@@ -28,60 +77,63 @@ describe("codex.init public api wrapper commands", function()
     assert.equals("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
   end)
 
-  it("show_status dispatches /status", function()
+  it("dispatches /status", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.show_status()
+    local ok = env.codex.execute_slash_command({ command = "status" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/status", env.provider.send_calls[1].text)
   end)
 
-  it("show_permissions dispatches /permissions", function()
+  it("normalizes a leading slash in opts.command", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.show_permissions()
+    local ok = env.codex.execute_slash_command({ command = "/permissions" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/permissions", env.provider.send_calls[1].text)
   end)
 
-  it("compact dispatches /compact", function()
+  it("dispatches /compact", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.compact()
+    local ok = env.codex.execute_slash_command({ command = "compact" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/compact", env.provider.send_calls[1].text)
   end)
 
-  it("review dispatches /review when no instructions are provided", function()
+  it("dispatches /review when no args are provided", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.review()
+    local ok = env.codex.execute_slash_command({ command = "review" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/review", env.provider.send_calls[1].text)
   end)
 
-  it("review dispatches /review with inline instructions", function()
+  it("dispatches /review with inline args", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.review("focus on security")
+    local ok = env.codex.execute_slash_command({
+      command = "review",
+      args = "focus on security",
+    })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -91,24 +143,73 @@ describe("codex.init public api wrapper commands", function()
     )
   end)
 
-  it("review treats empty instructions as plain /review", function()
+  it("treats args = '' as plain /review", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.review("")
+    local ok = env.codex.execute_slash_command({ command = "review", args = "" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/review", env.provider.send_calls[1].text)
   end)
 
-  it("review opens with focus when no active session exists", function()
+  it("treats empty args as plain /review", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.review()
+    local ok = env.codex.execute_slash_command({ command = "review", args = "   " })
+
+    -- ========= [A]ssert  =========
+    assert.is_true(ok)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/review", env.provider.send_calls[1].text)
+  end)
+
+  it("queues while terminal startup is in progress and flushes later", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps({
+      terminal = {
+        startup = { timeout_ms = 200, retry_interval_ms = 50 },
+      },
+    })
+    env.provider.is_alive_fn = function(handle)
+      return handle and env.fake_vim._runtime.now >= 100
+    end
+
+    -- ========= [A]ct     =========
+    local ok, err = env.codex.execute_slash_command({ command = "status" })
+
+    -- ========= [A]ssert  =========
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.equals(1, #env.provider.open_calls)
+    assert.is_true(env.provider.open_calls[1].focus)
+    assert.equals(0, #env.provider.send_calls)
+    assert.equals(1, #env.fake_vim._deferred)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(0, #env.provider.send_calls)
+    assert.equals(1, #env.fake_vim._deferred)
+
+    run_deferred(env.fake_vim, 1)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/status", env.provider.send_calls[1].text)
+    assert.equals(2, #env.provider.focus_calls)
+    assert.equals(3, #env.fake_vim._replace_termcodes_calls)
+    assert.equals("<C-e>", env.fake_vim._replace_termcodes_calls[1].str)
+    assert.equals("<C-u>", env.fake_vim._replace_termcodes_calls[2].str)
+    assert.equals("<CR>", env.fake_vim._replace_termcodes_calls[3].str)
+    assert.equals(1, #env.fake_vim._feedkeys_calls)
+  end)
+
+  it("opens with focus when no active session exists", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+
+    -- ========= [A]ct     =========
+    local ok = env.codex.execute_slash_command({ command = "review" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -118,25 +219,25 @@ describe("codex.init public api wrapper commands", function()
     assert.equals(0, #env.fake_vim._notify_calls)
   end)
 
-  it("show_diff dispatches /diff", function()
+  it("dispatches /diff", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.show_diff()
+    local ok = env.codex.execute_slash_command({ command = "diff" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/diff", env.provider.send_calls[1].text)
   end)
 
-  it("wrapper commands are sent atomically and remain ordered for consecutive calls", function()
+  it("commands are sent atomically and remain ordered for consecutive calls", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
-    local ok_status = env.codex.show_status()
+    local ok_status = env.codex.execute_slash_command({ command = "status" })
 
     -- ========= [A]ct     =========
-    local ok_diff = env.codex.show_diff()
+    local ok_diff = env.codex.execute_slash_command({ command = "diff" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok_status)
@@ -148,7 +249,7 @@ describe("codex.init public api wrapper commands", function()
     assert.equals(2, #env.fake_vim._feedkeys_calls)
   end)
 
-  it("wrapper commands copy existing prompt input to unnamed register without restoring", function()
+  it("copies existing prompt input to unnamed register without restoring", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
@@ -159,7 +260,10 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_lines(77, { "> draft instructions" })
 
     -- ========= [A]ct     =========
-    local ok = env.codex.review("focus on security")
+    local ok = env.codex.execute_slash_command({
+      command = "review",
+      args = "focus on security",
+    })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -179,7 +283,7 @@ describe("codex.init public api wrapper commands", function()
     assert.equals(1, #env.provider.send_calls)
   end)
 
-  it("wrapper commands clear multiline prompt input before slash dispatch", function()
+  it("clears multiline prompt input before slash dispatch", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
@@ -191,7 +295,7 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_cursor(77, 1701, 2, 11)
 
     -- ========= [A]ct     =========
-    local ok = env.codex.show_status()
+    local ok = env.codex.execute_slash_command({ command = "status" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -210,46 +314,43 @@ describe("codex.init public api wrapper commands", function()
     assert.equals(0, #env.fake_vim._feedkeys_calls)
   end)
 
-  it(
-    "wrapper commands capture nearest multiline draft and normalize continuation gutters",
-    function()
-      -- ========= [A]rrange =========
-      local env = setup_with_deps()
+  it("captures nearest multiline draft and normalizes continuation gutters", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
 
-      env.codex.open(false)
-      env.provider.get_bufnr_fn = function()
-        return 77
-      end
-      env.fake_vim._set_buf_lines(77, {
-        "> stale prompt",
-        "  stale continuation",
-        "> active prompt",
-        "  . active continuation",
-        "  final line",
-      })
-      env.fake_vim._set_buf_cursor(77, 1701, 5, 12)
-
-      -- ========= [A]ct     =========
-      local ok = env.codex.compact()
-
-      -- ========= [A]ssert  =========
-      assert.is_true(ok)
-      assert.equals(2, #env.provider.send_calls)
-      assert.equals(
-        "<termcoded:<C-e>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>>/compact",
-        env.provider.send_calls[1].text
-      )
-      assert.equals("\r", env.provider.send_calls[2].text)
-      assert.equals(1, #env.fake_vim._setreg_calls)
-      assert.equals(
-        "active prompt\nactive continuation\nfinal line",
-        env.fake_vim._setreg_calls[1].value
-      )
-      assert.equals(0, #env.fake_vim._feedkeys_calls)
+    env.codex.open(false)
+    env.provider.get_bufnr_fn = function()
+      return 77
     end
-  )
+    env.fake_vim._set_buf_lines(77, {
+      "> stale prompt",
+      "  stale continuation",
+      "> active prompt",
+      "  . active continuation",
+      "  final line",
+    })
+    env.fake_vim._set_buf_cursor(77, 1701, 5, 12)
 
-  it("wrapper commands clear full draft when code-fence-like lines are near cursor", function()
+    -- ========= [A]ct     =========
+    local ok = env.codex.execute_slash_command({ command = "compact" })
+
+    -- ========= [A]ssert  =========
+    assert.is_true(ok)
+    assert.equals(2, #env.provider.send_calls)
+    assert.equals(
+      "<termcoded:<C-e>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>><termcoded:<C-h>><termcoded:<C-u>>/compact",
+      env.provider.send_calls[1].text
+    )
+    assert.equals("\r", env.provider.send_calls[2].text)
+    assert.equals(1, #env.fake_vim._setreg_calls)
+    assert.equals(
+      "active prompt\nactive continuation\nfinal line",
+      env.fake_vim._setreg_calls[1].value
+    )
+    assert.equals(0, #env.fake_vim._feedkeys_calls)
+  end)
+
+  it("clears full draft when code-fence-like lines are near cursor", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
@@ -263,7 +364,7 @@ describe("codex.init public api wrapper commands", function()
       "```lua",
       'vim.api.nvim_create_user_command("CodexCompact", function()',
       'local codex = require("codex")',
-      "codex.compact()",
+      'codex.execute_slash_command({ command = "compact" })',
       "end, {",
       'desc = "Run Codex /compact in the active session",',
       "nargs = 0,",
@@ -274,7 +375,7 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_cursor(77, 1701, 12, 3)
 
     -- ========= [A]ct     =========
-    local ok = env.codex.compact()
+    local ok = env.codex.execute_slash_command({ command = "compact" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -290,7 +391,7 @@ describe("codex.init public api wrapper commands", function()
       "```lua",
       'vim.api.nvim_create_user_command("CodexCompact", function()',
       'local codex = require("codex")',
-      "codex.compact()",
+      'codex.execute_slash_command({ command = "compact" })',
       "end, {",
       'desc = "Run Codex /compact in the active session",',
       "nargs = 0,",
@@ -302,7 +403,7 @@ describe("codex.init public api wrapper commands", function()
     assert.equals(0, #env.fake_vim._feedkeys_calls)
   end)
 
-  it("wrapper commands warn when setreg fails", function()
+  it("warns when setreg fails", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
@@ -316,7 +417,7 @@ describe("codex.init public api wrapper commands", function()
     end
 
     -- ========= [A]ct     =========
-    local ok = env.codex.show_status()
+    local ok = env.codex.execute_slash_command({ command = "status" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -329,7 +430,7 @@ describe("codex.init public api wrapper commands", function()
     assert.equals(1, #env.fake_vim._feedkeys_calls)
   end)
 
-  it("wrapper commands do not warn when prompt input is uncertain", function()
+  it("does not warn when prompt input is uncertain", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
@@ -341,7 +442,7 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_cursor(77, 1702, 1, 0)
 
     -- ========= [A]ct     =========
-    local ok = env.codex.compact()
+    local ok = env.codex.execute_slash_command({ command = "compact" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -352,7 +453,7 @@ describe("codex.init public api wrapper commands", function()
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/compact", env.provider.send_calls[1].text)
   end)
 
-  it("wrapper commands do not warn when prompt line has no typed input", function()
+  it("does not warn when prompt line has no typed input", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
@@ -364,7 +465,7 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_cursor(77, 1702, 1, 0)
 
     -- ========= [A]ct     =========
-    local ok = env.codex.compact()
+    local ok = env.codex.execute_slash_command({ command = "compact" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -375,7 +476,7 @@ describe("codex.init public api wrapper commands", function()
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/compact", env.provider.send_calls[1].text)
   end)
 
-  it("wrapper commands warn when capture is unavailable for an alive-session buffer", function()
+  it("warns when capture is unavailable for an alive-session buffer", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
@@ -385,7 +486,7 @@ describe("codex.init public api wrapper commands", function()
     end
 
     -- ========= [A]ct     =========
-    local ok = env.codex.show_permissions()
+    local ok = env.codex.execute_slash_command({ command = "permissions" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -397,7 +498,7 @@ describe("codex.init public api wrapper commands", function()
     assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/permissions", env.provider.send_calls[1].text)
   end)
 
-  it("wrapper commands use logger.warn when prompt save succeeds", function()
+  it("uses logger.warn when prompt save succeeds", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
@@ -408,7 +509,7 @@ describe("codex.init public api wrapper commands", function()
     env.fake_vim._set_buf_lines(77, { "> draft instructions" })
 
     -- ========= [A]ct     =========
-    local ok = env.codex.review()
+    local ok = env.codex.execute_slash_command({ command = "review" })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)

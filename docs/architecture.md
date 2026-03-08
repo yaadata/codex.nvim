@@ -261,9 +261,8 @@ After resolving deps and config, `setup()` wires the constructor modules:
 3. `mention.create()` -- receives `get_deps`, `get_config`, and a
    `dispatch_send` closure that delegates to the send dispatch instance.
 4. `wrapper_command.create()` -- receives `get_deps`, `get_config`, and a
-   `dispatch_send` closure used by slash-wrapper APIs (`set_model`,
-   `show_status`, `show_permissions`, `compact`, `review`, `show_diff`, and
-   in-process `resume`).
+   `dispatch_send` closure used by `execute_slash_command()` and in-process
+   `resume()`.
 
 This wiring order allows `send_dispatch` to reference the send queue (via
 closure) even though the queue is created after the dispatch instance.
@@ -293,7 +292,7 @@ failures downstream.
 
 ### Auto-Open
 
-APIs that need an active session (`send`, `send_command`, `focus`,
+APIs that need an active session (`send`, `execute_slash_command`, `focus`,
 `send_selection`, `mention_file`, `mention_directory`) automatically open one
 when needed. The lower-level `send` API opens without focus, while
 command-facing flows (`:CodexSend`, `:CodexMentionFile`) ensure the terminal is

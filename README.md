@@ -35,12 +35,6 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
     "CodexMentionFile",
     "CodexMentionDirectory",
     "CodexResume",
-    "CodexModel",
-    "CodexStatus",
-    "CodexPermissions",
-    "CodexCompact",
-    "CodexReview",
-    "CodexDiff",
   },
   opts = {},
   config = function(_, opts)
@@ -122,12 +116,6 @@ opts = {
   normalized to cwd-relative and forced to end with a path separator.
 - `:CodexResume[!]` resumes in-process or launches `codex resume` (`!` uses
   `--last` when launching).
-- `:CodexModel` sends `/model`
-- `:CodexStatus` sends `/status`
-- `:CodexPermissions` sends `/permissions`
-- `:CodexCompact` sends `/compact`
-- `:CodexReview [instructions]` sends `/review`.
-- `:CodexDiff` sends `/diff`
 
 For detailed command behavior and component interactions, see
 [`docs/command-interactions.md`](docs/command-interactions.md).
@@ -167,12 +155,6 @@ in your lazy.nvim plugin spec `keys`:
     "CodexMentionFile",
     "CodexMentionDirectory",
     "CodexResume",
-    "CodexModel",
-    "CodexStatus",
-    "CodexPermissions",
-    "CodexCompact",
-    "CodexReview",
-    "CodexDiff",
   },
   opts = {},
   config = function(_, opts)
@@ -227,46 +209,6 @@ in your lazy.nvim plugin spec `keys`:
       desc = "Codex: Resume session",
       mode = { "n", "v" },
     },
-    {
-      "<leader>oi",
-      function()
-        require("codex").show_status()
-      end,
-      desc = "Codex: Show status",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>op",
-      function()
-        require("codex").show_permissions()
-      end,
-      desc = "Codex: Permissions",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>oc",
-      function()
-        require("codex").compact()
-      end,
-      desc = "Codex: Compact context",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>oR",
-      function()
-        require("codex").review()
-      end,
-      desc = "Codex: Review changes",
-      mode = { "n", "v" },
-    },
-    {
-      "<leader>od",
-      function()
-        require("codex").show_diff()
-      end,
-      desc = "Codex: Show diff",
-      mode = { "n", "v" },
-    },
   },
 }
 ```
@@ -303,25 +245,31 @@ require("codex").setup({
 Each entry uses `{ mode, action, desc? }`, where:
 
 - `mode` is a string or list of modes accepted by `vim.keymap.set`.
-- `action` is a function (for builtins, use `require("codex.keymaps").builtins`).
-- `desc` is optional for builtin actions (auto-filled), required for custom actions.
+- `action` is a function (for builtins, use
+  `require("codex.keymaps").builtins`).
+- `desc` is optional for builtin actions (auto-filled), required for custom
+  actions.
 
 `terminal.auto_close` controls whether provider windows auto-close only after
 the terminal process exits.
-
-## Lua API
-
-The authoritative Lua API reference lives in
-[`docs/api.md`](docs/api.md).
-
-For `:Codex*` command behavior and component interaction details, see
-[`docs/command-interactions.md`](docs/command-interactions.md).
 
 ## Providers
 
 `auto` (default) prefers `snacks` when available, falls back to `native`. See
 [docs/architecture.md](docs/architecture.md) for the full provider interface and
 implementation details.
+
+## Lua API
+
+The authoritative Lua API reference lives in [`docs/api.md`](docs/api.md).
+
+For `:Codex*` command behavior and component interaction details, see
+[`docs/command-interactions.md`](docs/command-interactions.md).
+
+## Recipes
+
+See [`docs/recipes.md`](docs/recipes.md) for copy-pasteable configuration
+patterns, workflow examples, integration with other plugins etc.
 
 ## Development
 

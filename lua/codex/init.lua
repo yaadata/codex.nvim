@@ -225,80 +225,13 @@ function M.submit_input()
   end, "submit_input")
 end
 
----Normalizes and dispatches a slash command payload.
----@param slash_cmd string Slash command name with or without a leading `/`.
+---Dispatches a slash command using the wrapper-command flow.
+---@param opts codex.ExecuteSlashCommandOpts
 ---@return codex.SendResult ok True when command payload is sent.
 ---@return string|nil err
-function M.send_command(slash_cmd)
+function M.execute_slash_command(opts)
   ensure_setup()
-  local normalized = slash_cmd:gsub("^/+", "")
-  local command_path = "/" .. normalized
-  local payload = command_path
-  return state.send_dispatch.dispatch_send(payload, {
-    open_focus = true,
-    pre_focus = true,
-    command_path = command_path,
-    on_sent = function()
-      local submit_ok, submit_err = prompt_ops.submit_with_enter_key(get_deps, function()
-        return state.config
-      end, command_path)
-      if not submit_ok then
-        error(submit_err or ("failed to submit " .. command_path))
-      end
-    end,
-  })
-end
-
----Requests model selection in Codex CLI.
----@return codex.SendResult ok True when `/model` is sent.
----@return string|nil err
-function M.set_model()
-  ensure_setup()
-  return state.wrapper_command.dispatch_wrapper_command("model")
-end
-
----Requests current session status in Codex CLI.
----@return codex.SendResult ok True when `/status` is sent.
----@return string|nil err
-function M.show_status()
-  ensure_setup()
-  return state.wrapper_command.dispatch_wrapper_command("status")
-end
-
----Requests permission status in Codex CLI.
----@return codex.SendResult ok True when `/permissions` is sent.
----@return string|nil err
-function M.show_permissions()
-  ensure_setup()
-  return state.wrapper_command.dispatch_wrapper_command("permissions")
-end
-
----Requests context compaction in Codex CLI.
----@return codex.SendResult ok True when `/compact` is sent.
----@return string|nil err
-function M.compact()
-  ensure_setup()
-  return state.wrapper_command.dispatch_wrapper_command("compact")
-end
-
----Starts a review command, with optional inline instructions.
----@param instructions? string Optional inline review instructions.
----@return codex.SendResult ok True when `/review` is sent.
----@return string|nil err
-function M.review(instructions)
-  ensure_setup()
-  if instructions == nil or instructions == "" then
-    return state.wrapper_command.dispatch_wrapper_command("review")
-  end
-  return state.wrapper_command.dispatch_wrapper_command("review " .. instructions)
-end
-
----Requests a diff summary in Codex CLI.
----@return codex.SendResult ok True when `/diff` is sent.
----@return string|nil err
-function M.show_diff()
-  ensure_setup()
-  return state.wrapper_command.dispatch_wrapper_command("diff")
+  return state.wrapper_command.execute_slash_command(opts)
 end
 
 ---@class codex.ResumeOpts
@@ -316,7 +249,7 @@ function M.resume(opts)
   local session, provider = session_lifecycle.get_active_session_and_provider(deps, state.config)
 
   if session and session.alive and provider.is_alive(session.handle) then
-    return state.wrapper_command.dispatch_wrapper_command("resume")
+    return M.execute_slash_command({ command = "resume" })
   end
 
   local args = { "resume" }

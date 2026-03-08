@@ -14,21 +14,69 @@ local COULD_NOT_SAVE_PROMPT_NOTIFY_MSG = "Could not save existing prompt before 
 
 ---Creates a wrapper-command dispatcher.
 ---@param opts codex.WrapperCommandCreateOpts
----@return { dispatch_wrapper_command: fun(slash_cmd: string): codex.SendResult, string|nil }
+---@return { execute_slash_command: fun(command_opts: codex.ExecuteSlashCommandOpts): codex.SendResult, string|nil }
 function M.create(opts)
   local get_deps = opts.get_deps
   local get_config = opts.get_config
   local dispatch_send = opts.dispatch_send
 
+  ---@param deps table
+  ---@param value string
+  ---@return string
+  local function trim_string(deps, value)
+    if deps.vim and type(deps.vim.trim) == "function" then
+      return deps.vim.trim(value)
+    end
+    return value:match("^%s*(.-)%s*$")
+  end
+
+  ---@param command_opts codex.ExecuteSlashCommandOpts
+  ---@return string|nil command_name
+  ---@return string|nil command_text
+  ---@return string|nil err
+  local function normalize_command(command_opts)
+    if type(command_opts) ~= "table" then
+      return nil, nil, "execute_slash_command requires an opts table"
+    end
+
+    local deps = get_deps()
+
+    if type(command_opts.command) ~= "string" then
+      return nil, nil, "execute_slash_command requires opts.command"
+    end
+
+    local command_name = trim_string(deps, command_opts.command:gsub("^/+", ""))
+    if command_name == "" then
+      return nil, nil, "execute_slash_command requires a non-empty opts.command"
+    end
+
+    local args = command_opts.args
+    if args == nil then
+      return command_name, command_name, nil
+    end
+
+    if type(args) ~= "string" then
+      return nil, nil, "execute_slash_command expects opts.args to be a string"
+    end
+
+    local trimmed_args = trim_string(deps, args)
+    if trimmed_args == "" then
+      return command_name, command_name, nil
+    end
+
+    return command_name, command_name .. " " .. trimmed_args, nil
+  end
+
   ---Captures prompt input and builds wrapper command payload.
-  ---@param slash_cmd string
+  ---@param command_name string
+  ---@param command_text string
   ---@return string payload
   ---@return string command_path
   ---@return boolean submit_via_channel
-  local function build_wrapper_command_payload(slash_cmd)
+  local function build_wrapper_command_payload(command_name, command_text)
     local deps = get_deps()
-    local normalized = slash_cmd:gsub("^/+", "")
-    local command_path = "/" .. normalized
+    local command_path = "/" .. command_name
+    local payload_text = "/" .. command_text
 
     local existing_input, capture_status, clear_line_count =
       prompt_ops.capture_active_prompt_input(get_deps, get_config)
@@ -47,16 +95,22 @@ function M.create(opts)
 
     local submit_via_channel = clear_line_count > 1
     local payload = terminal_io.encode_clear_line_for_mention(deps, clear_line_count)
-      .. command_path
+      .. payload_text
     return payload, command_path, submit_via_channel
   end
 
   ---Dispatches wrapper slash commands with prompt capture/copy/clear before submit.
-  ---@param slash_cmd string Slash command name with or without a leading `/`.
+  ---@param command_opts codex.ExecuteSlashCommandOpts
   ---@return codex.SendResult ok True when command payload is sent.
   ---@return string|nil err
-  local function dispatch_wrapper_command(slash_cmd)
-    local payload, command_path, submit_via_channel = build_wrapper_command_payload(slash_cmd)
+  local function execute_slash_command(command_opts)
+    local command_name, command_text, err = normalize_command(command_opts)
+    if not command_name then
+      return false, err
+    end
+
+    local payload, command_path, submit_via_channel =
+      build_wrapper_command_payload(command_name, command_text)
     return dispatch_send(payload, {
       open_focus = true,
       pre_focus = true,
@@ -89,7 +143,7 @@ function M.create(opts)
   end
 
   return {
-    dispatch_wrapper_command = dispatch_wrapper_command,
+    execute_slash_command = execute_slash_command,
   }
 end
 

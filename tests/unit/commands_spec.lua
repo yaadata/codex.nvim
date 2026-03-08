@@ -23,7 +23,7 @@ describe("codex.nvim command registration", function()
     package.loaded["codex.nvim.commands"] = nil
   end)
 
-  it("registers Codex phase 1/2/3/4 commands with expected options", function()
+  it("registers Codex commands with expected options", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]ct     =========
       require("codex.nvim.commands").register()
@@ -38,13 +38,6 @@ describe("codex.nvim command registration", function()
       assert.is_not_nil(registered.CodexMentionFile)
       assert.is_not_nil(registered.CodexMentionDirectory)
       assert.is_not_nil(registered.CodexResume)
-      assert.is_not_nil(registered.CodexModel)
-      assert.is_not_nil(registered.CodexStatus)
-      assert.is_not_nil(registered.CodexPermissions)
-      assert.is_not_nil(registered.CodexCompact)
-      assert.is_not_nil(registered.CodexReview)
-      assert.is_not_nil(registered.CodexDiff)
-
       assert.equals(
         "Toggle Codex terminal (use ! to force open and focus)",
         registered.Codex.opts.desc
@@ -97,27 +90,6 @@ describe("codex.nvim command registration", function()
       )
       assert.equals(0, registered.CodexResume.opts.nargs)
       assert.is_true(registered.CodexResume.opts.bang)
-
-      assert.equals("Open Codex model picker", registered.CodexModel.opts.desc)
-      assert.equals(0, registered.CodexModel.opts.nargs)
-
-      assert.equals("Show Codex status summary", registered.CodexStatus.opts.desc)
-      assert.equals(0, registered.CodexStatus.opts.nargs)
-
-      assert.equals("Open Codex permissions selector", registered.CodexPermissions.opts.desc)
-      assert.equals(0, registered.CodexPermissions.opts.nargs)
-
-      assert.equals("Run Codex /compact in the active session", registered.CodexCompact.opts.desc)
-      assert.equals(0, registered.CodexCompact.opts.nargs)
-
-      assert.equals(
-        "Run Codex /review (or /review <instructions>)",
-        registered.CodexReview.opts.desc
-      )
-      assert.equals("*", registered.CodexReview.opts.nargs)
-
-      assert.equals("Run Codex /diff in the active session", registered.CodexDiff.opts.desc)
-      assert.equals(0, registered.CodexDiff.opts.nargs)
     end)
   end)
 
@@ -428,150 +400,6 @@ describe("codex.nvim command registration", function()
       assert.equals(2, #calls)
       assert.same({ last = false }, calls[1])
       assert.same({ last = true }, calls[2])
-    end)
-  end)
-
-  it("dispatches :CodexModel to set_model", function()
-    -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
-    with_stubbed_command_registration(function(registered)
-      local calls = 0
-
-      package.loaded["codex"] = {
-        set_model = function()
-          calls = calls + 1
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-      registered.CodexModel.callback()
-
-      assert.equals(1, calls)
-    end)
-  end)
-
-  it("dispatches :CodexStatus to show_status", function()
-    -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
-    with_stubbed_command_registration(function(registered)
-      local calls = 0
-
-      package.loaded["codex"] = {
-        show_status = function()
-          calls = calls + 1
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-      registered.CodexStatus.callback()
-
-      assert.equals(1, calls)
-    end)
-  end)
-
-  it("dispatches :CodexPermissions to show_permissions", function()
-    -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
-    with_stubbed_command_registration(function(registered)
-      local calls = 0
-
-      package.loaded["codex"] = {
-        show_permissions = function()
-          calls = calls + 1
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-      registered.CodexPermissions.callback()
-
-      assert.equals(1, calls)
-    end)
-  end)
-
-  it("dispatches :CodexCompact to compact", function()
-    -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
-    with_stubbed_command_registration(function(registered)
-      local calls = 0
-
-      package.loaded["codex"] = {
-        compact = function()
-          calls = calls + 1
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-      registered.CodexCompact.callback()
-
-      assert.equals(1, calls)
-    end)
-  end)
-
-  it("dispatches :CodexReview without args as nil instructions", function()
-    -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
-    with_stubbed_command_registration(function(registered)
-      local called = 0
-      local received = "unset"
-
-      package.loaded["codex"] = {
-        review = function(instructions)
-          called = called + 1
-          received = instructions
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-      registered.CodexReview.callback({ args = "" })
-
-      assert.equals(1, called)
-      assert.is_nil(received)
-    end)
-  end)
-
-  it("dispatches :CodexReview with args to review(instructions)", function()
-    -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
-    with_stubbed_command_registration(function(registered)
-      local calls = {}
-
-      package.loaded["codex"] = {
-        review = function(instructions)
-          table.insert(calls, instructions)
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-      registered.CodexReview.callback({ args = "focus on security" })
-
-      assert.equals(1, #calls)
-      assert.equals("focus on security", calls[1])
-    end)
-  end)
-
-  it("dispatches :CodexDiff to show_diff", function()
-    -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
-    with_stubbed_command_registration(function(registered)
-      local calls = 0
-
-      package.loaded["codex"] = {
-        show_diff = function()
-          calls = calls + 1
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-      registered.CodexDiff.callback()
-
-      assert.equals(1, calls)
     end)
   end)
 end)

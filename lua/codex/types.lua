@@ -115,6 +115,10 @@
 ---@field path? string
 ---@field focus? boolean
 
+---@class codex.ExecuteSlashCommandOpts
+---@field command string
+---@field args? string
+
 ---@class codex.UserCommandOpts
 ---@field bang boolean
 ---@field line1 integer
