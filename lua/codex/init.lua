@@ -7,7 +7,7 @@ local session_lifecycle = require("codex.state.session_lifecycle")
 local send_dispatch_mod = require("codex.runtime.send_dispatch")
 local mention_mod = require("codex.context.mention")
 local wrapper_command_mod = require("codex.context.wrapper_command")
-local prompt_submit = require("codex.context.prompt_submit")
+local prompt_ops = require("codex.context.prompt_ops")
 
 local default_deps = {
   config = require("codex.config"),
@@ -205,12 +205,22 @@ function M.clear_input()
   return provider.send(session.handle, clear_sequence)
 end
 
+---Copies the current terminal input to the unnamed register.
+---@return boolean ok
+---@return string|nil err
+function M.copy_input()
+  ensure_setup()
+  return prompt_ops.copy_prompt_input(get_deps, function()
+    return state.config
+  end)
+end
+
 ---Sends Enter to submit the current terminal input.
 ---@return boolean ok
 ---@return string|nil err
 function M.submit_input()
   ensure_setup()
-  return prompt_submit.submit_with_enter_key(get_deps, function()
+  return prompt_ops.submit_with_enter_key(get_deps, function()
     return state.config
   end, "submit_input")
 end
@@ -229,7 +239,7 @@ function M.send_command(slash_cmd)
     pre_focus = true,
     command_path = command_path,
     on_sent = function()
-      local submit_ok, submit_err = prompt_submit.submit_with_enter_key(get_deps, function()
+      local submit_ok, submit_err = prompt_ops.submit_with_enter_key(get_deps, function()
         return state.config
       end, command_path)
       if not submit_ok then

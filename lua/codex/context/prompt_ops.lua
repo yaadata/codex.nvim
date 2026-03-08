@@ -204,6 +204,67 @@ function M.capture_prompt_input(get_deps, get_config)
   return nil, "no_input", 1
 end
 
+---Focuses the active session when available, then captures prompt input.
+---@param get_deps fun(): table
+---@param get_config fun(): table
+---@return string|nil input
+---@return "captured"|"no_input"|"uncertain"|"unavailable_session"|"unavailable_buffer" status
+---@return integer clear_line_count
+function M.capture_active_prompt_input(get_deps, get_config)
+  local deps = get_deps()
+  local config = get_config()
+  local function vdebug(msg, ...)
+    if type(deps.logger.vdebug) == "function" then
+      deps.logger.vdebug(msg, ...)
+    end
+  end
+  local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
+  if session_lifecycle.session_is_alive(session, provider) then
+    -- Capture depends on terminal buffer/window state; focus first to ensure buffer visibility.
+    vdebug("capture_active_prompt_input focusing active session before prompt capture")
+    provider.focus(session.handle)
+  end
+
+  return M.capture_prompt_input(get_deps, get_config)
+end
+
+---Captures current prompt input and copies it to the unnamed register.
+---@param get_deps fun(): table
+---@param get_config fun(): table
+---@return boolean ok
+---@return string|nil err
+function M.copy_prompt_input(get_deps, get_config)
+  local deps = get_deps()
+  local function vdebug(msg, ...)
+    if type(deps.logger.vdebug) == "function" then
+      deps.logger.vdebug(msg, ...)
+    end
+  end
+  local existing_input, capture_status = M.capture_active_prompt_input(get_deps, get_config)
+  if existing_input and existing_input ~= "" then
+    local save_ok = pcall(deps.vim.fn.setreg, '"', existing_input)
+    if not save_ok then
+      vdebug("copy_prompt_input setreg failed")
+      return false, "failed to copy prompt input"
+    end
+    vdebug("copy_prompt_input copied len=%d", #existing_input)
+    return true
+  end
+
+  if capture_status == "no_input" then
+    vdebug("copy_prompt_input no input")
+    return false, "no prompt input to copy"
+  end
+
+  if capture_status == "unavailable_session" then
+    vdebug("copy_prompt_input no active session")
+    return false, "no active Codex session"
+  end
+
+  vdebug("copy_prompt_input capture unavailable status=%s", capture_status or "unknown")
+  return false, "could not capture prompt input"
+end
+
 ---Submits the current prompt using Enter, with provider-send fallback.
 ---@param get_deps fun(): table
 ---@param get_config fun(): table

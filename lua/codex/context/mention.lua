@@ -1,6 +1,6 @@
 local terminal_io = require("codex.runtime.terminal_io")
 local session_lifecycle = require("codex.state.session_lifecycle")
-local prompt_submit = require("codex.context.prompt_submit")
+local prompt_ops = require("codex.context.prompt_ops")
 
 ---@class codex.MentionOpts
 ---@field get_deps fun(): table
@@ -91,15 +91,8 @@ function M.create(opts)
     local mention = deps.formatter.format_mention(resolved_path)
     vdebug("dispatch_mention path=%s", resolved_path)
 
-    local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
-    if session_lifecycle.session_is_alive(session, provider) then
-      -- Capture depends on terminal buffer/window state; focus first to ensure buffer visibility.
-      vdebug("dispatch_mention focusing active session before prompt capture")
-      provider.focus(session.handle)
-    end
-
     local existing_input, _, clear_line_count =
-      prompt_submit.capture_prompt_input(get_deps, get_config)
+      prompt_ops.capture_active_prompt_input(get_deps, get_config)
     if existing_input and existing_input ~= "" then
       vdebug("dispatch_mention captured existing prompt input len=%d", #existing_input)
     else
@@ -144,7 +137,7 @@ function M.create(opts)
             end
           else
             submit_ok, submit_err =
-              prompt_submit.submit_with_enter_key(get_deps, get_config, MENTION_COMMAND_PATH)
+              prompt_ops.submit_with_enter_key(get_deps, get_config, MENTION_COMMAND_PATH)
           end
           if not submit_ok then
             vdebug("dispatch_mention submit failed err=%s", submit_err or "unknown")

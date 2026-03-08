@@ -1,4 +1,4 @@
-local prompt_submit = require("codex.context.prompt_submit")
+local prompt_ops = require("codex.context.prompt_ops")
 local terminal_io = require("codex.runtime.terminal_io")
 local session_lifecycle = require("codex.state.session_lifecycle")
 
@@ -27,18 +27,11 @@ function M.create(opts)
   ---@return boolean submit_via_channel
   local function build_wrapper_command_payload(slash_cmd)
     local deps = get_deps()
-    local config = get_config()
     local normalized = slash_cmd:gsub("^/+", "")
     local command_path = "/" .. normalized
 
-    local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
-    if session_lifecycle.session_is_alive(session, provider) then
-      -- Capture depends on terminal buffer/window state; focus first to ensure buffer visibility.
-      provider.focus(session.handle)
-    end
-
     local existing_input, capture_status, clear_line_count =
-      prompt_submit.capture_prompt_input(get_deps, get_config)
+      prompt_ops.capture_active_prompt_input(get_deps, get_config)
 
     if existing_input and existing_input ~= "" then
       local save_ok = pcall(deps.vim.fn.setreg, '"', existing_input)
@@ -86,7 +79,7 @@ function M.create(opts)
           end
         else
           submit_ok, submit_err =
-            prompt_submit.submit_with_enter_key(get_deps, get_config, command_path)
+            prompt_ops.submit_with_enter_key(get_deps, get_config, command_path)
         end
         if not submit_ok then
           error(submit_err or ("failed to submit " .. command_path))

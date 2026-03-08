@@ -257,7 +257,7 @@ send_dispatch.dispatch_send(payload, {
   pre_focus = true,
   command_path = "/<command>",
   on_sent = function()
-    prompt_submit.submit_with_enter_key(..., "/<command>")
+    prompt_ops.submit_with_enter_key(..., "/<command>")
   end,
 })
 ```
