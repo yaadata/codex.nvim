@@ -30,6 +30,7 @@ local state = {
   deps = nil,
   send_queue = nil,
   send_dispatch = nil,
+  selection_send = nil,
   mention = nil,
   wrapper_command = nil,
 }
@@ -78,6 +79,16 @@ function M.setup(opts)
     retry_interval_ms = state.config.terminal.startup.retry_interval_ms,
     process = function(item)
       return state.send_dispatch.process_pending_send_item(item)
+    end,
+  })
+
+  state.selection_send = deps.selection_send.create({
+    get_deps = get_deps,
+    get_config = function()
+      return state.config
+    end,
+    dispatch_send = function(text, send_opts)
+      return state.send_dispatch.dispatch_send(text, send_opts)
     end,
   })
 
@@ -322,7 +333,7 @@ function M.send_buffer(opts)
     path = opts.path,
   })
   if not filepath then
-    deps.selection_send.log_selection_failure(deps, "buffer", err)
+    state.selection_send.log_collection_failure("buffer", err)
     return false, err
   end
 
@@ -352,54 +363,7 @@ end
 ---@return string|nil err
 function M.send_selection(opts)
   ensure_setup()
-  local deps = get_deps()
-  local selection_opts = deps.selection_send.resolve_selection_opts(deps, opts)
-  local spec, err = deps.selection.get_visual_selection(deps.vim, selection_opts)
-  if not spec then
-    deps.selection_send.log_selection_failure(deps, "selection", err)
-    return false, err
-  end
-
-  if deps.nvim_visual and type(deps.nvim_visual.exit_visual_mode_if_active) == "function" then
-    deps.nvim_visual.exit_visual_mode_if_active(deps.vim)
-  end
-
-  local payload = deps.formatter.format_selection(spec)
-  return state.send_dispatch.dispatch_send(terminal_io.encode_bracketed_paste(payload), {
-    open_focus = true,
-    post_focus = true,
-    on_sent = function()
-      local schedule = deps.vim.schedule
-      if type(schedule) == "function" then
-        local scheduled = pcall(schedule, function()
-          local callback_deps = get_deps()
-          local session, provider =
-            session_lifecycle.get_active_session_and_provider(callback_deps, state.config)
-          if not session_lifecycle.session_is_alive(session, provider) then
-            return
-          end
-          pcall(
-            session_lifecycle.apply_post_send_focus,
-            callback_deps,
-            session,
-            provider,
-            state.config
-          )
-        end)
-        if scheduled then
-          return
-        end
-      end
-
-      local callback_deps = get_deps()
-      local session, provider =
-        session_lifecycle.get_active_session_and_provider(callback_deps, state.config)
-      if not session_lifecycle.session_is_alive(session, provider) then
-        return
-      end
-      pcall(session_lifecycle.apply_post_send_focus, callback_deps, session, provider, state.config)
-    end,
-  })
+  return state.selection_send.send_selection(opts)
 end
 
 ---Sends `/mention` for a file, auto-submits it, then restores previously captured prompt input.

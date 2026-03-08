@@ -8,7 +8,8 @@ all terminal management (opening, closing, sending text, focus, toggling) is
 delegated to a provider that satisfies a 9-method interface contract. The core
 module (`init.lua`) acts as a thin **facade** -- it owns dependency wiring and
 the public Lua API, while delegating session lifecycle, send dispatch,
-selection-send helpers, and slash-command orchestration to dedicated modules.
+selection-send orchestration, and slash-command orchestration to dedicated
+modules.
 
 ```
 plugin/codex.lua          (entry point, version guard, load guard)
@@ -29,7 +30,7 @@ lua/codex/init.lua        (public API facade, DI container, setup wiring)
         │        ├── mention.lua    (mention orchestration, prompt capture/restore)
         │        ├── path.lua       (CWD-relative path normalization)
         │        ├── selection.lua  (visual selection extraction)
-        │        ├── selection_send.lua (selection-send option resolution + collection-failure logging)
+        │        ├── selection_send.lua (selection-send orchestration, visual fallback range resolution, and collection-failure logging)
         │        └── wrapper_command.lua (slash-wrapper orchestration for /model, /status, /compact, etc.)
         ├──► runtime/
         │        ├── send_dispatch.lua  (send pipeline, queue/retry orchestration)
@@ -86,8 +87,9 @@ codex.nvim/
 │   │   │                            # on error.
 │   │   ├── selection.lua            # Extracts visual selection from the current buffer.
 │   │   │                            # Resolves range via command args or visual marks.
-│   │   ├── selection_send.lua       # Selection-send helper utilities:
-│   │   │                            # visual fallback range derivation and warning/error logging
+│   │   ├── selection_send.lua       # Selection-send orchestration:
+│   │   │                            # visual fallback range derivation, selection dispatch,
+│   │   │                            # follow-up focus scheduling, and warning/error logging
 │   │   │                            # for selection/buffer collection failures.
 │   │   └── wrapper_command.lua      # Slash-wrapper command orchestration:
 │   │   │                            # prompt capture/save/clear + dispatch + submit flow.
