@@ -7,6 +7,30 @@ describe("codex.init public api lifecycle", function()
     package.loaded["codex"] = nil
   end)
 
+  local function configure_focusable_terminal(env, opts)
+    opts = opts or {}
+    local source_win = opts.source_win or 1
+    local source_buf = opts.source_buf or 11
+    local term_win = opts.term_win or 2
+    local term_buf = opts.term_buf or 200
+
+    env.fake_vim._set_window_buf(source_win, source_buf)
+    env.fake_vim._set_current_win(source_win)
+
+    env.provider.open_fn = function(call, handle)
+      handle.winid = term_win
+      handle.bufnr = term_buf
+      env.fake_vim._set_window_buf(term_win, term_buf)
+      if call.focus then
+        env.fake_vim._set_current_win(term_win)
+      end
+    end
+    env.provider.focus_fn = function(handle)
+      env.fake_vim._set_current_win(handle.winid)
+      return true
+    end
+  end
+
   it("requires setup before open", function()
     -- ========= [A]rrange =========
     local codex = require("codex")
@@ -178,6 +202,175 @@ describe("codex.init public api lifecycle", function()
     -- ========= [A]ssert  =========
     assert.equals(1, #env.provider.open_calls)
     assert.is_true(env.provider.open_calls[1].focus)
+  end)
+
+  it("is_focused returns false when there is no active session", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+
+    -- ========= [A]ct     =========
+    local focused = env.codex.is_focused()
+
+    -- ========= [A]ssert  =========
+    assert.is_false(focused)
+  end)
+
+  it("is_focused returns true only when the active Codex buffer has focus", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+    configure_focusable_terminal(env)
+
+    -- ========= [A]ct     =========
+    env.codex.open(false)
+    -- ========= [A]ssert  =========
+    assert.is_false(env.codex.is_focused())
+
+    env.provider.focus(env.store.get_active().handle)
+    assert.is_true(env.codex.is_focused())
+  end)
+
+  it("unfocus restores the previous non-Codex buffer after focus", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+    configure_focusable_terminal(env, {
+      source_win = 3,
+      source_buf = 31,
+      term_win = 5,
+      term_buf = 51,
+    })
+
+    -- ========= [A]ct     =========
+    env.codex.focus()
+    assert.is_true(env.codex.is_focused())
+    local ok, err = env.codex.unfocus()
+
+    -- ========= [A]ssert  =========
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.equals(3, env.fake_vim._get_current_win())
+    assert.equals(31, env.fake_vim._get_current_buf())
+    assert.is_false(env.codex.is_focused())
+  end)
+
+  it("unfocus returns false when there is no remembered non-Codex location", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+    configure_focusable_terminal(env)
+
+    -- ========= [A]ct     =========
+    env.codex.open(false)
+    env.provider.focus(env.store.get_active().handle)
+    local ok, err = env.codex.unfocus()
+
+    -- ========= [A]ssert  =========
+    assert.is_false(ok)
+    assert.equals("no previous non-Codex location", err)
+    assert.is_true(env.codex.is_focused())
+  end)
+
+  it(
+    "unfocus restores to another window showing the previous buffer when the original window is invalid",
+    function()
+      -- ========= [A]rrange =========
+      local env = setup_with_deps()
+      configure_focusable_terminal(env, {
+        source_win = 4,
+        source_buf = 41,
+        term_win = 5,
+        term_buf = 51,
+      })
+      env.fake_vim._set_window_buf(6, 41)
+
+      -- ========= [A]ct     =========
+      env.codex.focus()
+      env.fake_vim._set_win_valid(4, false)
+      local ok, err = env.codex.unfocus()
+
+      -- ========= [A]ssert  =========
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(6, env.fake_vim._get_current_win())
+      assert.equals(41, env.fake_vim._get_current_buf())
+    end
+  )
+
+  it("unfocus returns a distinct error when the remembered buffer is no longer visible", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+    configure_focusable_terminal(env, {
+      source_win = 12,
+      source_buf = 121,
+      term_win = 13,
+      term_buf = 131,
+    })
+
+    -- ========= [A]ct     =========
+    env.codex.focus()
+    env.fake_vim._set_win_valid(12, false)
+    local ok, err = env.codex.unfocus()
+
+    -- ========= [A]ssert  =========
+    assert.is_false(ok)
+    assert.equals("remembered buffer is no longer visible", err)
+  end)
+
+  it("unfocus keeps the original remembered location across repeated Codex focus calls", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+    configure_focusable_terminal(env, {
+      source_win = 7,
+      source_buf = 71,
+      term_win = 8,
+      term_buf = 81,
+    })
+
+    -- ========= [A]ct     =========
+    env.codex.focus()
+    env.codex.send("hello")
+    local ok, err = env.codex.unfocus()
+
+    -- ========= [A]ssert  =========
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.equals(7, env.fake_vim._get_current_win())
+    assert.equals(71, env.fake_vim._get_current_buf())
+  end)
+
+  it("unfocus returns false when Codex is not currently focused", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+    configure_focusable_terminal(env)
+
+    -- ========= [A]ct     =========
+    env.codex.focus()
+    env.fake_vim._set_current_win(1)
+    local ok, err = env.codex.unfocus()
+
+    -- ========= [A]ssert  =========
+    assert.is_false(ok)
+    assert.equals("Codex is not focused", err)
+  end)
+
+  it("close clears remembered focus state", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+    configure_focusable_terminal(env, {
+      source_win = 9,
+      source_buf = 91,
+      term_win = 10,
+      term_buf = 101,
+    })
+
+    -- ========= [A]ct     =========
+    env.codex.focus()
+    env.codex.close()
+    env.codex.open(false)
+    env.provider.focus(env.store.get_active().handle)
+    local ok, err = env.codex.unfocus()
+
+    -- ========= [A]ssert  =========
+    assert.is_false(ok)
+    assert.equals("no previous non-Codex location", err)
   end)
 
   it("send auto-opens when missing and logs provider errors", function()

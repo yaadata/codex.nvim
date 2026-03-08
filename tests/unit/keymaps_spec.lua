@@ -53,6 +53,7 @@ describe("codex.keymaps", function()
     -- ========= [A]ssert  =========
     assert.is_function(keymaps.builtins.toggle)
     assert.is_function(keymaps.builtins.clear_input)
+    assert.is_function(keymaps.builtins.unfocus)
     assert.is_function(keymaps.builtins.close)
     assert.is_function(keymaps.builtins.nav_left)
     assert.is_function(keymaps.builtins.nav_down)
@@ -135,5 +136,35 @@ describe("codex.keymaps", function()
       assert.equals("n", seen.mode)
       assert.is_false(seen.escape)
     end)
+  end)
+
+  it("unfocus builtin dispatches to codex.unfocus", function()
+    -- ========= [A]rrange =========
+    local original_codex = package.loaded["codex"]
+    local calls = 0
+
+    package.loaded["codex"] = {
+      unfocus = function()
+        calls = calls + 1
+      end,
+    }
+
+    -- ========= [A]ct     =========
+    local ok, err = pcall(function()
+      local keymaps = require("codex.keymaps")
+      keymaps.builtins.unfocus()
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, calls)
+      assert.equals(
+        "Codex: Return to previous buffer",
+        keymaps.get_builtin_desc(keymaps.builtins.unfocus)
+      )
+    end)
+    package.loaded["codex"] = original_codex
+
+    if not ok then
+      error(err)
+    end
   end)
 end)

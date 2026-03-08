@@ -85,7 +85,10 @@ local function make_provider()
     is_alive_fn = nil,
     is_ready_fn = nil,
     send_fn = nil,
+    open_fn = nil,
+    focus_fn = nil,
     get_bufnr_fn = nil,
+    next_open_handle = nil,
   }
 
   function provider.is_available()
@@ -93,24 +96,30 @@ local function make_provider()
   end
 
   function provider.open(cmd, args, env, config, focus, on_exit)
-    table.insert(provider.open_calls, {
+    local call = {
       cmd = cmd,
       args = args,
       env = env,
       config = config,
       focus = focus,
       on_exit = on_exit,
-    })
-    local handle = {
-      id = "handle_" .. #provider.open_calls,
-      alive = true,
     }
+    table.insert(provider.open_calls, call)
+    local handle = provider.next_open_handle
+      or {
+        id = "handle_" .. #provider.open_calls,
+        alive = true,
+      }
+    provider.next_open_handle = nil
     table.insert(provider.on_exit_callbacks, function()
       handle.alive = false
       if on_exit then
         on_exit(handle)
       end
     end)
+    if provider.open_fn then
+      provider.open_fn(call, handle)
+    end
     return handle
   end
 
@@ -129,6 +138,9 @@ local function make_provider()
 
   function provider.focus(handle)
     table.insert(provider.focus_calls, handle)
+    if provider.focus_fn then
+      return provider.focus_fn(handle)
+    end
     if provider.focus_sequence and #provider.focus_sequence > 0 then
       local next_focus = table.remove(provider.focus_sequence, 1)
       if type(next_focus) == "table" then
@@ -168,6 +180,9 @@ local function make_provider()
   function provider.get_bufnr(handle)
     if provider.get_bufnr_fn then
       return provider.get_bufnr_fn(handle)
+    end
+    if handle and type(handle.bufnr) == "number" then
+      return handle.bufnr
     end
     return nil
   end
@@ -332,6 +347,10 @@ local function make_fake_vim()
   local buf_lines = {}
   local buf_winids = {}
   local win_cursors = {}
+  local win_bufs = { [1] = 1 }
+  local win_valid = { [1] = true }
+  local buf_valid = { [1] = true }
+  local current_win = 1
   local scheduled = {}
   local deferred = {}
   local runtime = { now = 0 }
@@ -385,7 +404,7 @@ local function make_fake_vim()
         })
       end,
       nvim_buf_is_valid = function(bufnr)
-        return buf_lines[bufnr] ~= nil
+        return buf_valid[bufnr] == true or buf_lines[bufnr] ~= nil
       end,
       nvim_buf_line_count = function(bufnr)
         local lines = buf_lines[bufnr] or {}
@@ -401,6 +420,34 @@ local function make_fake_vim()
       end,
       nvim_win_get_cursor = function(winid)
         return win_cursors[winid] or { 1, 0 }
+      end,
+      nvim_get_current_win = function()
+        return current_win
+      end,
+      nvim_get_current_buf = function()
+        return win_bufs[current_win] or -1
+      end,
+      nvim_set_current_win = function(winid)
+        if win_valid[winid] ~= true then
+          error("invalid window")
+        end
+        current_win = winid
+      end,
+      nvim_win_is_valid = function(winid)
+        return win_valid[winid] == true
+      end,
+      nvim_list_wins = function()
+        local wins = {}
+        for winid, valid in pairs(win_valid) do
+          if valid then
+            table.insert(wins, winid)
+          end
+        end
+        table.sort(wins)
+        return wins
+      end,
+      nvim_win_get_buf = function(winid)
+        return win_bufs[winid]
       end,
     },
     notify = function(msg, level)
@@ -470,11 +517,39 @@ local function make_fake_vim()
     _run_next_deferred = run_next_deferred,
     _run_all_deferred = run_all_deferred,
     _set_buf_lines = function(bufnr, lines)
+      buf_valid[bufnr] = true
       buf_lines[bufnr] = vim.deepcopy(lines)
     end,
     _set_buf_cursor = function(bufnr, winid, row, col)
+      buf_valid[bufnr] = true
       buf_winids[bufnr] = winid
+      win_bufs[winid] = bufnr
+      win_valid[winid] = true
       win_cursors[winid] = { row, col }
+    end,
+    _set_window_buf = function(winid, bufnr)
+      win_valid[winid] = true
+      win_bufs[winid] = bufnr
+      buf_valid[bufnr] = true
+    end,
+    _set_current_win = function(winid)
+      win_valid[winid] = true
+      current_win = winid
+    end,
+    _set_win_valid = function(winid, valid)
+      win_valid[winid] = valid
+      if not valid and current_win == winid then
+        current_win = 1
+      end
+    end,
+    _set_buf_valid = function(bufnr, valid)
+      buf_valid[bufnr] = valid
+    end,
+    _get_current_win = function()
+      return current_win
+    end,
+    _get_current_buf = function()
+      return win_bufs[current_win] or -1
     end,
   }
 end

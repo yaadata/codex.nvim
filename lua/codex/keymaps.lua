@@ -22,6 +22,10 @@ register_builtin("clear_input", function()
   require("codex").clear_input()
 end, "Codex: Clear input")
 
+register_builtin("unfocus", function()
+  require("codex").unfocus()
+end, "Codex: Return to previous buffer")
+
 register_builtin("close", function()
   vim.schedule(function()
     require("codex").close()

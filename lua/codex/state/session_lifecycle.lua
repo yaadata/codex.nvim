@@ -1,5 +1,57 @@
 local M = {}
 
+---Return the shared focus-state table, creating one when missing.
+---@param deps table
+---@return table
+local function get_focus_state(deps)
+  if type(deps.focus_state) ~= "table" then
+    deps.focus_state = {}
+  end
+  return deps.focus_state
+end
+
+---Clear the remembered non-Codex focus target.
+---@param deps table
+---@return nil
+function M.clear_previous_focus(deps)
+  get_focus_state(deps).previous = nil
+end
+
+---Return the active Codex terminal buffer number when available.
+---@param session codex.Session|nil
+---@param provider codex.Provider
+---@return integer|nil
+local function get_session_bufnr(session, provider)
+  if not M.session_is_alive(session, provider) or type(provider.get_bufnr) ~= "function" then
+    return nil
+  end
+  return provider.get_bufnr(session.handle)
+end
+
+---Return the current editor window and buffer when available.
+---@param deps table
+---@return integer|nil
+---@return integer|nil
+local function get_current_focus(deps)
+  local api = deps.vim.api or {}
+  if
+    type(api.nvim_get_current_win) ~= "function" or type(api.nvim_get_current_buf) ~= "function"
+  then
+    return nil, nil
+  end
+
+  local ok_win, winid = pcall(api.nvim_get_current_win)
+  local ok_buf, bufnr = pcall(api.nvim_get_current_buf)
+  if not ok_win or not ok_buf then
+    return nil, nil
+  end
+
+  if type(winid) ~= "number" or type(bufnr) ~= "number" then
+    return nil, nil
+  end
+  return winid, bufnr
+end
+
 ---Emit a verbose-only debug log when supported.
 ---@param deps table
 ---@param msg string
@@ -36,6 +88,7 @@ local function open_or_reuse_session(deps, config, args, focus, provider, provid
   if session and session.alive and provider.is_alive(session.handle) then
     vdebug(deps, "open_session reusing alive active session id=%s", session.id)
     if focus then
+      M.remember_previous_focus(deps, config, session, provider)
       provider.focus(session.handle)
     end
     return
@@ -46,6 +99,11 @@ local function open_or_reuse_session(deps, config, args, focus, provider, provid
     vdebug(deps, "open_session closing stale session id=%s", session.id)
     provider.close(session.handle)
     deps.session_store.remove(session.id)
+    M.clear_previous_focus(deps)
+  end
+
+  if focus then
+    M.remember_previous_focus(deps, config, session, provider)
   end
 
   local handle = provider.open(
@@ -115,6 +173,50 @@ function M.get_active_session_and_provider(deps, config)
   return session, provider
 end
 
+---Return whether the current editor focus is on the active Codex buffer.
+---@param deps table
+---@param config table
+---@param session? codex.Session|nil
+---@param provider? codex.Provider
+---@return boolean
+function M.is_session_focused(deps, config, session, provider)
+  session = session or deps.session_store.get_active()
+  if not session then
+    return false
+  end
+  provider = provider or M.get_provider(deps, config)
+  local term_bufnr = get_session_bufnr(session, provider)
+  if type(term_bufnr) ~= "number" then
+    return false
+  end
+
+  local _, current_buf = get_current_focus(deps)
+  return current_buf == term_bufnr
+end
+
+---Remember the current non-Codex focus target before Codex steals focus.
+---@param deps table
+---@param config table
+---@param session? codex.Session|nil
+---@param provider? codex.Provider
+---@return nil
+function M.remember_previous_focus(deps, config, session, provider)
+  if M.is_session_focused(deps, config, session, provider) then
+    return
+  end
+
+  local winid, bufnr = get_current_focus(deps)
+  if type(winid) ~= "number" or type(bufnr) ~= "number" then
+    return
+  end
+
+  get_focus_state(deps).previous = {
+    winid = winid,
+    bufnr = bufnr,
+  }
+  vdebug(deps, "remember_previous_focus winid=%d bufnr=%d", winid, bufnr)
+end
+
 ---Opens or reuses a terminal session, replacing stale sessions when needed.
 ---@param deps table
 ---@param config table
@@ -136,6 +238,7 @@ function M.close_session(deps, config, send_queue)
   local session = deps.session_store.get_active()
   if not session then
     vdebug(deps, "close_session no active session")
+    M.clear_previous_focus(deps)
     if send_queue then
       send_queue:reset()
     end
@@ -146,6 +249,7 @@ function M.close_session(deps, config, send_queue)
   vdebug(deps, "close_session closing session id=%s", session.id)
   provider.close(session.handle)
   deps.session_store.remove(session.id)
+  M.clear_previous_focus(deps)
   if send_queue then
     send_queue:reset()
   end
@@ -189,6 +293,7 @@ function M.focus_session(deps, config)
   local provider = M.get_provider(deps, config)
 
   if session and session.alive and provider.is_alive(session.handle) then
+    M.remember_previous_focus(deps, config, session, provider)
     vdebug(deps, "focus_session focusing session id=%s", session.id)
     provider.focus(session.handle)
     return true
@@ -219,6 +324,7 @@ end
 ---@param config table
 ---@return nil
 function M.apply_post_send_focus(deps, session, provider, config)
+  M.remember_previous_focus(deps, config, session, provider)
   local focused = provider.focus(session.handle)
   if focused then
     vdebug(deps, "apply_post_send_focus focused active terminal")
@@ -238,6 +344,67 @@ function M.apply_post_send_focus(deps, session, provider, config)
   end
   provider.focus(session.handle)
   vdebug(deps, "apply_post_send_focus re-focused after toggle")
+end
+
+---Return to the remembered non-Codex location when Codex currently has focus.
+---@param deps table
+---@param config table
+---@return boolean ok
+---@return string|nil err
+function M.unfocus_session(deps, config)
+  local session, provider = M.get_active_session_and_provider(deps, config)
+  if not M.is_session_focused(deps, config, session, provider) then
+    return false, "Codex is not focused"
+  end
+
+  local previous = get_focus_state(deps).previous
+  if type(previous) ~= "table" then
+    return false, "no previous non-Codex location"
+  end
+
+  local api = deps.vim.api or {}
+  if
+    type(api.nvim_win_is_valid) ~= "function"
+    or type(api.nvim_set_current_win) ~= "function"
+    or type(api.nvim_win_get_buf) ~= "function"
+    or type(api.nvim_list_wins) ~= "function"
+  then
+    return false, "editor focus restoration is unavailable"
+  end
+
+  local term_bufnr = get_session_bufnr(session, provider)
+
+  local function focus_window(winid)
+    local ok_focus, focus_err = pcall(api.nvim_set_current_win, winid)
+    if not ok_focus then
+      return false, tostring(focus_err)
+    end
+    M.clear_previous_focus(deps)
+    return true
+  end
+
+  local ok_valid, is_valid = pcall(api.nvim_win_is_valid, previous.winid)
+  if ok_valid and is_valid then
+    local ok_buf, win_bufnr = pcall(api.nvim_win_get_buf, previous.winid)
+    if ok_buf and win_bufnr == previous.bufnr and win_bufnr ~= term_bufnr then
+      return focus_window(previous.winid)
+    end
+  end
+
+  local ok_wins, wins = pcall(api.nvim_list_wins)
+  if ok_wins and type(wins) == "table" then
+    for _, winid in ipairs(wins) do
+      local ok_win_valid, win_valid = pcall(api.nvim_win_is_valid, winid)
+      if ok_win_valid and win_valid then
+        local ok_buf, win_bufnr = pcall(api.nvim_win_get_buf, winid)
+        if ok_buf and win_bufnr == previous.bufnr and win_bufnr ~= term_bufnr then
+          return focus_window(winid)
+        end
+      end
+    end
+  end
+
+  return false, "remembered buffer is no longer visible"
 end
 
 return M

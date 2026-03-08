@@ -232,6 +232,7 @@ require("codex").setup({
     keymaps = {
       ["<C-c>"] = { mode = { "t", "n" }, action = km.toggle },
       ["<M-BS>"] = { mode = { "t", "n" }, action = km.clear_input },
+      ["<C-g>"] = { mode = { "t", "n" }, action = km.unfocus },
       ["<C-x>"] = { mode = { "t", "n" }, action = km.close },
       ["<A-h>"] = { mode = { "t", "n" }, action = km.nav_left },
       ["<A-j>"] = { mode = { "t", "n" }, action = km.nav_down },

@@ -33,6 +33,9 @@ local state = {
   selection_send = nil,
   mention = nil,
   wrapper_command = nil,
+  focus_state = {
+    previous = nil,
+  },
 }
 
 ---Returns runtime dependencies, preferring injected deps from setup.
@@ -54,6 +57,8 @@ function M.setup(opts)
   for key, value in pairs(opts._deps or {}) do
     deps[key] = value
   end
+  state.focus_state.previous = nil
+  deps.focus_state = state.focus_state
   state.deps = deps
 
   local config_opts = deps.vim.deepcopy(opts)
@@ -175,6 +180,14 @@ function M.focus()
   if not session_lifecycle.focus_session(get_deps(), state.config) then
     M.open(true)
   end
+end
+
+---Returns focus to the remembered non-Codex editor location.
+---@return boolean ok
+---@return string|nil err
+function M.unfocus()
+  ensure_setup()
+  return session_lifecycle.unfocus_session(get_deps(), state.config)
 end
 
 ---Sends plain text to Codex terminal through the resilient send path.
@@ -344,6 +357,13 @@ end
 function M.is_running()
   local deps = get_deps()
   return session_lifecycle.is_running(deps, state.config)
+end
+
+---Returns whether the current editor focus is on the active Codex session.
+---@return boolean
+function M.is_focused()
+  ensure_setup()
+  return session_lifecycle.is_session_focused(get_deps(), state.config)
 end
 
 ---Returns a deep-copied resolved config for inspection.

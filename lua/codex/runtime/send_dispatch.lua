@@ -81,6 +81,7 @@ function M.create(opts)
 
     if item.pre_focus then
       vdebug("send_item_now pre_focus command_path=%s", item.command_path or "<text>")
+      session_lifecycle.remember_previous_focus(deps, config, session, provider)
       provider.focus(session.handle)
     end
 

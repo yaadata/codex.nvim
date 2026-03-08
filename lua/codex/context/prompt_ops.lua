@@ -222,6 +222,7 @@ function M.capture_active_prompt_input(get_deps, get_config)
   if session_lifecycle.session_is_alive(session, provider) then
     -- Capture depends on terminal buffer/window state; focus first to ensure buffer visibility.
     vdebug("capture_active_prompt_input focusing active session before prompt capture")
+    session_lifecycle.remember_previous_focus(deps, config, session, provider)
     provider.focus(session.handle)
   end
 
@@ -285,6 +286,7 @@ function M.submit_with_enter_key(get_deps, get_config, target)
     return false, "no active Codex session"
   end
 
+  session_lifecycle.remember_previous_focus(deps, config, session, provider)
   provider.focus(session.handle)
   local enter_termcode = terminal_io.encode_termcode(deps, "<CR>")
   local feedkeys = deps.vim.api.nvim_feedkeys

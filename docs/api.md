@@ -21,10 +21,10 @@ For `:Codex*` command flow and internal command-to-component behavior, see
 
 ## Return Conventions
 
-| API Scope                                                                 | Return Shape  | Notes                                      |
-| ------------------------------------------------------------------------- | ------------- | ------------------------------------------ |
-| Send-like, input-control, wrapper-command, resume, and mention APIs       | `ok, err`     | `ok` is `boolean`; `err` is `string\|nil`. |
-| Query-style APIs such as `is_running()`, `get_config()`, and `get_logs()` | Varies by API | See the per-API return details below.      |
+| API Scope                                                                                 | Return Shape  | Notes                                      |
+| ----------------------------------------------------------------------------------------- | ------------- | ------------------------------------------ |
+| Send-like, input-control, wrapper-command, resume, and mention APIs                       | `ok, err`     | `ok` is `boolean`; `err` is `string\|nil`. |
+| Query-style APIs such as `is_running()`, `is_focused()`, `get_config()`, and `get_logs()` | Varies by API | See the per-API return details below.      |
 
 ## Setup and Runtime
 
@@ -32,18 +32,20 @@ For `:Codex*` command flow and internal command-to-component behavior, see
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------ |
 | `codex.setup(opts)`  | Initialize plugin config and runtime state, register `:Codex*` commands, and wire the send queue and lifecycle collaborators. | `opts` (`table\|nil`): setup options. Call before using the other public APIs. | `nil`              |
 | `codex.is_running()` | Return whether the active Codex session is currently alive.                                                                   | None                                                                           | `boolean`          |
+| `codex.is_focused()` | Return whether the current editor focus is on the active Codex session.                                                       | None                                                                           | `boolean`          |
 | `codex.get_config()` | Return a deep-copied snapshot of the resolved config.                                                                         | None                                                                           | `table\|nil`       |
 | `codex.get_logs()`   | Return captured in-memory log entries.                                                                                        | None                                                                           | `codex.LogEntry[]` |
 | `codex.clear_logs()` | Clear captured in-memory log entries.                                                                                         | None                                                                           | `nil`              |
 
 ## Session Control
 
-| API                 | Description                                                                     | Options / Inputs                                           | Returns |
-| ------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------- |
-| `codex.open(focus)` | Open a Codex terminal session.                                                  | `focus` (`boolean\|nil`): defaults to `true` when omitted. | `nil`   |
-| `codex.close()`     | Close the active session and reset the send queue.                              | None                                                       | `nil`   |
-| `codex.toggle()`    | Toggle the active terminal if one is running, otherwise open a focused session. | None                                                       | `nil`   |
-| `codex.focus()`     | Focus the active session, or open one when no session is running.               | None                                                       | `nil`   |
+| API                 | Description                                                                     | Options / Inputs                                           | Returns   |
+| ------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------- | --------- |
+| `codex.open(focus)` | Open a Codex terminal session.                                                  | `focus` (`boolean\|nil`): defaults to `true` when omitted. | `nil`     |
+| `codex.close()`     | Close the active session and reset the send queue.                              | None                                                       | `nil`     |
+| `codex.toggle()`    | Toggle the active terminal if one is running, otherwise open a focused session. | None                                                       | `nil`     |
+| `codex.focus()`     | Focus the active session, or open one when no session is running.               | None                                                       | `nil`     |
+| `codex.unfocus()`   | Return to the last remembered non-Codex editor location when Codex is focused.  | None                                                       | `ok, err` |
 
 ## Sending and Input
 
@@ -77,6 +79,6 @@ and auto-submits it. For custom user command examples, see
 
 ## Terminal Keymap Builtins
 
-| API                                 | Description                                                                                                                                                                                                                     | Available Actions                                                               | Returns                   |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------- |
-| `require("codex.keymaps").builtins` | Builtin terminal keymap actions for use in `terminal.keymaps` config. These are action functions intended for terminal-buffer mappings and carry builtin descriptions automatically when used through the keymap helper module. | `toggle`, `clear_input`, `close`, `nav_left`, `nav_down`, `nav_up`, `nav_right` | `table<string, function>` |
+| API                                 | Description                                                                                                                                                                                                                     | Available Actions                                                                          | Returns                   |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------- |
+| `require("codex.keymaps").builtins` | Builtin terminal keymap actions for use in `terminal.keymaps` config. These are action functions intended for terminal-buffer mappings and carry builtin descriptions automatically when used through the keymap helper module. | `toggle`, `clear_input`, `unfocus`, `close`, `nav_left`, `nav_down`, `nav_up`, `nav_right` | `table<string, function>` |
