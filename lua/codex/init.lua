@@ -35,6 +35,7 @@ local state = {
   wrapper_command = nil,
   focus_state = {
     previous = nil,
+    last_non_codex = nil,
   },
 }
 
@@ -58,6 +59,7 @@ function M.setup(opts)
     deps[key] = value
   end
   state.focus_state.previous = nil
+  state.focus_state.last_non_codex = nil
   deps.focus_state = state.focus_state
   state.deps = deps
 
@@ -123,6 +125,16 @@ function M.setup(opts)
   end
 
   deps.commands.register()
+
+  local focus_tracking_group = deps.vim.api.nvim_create_augroup("codex_focus_tracking", {
+    clear = true,
+  })
+  deps.vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter" }, {
+    group = focus_tracking_group,
+    callback = function()
+      session_lifecycle.record_non_codex_focus(get_deps(), state.config)
+    end,
+  })
 
   deps.vim.api.nvim_create_autocmd("VimLeavePre", {
     group = deps.vim.api.nvim_create_augroup("codex_cleanup", { clear = true }),

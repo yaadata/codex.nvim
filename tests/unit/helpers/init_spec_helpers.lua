@@ -355,6 +355,27 @@ local function make_fake_vim()
   local deferred = {}
   local runtime = { now = 0 }
 
+  local function fire_autocmd(event)
+    for _, autocmd in ipairs(autocmds) do
+      local registered = autocmd.event
+      local matches = false
+      if registered == event then
+        matches = true
+      elseif type(registered) == "table" then
+        for _, item in ipairs(registered) do
+          if item == event then
+            matches = true
+            break
+          end
+        end
+      end
+
+      if matches and autocmd.spec and type(autocmd.spec.callback) == "function" then
+        autocmd.spec.callback()
+      end
+    end
+  end
+
   local function run_next_deferred()
     if #deferred == 0 then
       return false
@@ -431,7 +452,15 @@ local function make_fake_vim()
         if win_valid[winid] ~= true then
           error("invalid window")
         end
+        local prev_win = current_win
+        local prev_buf = win_bufs[current_win]
         current_win = winid
+        if prev_win ~= winid then
+          fire_autocmd("WinEnter")
+        end
+        if prev_buf ~= win_bufs[winid] then
+          fire_autocmd("BufEnter")
+        end
       end,
       nvim_win_is_valid = function(winid)
         return win_valid[winid] == true
@@ -514,6 +543,7 @@ local function make_fake_vim()
     _scheduled = scheduled,
     _deferred = deferred,
     _runtime = runtime,
+    _fire_autocmd = fire_autocmd,
     _run_next_deferred = run_next_deferred,
     _run_all_deferred = run_all_deferred,
     _set_buf_lines = function(bufnr, lines)
@@ -534,7 +564,15 @@ local function make_fake_vim()
     end,
     _set_current_win = function(winid)
       win_valid[winid] = true
+      local prev_win = current_win
+      local prev_buf = win_bufs[current_win]
       current_win = winid
+      if prev_win ~= winid then
+        fire_autocmd("WinEnter")
+      end
+      if prev_buf ~= win_bufs[winid] then
+        fire_autocmd("BufEnter")
+      end
     end,
     _set_win_valid = function(winid, valid)
       win_valid[winid] = valid

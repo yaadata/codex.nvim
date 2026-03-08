@@ -85,8 +85,9 @@ describe("codex.init public api lifecycle", function()
     assert.same({ "commands" }, env.call_order)
     assert.equals("info", env.logger.set_levels[1])
     assert.is_true(env.logger.set_verboses[1])
-    assert.equals(1, #env.fake_vim._autocmds)
-    assert.equals("VimLeavePre", env.fake_vim._autocmds[1].event)
+    assert.equals(2, #env.fake_vim._autocmds)
+    assert.same({ "WinEnter", "BufEnter" }, env.fake_vim._autocmds[1].event)
+    assert.equals("VimLeavePre", env.fake_vim._autocmds[2].event)
 
     local cfg = env.codex.get_config()
     assert.equals("codex-test", cfg.launch.cmd)
@@ -229,7 +230,7 @@ describe("codex.init public api lifecycle", function()
     assert.is_true(env.codex.is_focused())
   end)
 
-  it("unfocus restores the previous non-Codex buffer after focus", function()
+  it("unfocus restores the last tracked non-Codex buffer after focus", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     configure_focusable_terminal(env, {
@@ -252,7 +253,7 @@ describe("codex.init public api lifecycle", function()
     assert.is_false(env.codex.is_focused())
   end)
 
-  it("unfocus returns false when there is no remembered non-Codex location", function()
+  it("unfocus returns false when there is no tracked non-Codex location", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     configure_focusable_terminal(env)
@@ -269,7 +270,7 @@ describe("codex.init public api lifecycle", function()
   end)
 
   it(
-    "unfocus restores to another window showing the previous buffer when the original window is invalid",
+    "unfocus restores to another window showing the tracked buffer when the original window is invalid",
     function()
       -- ========= [A]rrange =========
       local env = setup_with_deps()
@@ -294,7 +295,7 @@ describe("codex.init public api lifecycle", function()
     end
   )
 
-  it("unfocus returns a distinct error when the remembered buffer is no longer visible", function()
+  it("unfocus tracks the latest non-Codex window entered before returning from Codex", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     configure_focusable_terminal(env, {
@@ -303,38 +304,89 @@ describe("codex.init public api lifecycle", function()
       term_win = 13,
       term_buf = 131,
     })
+    env.fake_vim._set_window_buf(14, 141)
 
     -- ========= [A]ct     =========
+    env.fake_vim._set_current_win(14)
     env.codex.focus()
-    env.fake_vim._set_win_valid(12, false)
-    local ok, err = env.codex.unfocus()
-
-    -- ========= [A]ssert  =========
-    assert.is_false(ok)
-    assert.equals("remembered buffer is no longer visible", err)
-  end)
-
-  it("unfocus keeps the original remembered location across repeated Codex focus calls", function()
-    -- ========= [A]rrange =========
-    local env = setup_with_deps()
-    configure_focusable_terminal(env, {
-      source_win = 7,
-      source_buf = 71,
-      term_win = 8,
-      term_buf = 81,
-    })
-
-    -- ========= [A]ct     =========
-    env.codex.focus()
-    env.codex.send("hello")
     local ok, err = env.codex.unfocus()
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.is_nil(err)
-    assert.equals(7, env.fake_vim._get_current_win())
-    assert.equals(71, env.fake_vim._get_current_buf())
+    assert.equals(14, env.fake_vim._get_current_win())
+    assert.equals(141, env.fake_vim._get_current_buf())
   end)
+
+  it("unfocus tracks same-window buffer switches via BufEnter", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+    configure_focusable_terminal(env, {
+      source_win = 15,
+      source_buf = 151,
+      term_win = 16,
+      term_buf = 161,
+    })
+
+    -- ========= [A]ct     =========
+    env.fake_vim._set_window_buf(15, 152)
+    env.fake_vim._fire_autocmd("BufEnter")
+    env.codex.focus()
+    local ok, err = env.codex.unfocus()
+
+    -- ========= [A]ssert  =========
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.equals(15, env.fake_vim._get_current_win())
+    assert.equals(152, env.fake_vim._get_current_buf())
+  end)
+
+  it("unfocus returns a distinct error when the tracked buffer is no longer visible", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+    configure_focusable_terminal(env, {
+      source_win = 17,
+      source_buf = 171,
+      term_win = 18,
+      term_buf = 181,
+    })
+
+    -- ========= [A]ct     =========
+    env.codex.focus()
+    env.fake_vim._set_win_valid(17, false)
+    local ok, err = env.codex.unfocus()
+
+    -- ========= [A]ssert  =========
+    assert.is_false(ok)
+    assert.equals("tracked non-Codex location is no longer available", err)
+  end)
+
+  it(
+    "unfocus ignores repeated Codex focus calls and keeps the latest tracked non-Codex location",
+    function()
+      -- ========= [A]rrange =========
+      local env = setup_with_deps()
+      configure_focusable_terminal(env, {
+        source_win = 7,
+        source_buf = 71,
+        term_win = 8,
+        term_buf = 81,
+      })
+      env.fake_vim._set_window_buf(9, 91)
+
+      -- ========= [A]ct     =========
+      env.fake_vim._set_current_win(9)
+      env.codex.focus()
+      env.codex.send("hello")
+      local ok, err = env.codex.unfocus()
+
+      -- ========= [A]ssert  =========
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(9, env.fake_vim._get_current_win())
+      assert.equals(91, env.fake_vim._get_current_buf())
+    end
+  )
 
   it("unfocus returns false when Codex is not currently focused", function()
     -- ========= [A]rrange =========
@@ -351,7 +403,7 @@ describe("codex.init public api lifecycle", function()
     assert.equals("Codex is not focused", err)
   end)
 
-  it("close clears remembered focus state", function()
+  it("close preserves tracked focus state across session reopen", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     configure_focusable_terminal(env, {
@@ -369,8 +421,10 @@ describe("codex.init public api lifecycle", function()
     local ok, err = env.codex.unfocus()
 
     -- ========= [A]ssert  =========
-    assert.is_false(ok)
-    assert.equals("no previous non-Codex location", err)
+    assert.is_true(ok)
+    assert.is_nil(err)
+    assert.equals(9, env.fake_vim._get_current_win())
+    assert.equals(91, env.fake_vim._get_current_buf())
   end)
 
   it("send auto-opens when missing and logs provider errors", function()

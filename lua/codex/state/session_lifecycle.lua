@@ -10,11 +10,13 @@ local function get_focus_state(deps)
   return deps.focus_state
 end
 
----Clear the remembered non-Codex focus target.
+---Clear the tracked non-Codex focus target.
 ---@param deps table
 ---@return nil
 function M.clear_previous_focus(deps)
-  get_focus_state(deps).previous = nil
+  local focus_state = get_focus_state(deps)
+  focus_state.previous = nil
+  focus_state.last_non_codex = nil
 end
 
 ---Return the active Codex terminal buffer number when available.
@@ -63,6 +65,24 @@ local function vdebug(deps, msg, ...)
   end
 end
 
+---Run a callback while temporarily suppressing autocmd-based focus tracking.
+---@generic T1, T2
+---@param deps table
+---@param fn fun(): T1, T2
+---@return T1
+---@return T2
+local function with_tracking_suspended(deps, fn)
+  local focus_state = get_focus_state(deps)
+  local previous = focus_state.suspend_tracking == true
+  focus_state.suspend_tracking = true
+  local ok, result1, result2 = pcall(fn)
+  focus_state.suspend_tracking = previous
+  if not ok then
+    error(result1)
+  end
+  return result1, result2
+end
+
 ---Resolves the configured terminal provider implementation.
 ---@param deps table
 ---@param config table
@@ -88,8 +108,10 @@ local function open_or_reuse_session(deps, config, args, focus, provider, provid
   if session and session.alive and provider.is_alive(session.handle) then
     vdebug(deps, "open_session reusing alive active session id=%s", session.id)
     if focus then
-      M.remember_previous_focus(deps, config, session, provider)
-      provider.focus(session.handle)
+      M.record_non_codex_focus(deps, config, session, provider)
+      with_tracking_suspended(deps, function()
+        return provider.focus(session.handle)
+      end)
     end
     return
   end
@@ -99,23 +121,24 @@ local function open_or_reuse_session(deps, config, args, focus, provider, provid
     vdebug(deps, "open_session closing stale session id=%s", session.id)
     provider.close(session.handle)
     deps.session_store.remove(session.id)
-    M.clear_previous_focus(deps)
   end
 
   if focus then
-    M.remember_previous_focus(deps, config, session, provider)
+    M.record_non_codex_focus(deps, config, session, provider)
   end
 
-  local handle = provider.open(
-    config.launch.cmd,
-    args,
-    config.launch.env,
-    config,
-    focus,
-    function(exited_handle)
-      M.mark_session_dead_by_handle(deps, exited_handle)
-    end
-  )
+  local handle = with_tracking_suspended(deps, function()
+    return provider.open(
+      config.launch.cmd,
+      args,
+      config.launch.env,
+      config,
+      focus,
+      function(exited_handle)
+        M.mark_session_dead_by_handle(deps, exited_handle)
+      end
+    )
+  end)
   vdebug(deps, "open_session created new session provider=%s", provider_name)
 
   deps.session_store.create({
@@ -194,27 +217,49 @@ function M.is_session_focused(deps, config, session, provider)
   return current_buf == term_bufnr
 end
 
----Remember the current non-Codex focus target before Codex steals focus.
+---Track the latest non-Codex editor location.
+---@param deps table
+---@param config table
+---@param session? codex.Session|nil
+---@param provider? codex.Provider
+---@return nil
+function M.record_non_codex_focus(deps, config, session, provider, winid, bufnr)
+  if get_focus_state(deps).suspend_tracking == true then
+    return
+  end
+
+  if type(winid) ~= "number" or type(bufnr) ~= "number" then
+    winid, bufnr = get_current_focus(deps)
+  end
+  if type(winid) ~= "number" or type(bufnr) ~= "number" then
+    return
+  end
+
+  session = session or deps.session_store.get_active()
+  provider = provider or M.get_provider(deps, config)
+  local term_bufnr = get_session_bufnr(session, provider)
+  if type(term_bufnr) == "number" and bufnr == term_bufnr then
+    return
+  end
+
+  local tracked = {
+    winid = winid,
+    bufnr = bufnr,
+  }
+  local focus_state = get_focus_state(deps)
+  focus_state.last_non_codex = tracked
+  focus_state.previous = tracked
+  vdebug(deps, "record_non_codex_focus winid=%d bufnr=%d", winid, bufnr)
+end
+
+---Backwards-compatible alias for existing focus-capture call sites.
 ---@param deps table
 ---@param config table
 ---@param session? codex.Session|nil
 ---@param provider? codex.Provider
 ---@return nil
 function M.remember_previous_focus(deps, config, session, provider)
-  if M.is_session_focused(deps, config, session, provider) then
-    return
-  end
-
-  local winid, bufnr = get_current_focus(deps)
-  if type(winid) ~= "number" or type(bufnr) ~= "number" then
-    return
-  end
-
-  get_focus_state(deps).previous = {
-    winid = winid,
-    bufnr = bufnr,
-  }
-  vdebug(deps, "remember_previous_focus winid=%d bufnr=%d", winid, bufnr)
+  M.record_non_codex_focus(deps, config, session, provider)
 end
 
 ---Opens or reuses a terminal session, replacing stale sessions when needed.
@@ -238,7 +283,6 @@ function M.close_session(deps, config, send_queue)
   local session = deps.session_store.get_active()
   if not session then
     vdebug(deps, "close_session no active session")
-    M.clear_previous_focus(deps)
     if send_queue then
       send_queue:reset()
     end
@@ -249,7 +293,6 @@ function M.close_session(deps, config, send_queue)
   vdebug(deps, "close_session closing session id=%s", session.id)
   provider.close(session.handle)
   deps.session_store.remove(session.id)
-  M.clear_previous_focus(deps)
   if send_queue then
     send_queue:reset()
   end
@@ -293,9 +336,11 @@ function M.focus_session(deps, config)
   local provider = M.get_provider(deps, config)
 
   if session and session.alive and provider.is_alive(session.handle) then
-    M.remember_previous_focus(deps, config, session, provider)
+    M.record_non_codex_focus(deps, config, session, provider)
     vdebug(deps, "focus_session focusing session id=%s", session.id)
-    provider.focus(session.handle)
+    with_tracking_suspended(deps, function()
+      return provider.focus(session.handle)
+    end)
     return true
   end
 
@@ -324,8 +369,10 @@ end
 ---@param config table
 ---@return nil
 function M.apply_post_send_focus(deps, session, provider, config)
-  M.remember_previous_focus(deps, config, session, provider)
-  local focused = provider.focus(session.handle)
+  M.record_non_codex_focus(deps, config, session, provider)
+  local focused = with_tracking_suspended(deps, function()
+    return provider.focus(session.handle)
+  end)
   if focused then
     vdebug(deps, "apply_post_send_focus focused active terminal")
     return
@@ -342,11 +389,13 @@ function M.apply_post_send_focus(deps, session, provider, config)
   if new_handle then
     session.handle = new_handle
   end
-  provider.focus(session.handle)
+  with_tracking_suspended(deps, function()
+    return provider.focus(session.handle)
+  end)
   vdebug(deps, "apply_post_send_focus re-focused after toggle")
 end
 
----Return to the remembered non-Codex location when Codex currently has focus.
+---Return to the last tracked non-Codex location when Codex currently has focus.
 ---@param deps table
 ---@param config table
 ---@return boolean ok
@@ -357,7 +406,7 @@ function M.unfocus_session(deps, config)
     return false, "Codex is not focused"
   end
 
-  local previous = get_focus_state(deps).previous
+  local previous = get_focus_state(deps).last_non_codex or get_focus_state(deps).previous
   if type(previous) ~= "table" then
     return false, "no previous non-Codex location"
   end
@@ -379,7 +428,6 @@ function M.unfocus_session(deps, config)
     if not ok_focus then
       return false, tostring(focus_err)
     end
-    M.clear_previous_focus(deps)
     return true
   end
 
@@ -404,7 +452,7 @@ function M.unfocus_session(deps, config)
     end
   end
 
-  return false, "remembered buffer is no longer visible"
+  return false, "tracked non-Codex location is no longer available"
 end
 
 return M

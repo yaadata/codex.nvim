@@ -45,7 +45,7 @@ For `:Codex*` command flow and internal command-to-component behavior, see
 | `codex.close()`     | Close the active session and reset the send queue.                              | None                                                       | `nil`     |
 | `codex.toggle()`    | Toggle the active terminal if one is running, otherwise open a focused session. | None                                                       | `nil`     |
 | `codex.focus()`     | Focus the active session, or open one when no session is running.               | None                                                       | `nil`     |
-| `codex.unfocus()`   | Return to the last remembered non-Codex editor location when Codex is focused.  | None                                                       | `ok, err` |
+| `codex.unfocus()`   | Return to the last tracked non-Codex editor location when Codex is focused.     | None                                                       | `ok, err` |
 
 ## Sending and Input
 
