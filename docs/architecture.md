@@ -50,7 +50,7 @@ codex.nvim/
 │                                    # prevents double-loading via vim.g.loaded_codex.
 ├── lua/codex/
 │   ├── init.lua                     # Public API facade (setup, open, close, toggle,
-│   │                                # send, send_buffer, send_selection, mention_file, mention_directory, resume, etc.).
+│   │                                # send, send_file, send_selection, mention_file, mention_directory, resume, etc.).
 │   │                                # Owns the DI container, setup wiring, and thin delegates.
 │   ├── config.lua                   # Default config table, vim.validate-based
 │   │                                # validation, and deep-merge with user options.
@@ -337,7 +337,7 @@ Key types:
 | `codex.SessionSpec`          | class | Spec for creating a new session                                        |
 | `codex.SelectionSpec`        | class | Visual selection data (defined in `formatter.lua`)                     |
 | `codex.SelectionOpts`        | class | Options for selection extraction (defined in `selection.lua`)          |
-| `codex.SendBufferOpts`       | class | Options for `send_buffer` (`path`, `bufnr`, optional `focus`)          |
+| `codex.SendFileOpts`         | class | Options for `send_file` (`path`, `bufnr`, optional `focus`)            |
 | `codex.MentionCommandOpts`   | class | Mention API options (for example `post_execute(ok, err)`)              |
 | `codex.UserCommandOpts`      | class | Neovim user command callback argument shape                            |
 | `codex.PendingSend`          | class | Queued send item (defined in `send_dispatch.lua`)                      |

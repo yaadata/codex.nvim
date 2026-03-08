@@ -1,17 +1,17 @@
 local helpers = require("tests.unit.helpers.init_spec_helpers")
 local setup_with_deps = helpers.setup_with_deps
 
-describe("codex.init public api send_buffer", function()
+describe("codex.init public api send_file", function()
   before_each(function()
     package.loaded["codex"] = nil
   end)
 
-  it("send_buffer formats and sends the buffer payload", function()
+  it("send_file formats and sends the file payload", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local ok = env.codex.send_buffer()
+    local ok = env.codex.send_file()
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -26,13 +26,13 @@ describe("codex.init public api send_buffer", function()
     assert.equals(1, #env.provider.focus_calls)
   end)
 
-  it("send_buffer warns and returns false for invalid selection path", function()
+  it("send_file warns and returns false for invalid selection path", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.selection.buffer_err = env.selection.errors.INVALID_FILEPATH
 
     -- ========= [A]ct     =========
-    local ok, err = env.codex.send_buffer()
+    local ok, err = env.codex.send_file()
 
     -- ========= [A]ssert  =========
     assert.is_false(ok)
@@ -45,13 +45,13 @@ describe("codex.init public api send_buffer", function()
     assert.equals(0, #env.logger.errors)
   end)
 
-  it("send_buffer warns and returns false for unnamed buffers", function()
+  it("send_file warns and returns false for unnamed buffers", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.selection.buffer_err = env.selection.errors.NO_FILEPATH
 
     -- ========= [A]ct     =========
-    local ok, err = env.codex.send_buffer()
+    local ok, err = env.codex.send_file()
 
     -- ========= [A]ssert  =========
     assert.is_false(ok)
@@ -61,13 +61,13 @@ describe("codex.init public api send_buffer", function()
     assert.equals(0, #env.logger.errors)
   end)
 
-  it("send_buffer warns and returns false when buffer does not exist", function()
+  it("send_file warns and returns false when buffer does not exist", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.selection.buffer_err = env.selection.errors.BUFFER_NOT_FOUND
 
     -- ========= [A]ct     =========
-    local ok, err = env.codex.send_buffer()
+    local ok, err = env.codex.send_file()
 
     -- ========= [A]ssert  =========
     assert.is_false(ok)
@@ -77,40 +77,40 @@ describe("codex.init public api send_buffer", function()
     assert.equals(0, #env.logger.errors)
   end)
 
-  it("send_buffer forwards opts to filepath extractor", function()
+  it("send_file forwards opts to filepath extractor", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    env.codex.send_buffer({ bufnr = 42 })
+    env.codex.send_file({ bufnr = 42 })
 
     -- ========= [A]ssert  =========
     assert.same({ bufnr = 42 }, env.selection.buffer_calls[1].opts)
   end)
 
-  it("send_buffer forwards explicit path to filepath extractor", function()
+  it("send_file forwards explicit path to filepath extractor", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    env.codex.send_buffer({ path = "/tmp/example.lua" })
+    env.codex.send_file({ path = "/tmp/example.lua" })
 
     -- ========= [A]ssert  =========
     assert.same({ path = "/tmp/example.lua" }, env.selection.buffer_calls[1].opts)
   end)
 
-  it("send_buffer forwards both path and bufnr when both are provided", function()
+  it("send_file forwards both path and bufnr when both are provided", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    env.codex.send_buffer({ bufnr = 42, path = "/tmp/example.lua" })
+    env.codex.send_file({ bufnr = 42, path = "/tmp/example.lua" })
 
     -- ========= [A]ssert  =========
     assert.same({ bufnr = 42, path = "/tmp/example.lua" }, env.selection.buffer_calls[1].opts)
   end)
 
-  it("send_buffer keeps editor focus when opts.focus=false and opens without focus", function()
+  it("send_file keeps editor focus when opts.focus=false and opens without focus", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     local current_win = 11
@@ -130,7 +130,7 @@ describe("codex.init public api send_buffer", function()
     end
 
     -- ========= [A]ct     =========
-    local ok = env.codex.send_buffer({ focus = false })
+    local ok = env.codex.send_file({ focus = false })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -141,13 +141,13 @@ describe("codex.init public api send_buffer", function()
     assert.equals(11, current_win)
   end)
 
-  it("send_buffer keeps editor focus with active session when opts.focus=false", function()
+  it("send_file keeps editor focus with active session when opts.focus=false", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
     env.codex.open(false)
 
     -- ========= [A]ct     =========
-    local ok = env.codex.send_buffer({ focus = false })
+    local ok = env.codex.send_file({ focus = false })
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
@@ -156,12 +156,12 @@ describe("codex.init public api send_buffer", function()
     assert.equals(0, #env.provider.focus_calls)
   end)
 
-  it("send_buffer accepts bufnr with opts.focus=false", function()
+  it("send_file accepts bufnr with opts.focus=false", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    env.codex.send_buffer({ bufnr = 42, focus = false })
+    env.codex.send_file({ bufnr = 42, focus = false })
 
     -- ========= [A]ssert  =========
     assert.same({ bufnr = 42 }, env.selection.buffer_calls[1].opts)

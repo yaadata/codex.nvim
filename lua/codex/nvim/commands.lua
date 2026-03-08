@@ -105,7 +105,7 @@ function M.register()
 
   vim.api.nvim_create_user_command("CodexAddBuffer", function()
     local codex = require("codex")
-    codex.send_buffer()
+    codex.send_file()
   end, {
     desc = "Send current buffer path to Codex as ACP reference",
     nargs = 0,

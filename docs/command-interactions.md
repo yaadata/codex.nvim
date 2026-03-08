@@ -18,7 +18,7 @@ For the authoritative Lua API reference, see [`docs/api.md`](./api.md).
 | `:CodexFocus`                   | `codex.focus()`                         | Focus active session or open one                                                                |
 | `:CodexClose`                   | `codex.close()`                         | Close active session and reset queue                                                            |
 | `:CodexClearInput`              | `codex.clear_input()`                   | Send `<C-c>` to active session                                                                  |
-| `:CodexAddBuffer`               | `codex.send_buffer(opts)`               | Collect explicit file path (`opts.path`) or current buffer path, format `@path`, send via queue |
+| `:CodexAddBuffer`               | `codex.send_file(opts)`                 | Collect explicit file path (`opts.path`) or current buffer path, format `@path`, send via queue |
 | `:CodexSend`                    | `codex.send_selection(opts)`            | Collect selection, format, send via queue                                                       |
 | `:CodexMentionFile [path]`      | `codex.mention_file(path[, opts])`      | Build `/mention` payload for relative file and submit                                           |
 | `:CodexMentionDirectory [path]` | `codex.mention_directory(path[, opts])` | Build `/mention` payload for relative directory (with trailing separator) and submit            |
@@ -175,10 +175,10 @@ init.lua send_selection()
 User runs :CodexAddBuffer
     |
     v
-commands.lua -> codex.send_buffer()
+commands.lua -> codex.send_file()
     |
     v
-init.lua send_buffer()
+init.lua send_file()
     |- ensure_setup()
     |- selection.get_current_buffer_filepath(vim, opts)
     |    |- [opts.path provided] validate explicit file path and return cwd-relative filepath

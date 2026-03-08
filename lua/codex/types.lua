@@ -110,7 +110,7 @@
 ---@class codex.MentionCommandOpts
 ---@field post_execute? fun(ok: boolean, err: string|nil)
 
----@class codex.SendBufferOpts
+---@class codex.SendFileOpts
 ---@field bufnr? integer
 ---@field path? string
 ---@field focus? boolean

@@ -269,13 +269,13 @@ describe("codex.nvim command registration", function()
     end)
   end)
 
-  it("dispatches :CodexAddBuffer to send_buffer", function()
+  it("dispatches :CodexAddBuffer to send_file", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
       local calls = 0
 
       package.loaded["codex"] = {
-        send_buffer = function()
+        send_file = function()
           calls = calls + 1
         end,
       }

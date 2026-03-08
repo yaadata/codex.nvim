@@ -172,9 +172,9 @@ in your lazy.nvim plugin spec `keys`:
     {
       "<leader>os",
       function()
-        require("codex").send_buffer()
+        require("codex").send_file()
       end,
-      desc = "Codex: Add current buffer",
+      desc = "Codex: Send @{file_path}",
       mode = "n",
     },
     {

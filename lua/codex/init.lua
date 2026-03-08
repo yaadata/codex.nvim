@@ -275,10 +275,10 @@ function M.resume(opts)
 end
 
 ---Formats current buffer or explicit path reference and sends it as bracketed paste.
----@param opts? codex.SendBufferOpts Buffer override via `opts.bufnr` or explicit `opts.path`; set `opts.focus=false` to keep editor focus.
----@return codex.SendResult ok True when buffer payload is sent.
+---@param opts? codex.SendFileOpts File override via `opts.bufnr` or explicit `opts.path`; set `opts.focus=false` to keep editor focus.
+---@return codex.SendResult ok True when file payload is sent.
 ---@return string|nil err
-function M.send_buffer(opts)
+function M.send_file(opts)
   ensure_setup()
   opts = opts or {}
   local deps = get_deps()
