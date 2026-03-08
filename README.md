@@ -15,7 +15,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 > [!CAUTION]
 > You are reading the `main` branch README. Install and configuration details
 > may differ from tagged releases. The current latest release tag is
-> [`v0.5.0`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.5.0). For
+> [`v0.6.0`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.6.0). For
 > version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -24,7 +24,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "0.5.0",
+  version = "0.6.0",
   cmd = {
     "Codex",
     "CodexFocus",
@@ -108,7 +108,8 @@ opts = {
 - `:CodexFocus` focuses the terminal (opens it if needed)
 - `:CodexClose` closes the active Codex terminal session
 - `:CodexClearInput` clears the active Codex terminal input line
-- `:CodexSendSelection` sends the active visual selection with path and range context.
+- `:CodexSendSelection` sends the active visual selection with path and range
+  context.
 - `:CodexSendFile` sends current buffer path as ACP file reference (`@path`).
 - `:CodexMentionFile [path]` sends `/mention` for a file path, normalized to
   cwd-relative.
@@ -143,7 +144,7 @@ in your lazy.nvim plugin spec `keys`:
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "0.5.0",
+  version = "0.6.0",
   main = "codex",
   cmd = {
     "Codex",
