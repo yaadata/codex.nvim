@@ -208,7 +208,7 @@ User runs :CodexMentionFile [path] (or :CodexMentionDirectory [path])
 commands.lua -> codex.mention_file(path_or_nil) (or codex.mention_directory(path_or_nil))
     |
     v
-init.lua mention_file(path[, opts]) / mention_directory(path[, opts]) -> mention module
+init.lua mention_file(path) / mention_directory(path) -> mention module
     |- ensure_setup()
     |- resolve path (arg or current buffer path via %:p / %:p:h)
     |- [missing path] -> log + return false, "current buffer has no file/directory path"
@@ -221,8 +221,7 @@ init.lua mention_file(path[, opts]) / mention_directory(path[, opts]) -> mention
          |- mention_payload = clear_line_sequence + mention_text
              \- send_dispatch.dispatch_send(mention_payload, { open_focus=true, pre_focus=true, command_path="/mention", on_sent=... })
                   |- on_sent: submit Enter for /mention (multiline capture -> channel send, otherwise feedkeys path)
-                  |- on_sent: restore captured prompt input via delayed dispatch_send(...)
-                  \- [opts.post_execute] callback once at terminal completion (success/failure)
+                  \- on_sent: restore captured prompt input via delayed dispatch_send(...)
 ```
 
 ### `execute_slash_command()` (Mention-Style Autosubmit)

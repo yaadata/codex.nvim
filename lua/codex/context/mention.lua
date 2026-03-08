@@ -12,7 +12,7 @@ local MENTION_COMMAND_PATH = "/mention"
 
 ---Creates a mention orchestration instance with the given accessors.
 ---@param opts codex.MentionOpts
----@return { mention_file: fun(path?: string, opts?: codex.MentionCommandOpts): codex.SendResult, string|nil, mention_directory: fun(path?: string, opts?: codex.MentionCommandOpts): codex.SendResult, string|nil, dispatch: fun(resolved_path: string, opts?: codex.MentionCommandOpts): codex.SendResult, string|nil }
+---@return { mention_file: fun(path?: string): codex.SendResult, string|nil, mention_directory: fun(path?: string): codex.SendResult, string|nil, dispatch: fun(resolved_path: string): codex.SendResult, string|nil }
 function M.create(opts)
   local get_deps = opts.get_deps
   local get_config = opts.get_config
@@ -29,63 +29,11 @@ function M.create(opts)
     end
   end
 
-  ---Resolve optional post-execution callback from mention options.
-  ---@param mention_opts? codex.MentionCommandOpts
-  ---@return fun(ok: boolean, err: string|nil)|nil
-  local function get_post_execute(mention_opts)
-    if type(mention_opts) ~= "table" then
-      return nil
-    end
-    local post_execute = mention_opts.post_execute
-    if type(post_execute) == "function" then
-      return post_execute
-    end
-    return nil
-  end
-
-  ---Run post-execution callback and swallow callback failures.
-  ---@param post_execute fun(ok: boolean, err: string|nil)|nil
-  ---@param ok boolean
-  ---@param err string|nil
-  ---@return nil
-  local function run_post_execute(post_execute, ok, err)
-    if type(post_execute) ~= "function" then
-      return
-    end
-    local deps = get_deps()
-    local callback_ok, callback_err = pcall(post_execute, ok, err)
-    if callback_ok then
-      return
-    end
-    deps.logger.error(
-      "failed to run %s post_execute callback: %s",
-      MENTION_COMMAND_PATH,
-      callback_err or "unknown error"
-    )
-  end
-
   ---Sends `/mention` for an already-resolved relative path, auto-submits, and restores prompt input.
   ---@param resolved_path string Relative path to mention.
-  ---@param mention_opts? codex.MentionCommandOpts
   ---@return codex.SendResult ok True when mention payload is sent.
   ---@return string|nil err
-  local function dispatch_mention(resolved_path, mention_opts)
-    local post_execute = get_post_execute(mention_opts)
-    local has_post_execute = post_execute ~= nil
-    local finalized = false
-
-    ---Call post_execute once with final outcome.
-    ---@param ok boolean
-    ---@param err string|nil
-    ---@return nil
-    local function finalize(ok, err)
-      if finalized then
-        return
-      end
-      finalized = true
-      run_post_execute(post_execute, ok, err)
-    end
-
+  local function dispatch_mention(resolved_path)
     local deps = get_deps()
     local config = get_config()
     local mention = deps.formatter.format_mention(resolved_path)
@@ -121,20 +69,6 @@ function M.create(opts)
               submit_ok, submit_err =
                 submit_provider.send(submit_session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
             end
-          elseif has_post_execute then
-            local submit_session, submit_provider =
-              session_lifecycle.get_active_session_and_provider(deps, config)
-            if not session_lifecycle.session_is_alive(submit_session, submit_provider) then
-              submit_ok, submit_err = false, "no active Codex session"
-            else
-              terminal_io.append_send_debug_entry(
-                deps,
-                "/mention[channel_submit_post_execute]",
-                terminal_io.CODEX_ENTER_SEQUENCE
-              )
-              submit_ok, submit_err =
-                submit_provider.send(submit_session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
-            end
           else
             submit_ok, submit_err =
               prompt_ops.submit_with_enter_key(get_deps, get_config, MENTION_COMMAND_PATH)
@@ -142,13 +76,11 @@ function M.create(opts)
           if not submit_ok then
             vdebug("dispatch_mention submit failed err=%s", submit_err or "unknown")
             deps.logger.error("failed to submit %s: %s", MENTION_COMMAND_PATH, submit_err)
-            finalize(false, submit_err)
             return
           end
           vdebug("dispatch_mention submit succeeded")
 
           if not existing_input or existing_input == "" then
-            finalize(true, nil)
             return
           end
 
@@ -169,17 +101,14 @@ function M.create(opts)
                 MENTION_COMMAND_PATH,
                 restore_err
               )
-              finalize(false, restore_err)
               return
             end
             vdebug("dispatch_mention restore succeeded")
-            finalize(true, nil)
           end, terminal_io.RESTORE_INPUT_DELAY_MS)
         end, terminal_io.SUBMIT_INPUT_DELAY_MS)
       end,
     })
     if not ok then
-      finalize(false, err)
       return false, err
     end
     return true
@@ -187,11 +116,9 @@ function M.create(opts)
 
   ---Sends `/mention` for a file, auto-submits it, then restores previously captured prompt input.
   ---@param path? string Explicit file path to mention. When nil, uses current buffer path.
-  ---@param mention_opts? codex.MentionCommandOpts
   ---@return codex.SendResult ok True when mention payload is sent.
   ---@return string|nil err
-  local function mention_file(path, mention_opts)
-    local post_execute = get_post_execute(mention_opts)
+  local function mention_file(path)
     local deps = get_deps()
     local resolved_path = path
     if resolved_path == nil then
@@ -201,22 +128,19 @@ function M.create(opts)
     if not resolved_path or resolved_path == "" then
       local err = "current buffer has no file path"
       deps.logger.error("failed to mention file: %s", err)
-      run_post_execute(post_execute, false, err)
       return false, err
     end
 
     resolved_path = deps.path.to_relative(deps.vim, resolved_path)
     vdebug("mention_file resolved_path=%s", resolved_path)
-    return dispatch_mention(resolved_path, mention_opts)
+    return dispatch_mention(resolved_path)
   end
 
   ---Sends `/mention` for a directory, auto-submits it, then restores previously captured prompt input.
   ---@param path? string Explicit directory path to mention. When nil, uses current buffer's directory.
-  ---@param mention_opts? codex.MentionCommandOpts
   ---@return codex.SendResult ok True when mention payload is sent.
   ---@return string|nil err
-  local function mention_directory(path, mention_opts)
-    local post_execute = get_post_execute(mention_opts)
+  local function mention_directory(path)
     local deps = get_deps()
     local resolved_path = path
     if resolved_path == nil then
@@ -224,7 +148,6 @@ function M.create(opts)
       if not buf_path or buf_path == "" then
         local err = "current buffer has no directory path"
         deps.logger.error("failed to mention directory: %s", err)
-        run_post_execute(post_execute, false, err)
         return false, err
       end
       resolved_path = deps.vim.fn.expand("%:p:h")
@@ -233,14 +156,13 @@ function M.create(opts)
     if not resolved_path or resolved_path == "" then
       local err = "current buffer has no directory path"
       deps.logger.error("failed to mention directory: %s", err)
-      run_post_execute(post_execute, false, err)
       return false, err
     end
 
     resolved_path = deps.path.to_relative(deps.vim, resolved_path)
     resolved_path = deps.path.ensure_dir_trailing_separator(deps.vim, resolved_path)
     vdebug("mention_directory resolved_path=%s", resolved_path)
-    return dispatch_mention(resolved_path, mention_opts)
+    return dispatch_mention(resolved_path)
   end
 
   return {

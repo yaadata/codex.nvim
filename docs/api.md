@@ -72,10 +72,10 @@ and auto-submits it. For custom user command examples, see
 
 ## Mention Helpers
 
-| API                                   | Description                                                                                          | Options / Inputs                                                                                                                                                                                    | Returns   |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `codex.mention_file(path, opts)`      | Send `/mention` for a file path, auto-submit it, then restore previously captured prompt input.      | `path` (`string\|nil`): explicit file path; when omitted, uses the current buffer path.<br>`opts.post_execute` (`fun(ok, err)\|nil`): callback invoked after mention execution completes.           | `ok, err` |
-| `codex.mention_directory(path, opts)` | Send `/mention` for a directory path, auto-submit it, then restore previously captured prompt input. | `path` (`string\|nil`): explicit directory path; when omitted, uses the current buffer directory.<br>`opts.post_execute` (`fun(ok, err)\|nil`): callback invoked after mention execution completes. | `ok, err` |
+| API                             | Description                                                                                          | Options / Inputs                                                                                  | Returns   |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | --------- |
+| `codex.mention_file(path)`      | Send `/mention` for a file path, auto-submit it, then restore previously captured prompt input.      | `path` (`string\|nil`): explicit file path; when omitted, uses the current buffer path.           | `ok, err` |
+| `codex.mention_directory(path)` | Send `/mention` for a directory path, auto-submit it, then restore previously captured prompt input. | `path` (`string\|nil`): explicit directory path; when omitted, uses the current buffer directory. | `ok, err` |
 
 ## Terminal Keymap Builtins
 
