@@ -395,8 +395,6 @@ describe("codex.nvim command registration", function()
 
   it("dispatches :CodexMentionDirectory with explicit argument", function()
     -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
       local paths = {}
 
@@ -407,18 +405,18 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+      -- ========= [A]ct     =========
       registered.CodexMentionDirectory.callback({ args = "/tmp/" })
 
+      -- ========= [A]ssert  =========
       assert.equals(1, #paths)
       assert.equals("/tmp/", paths[1])
     end)
   end)
 
   it("dispatches :CodexMentionDirectory without argument as nil", function()
-    -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
     with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
       local called = false
       local received_path = "unset"
 
@@ -430,33 +428,52 @@ describe("codex.nvim command registration", function()
       }
 
       require("codex.nvim.commands").register()
+      -- ========= [A]ct     =========
       registered.CodexMentionDirectory.callback({ args = "" })
 
+      -- ========= [A]ssert  =========
       assert.is_true(called)
       assert.is_nil(received_path)
     end)
   end)
 
-  it("dispatches :CodexResume and :CodexResume! with expected last flag", function()
-    -- ========= [A]rrange =========
-    -- ========= [A]ct     =========
-    -- ========= [A]ssert  =========
+  it("dispatches :CodexResume with last=false", function()
     with_stubbed_command_registration(function(registered)
-      local calls = {}
+      -- ========= [A]rrange =========
+      local received_opts
 
       package.loaded["codex"] = {
         resume = function(opts)
-          table.insert(calls, opts)
+          received_opts = opts
         end,
       }
 
       require("codex.nvim.commands").register()
+      -- ========= [A]ct     =========
       registered.CodexResume.callback({ bang = false })
+
+      -- ========= [A]ssert  =========
+      assert.same({ last = false }, received_opts)
+    end)
+  end)
+
+  it("dispatches :CodexResume! with last=true", function()
+    with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
+      local received_opts
+
+      package.loaded["codex"] = {
+        resume = function(opts)
+          received_opts = opts
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+      -- ========= [A]ct     =========
       registered.CodexResume.callback({ bang = true })
 
-      assert.equals(2, #calls)
-      assert.same({ last = false }, calls[1])
-      assert.same({ last = true }, calls[2])
+      -- ========= [A]ssert  =========
+      assert.same({ last = true }, received_opts)
     end)
   end)
 end)
