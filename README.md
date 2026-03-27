@@ -13,7 +13,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 > [!CAUTION]
 > You are reading the `main` branch README. Install details may differ from
 > tagged releases. The current latest release tag is
-> [`v0.6.1`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.6.1). For
+> [`v0.6.2`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.6.2). For
 > version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -22,7 +22,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "0.6.1",
+  version = "0.6.2",
   cmd = {
     "Codex",
     "CodexFocus",
@@ -57,13 +57,13 @@ Common entry points:
 - `:Codex` toggles the Codex terminal
 - `:CodexSendSelection` sends the active visual selection
 - `:CodexSendFile` sends the current buffer as an ACP file reference
-- `:CodexMentionFile [path]` and `:CodexMentionDirectory [path]` send
-  `/mention`
+- `:CodexMentionFile [path]` and `:CodexMentionDirectory [path]` send `/mention`
 - `:CodexResume[!]` resumes in-process or launches `codex resume`
 
-If `:help codex.nvim` is missing after a local/raw install, generate help tags for
-the plugin's `doc/` directory, for example `:helptags {path-to-codex.nvim}/doc`.
-Plugin managers usually do this for you; `:helptags ALL` is the broad fallback.
+If `:help codex.nvim` is missing after a local/raw install, generate help tags
+for the plugin's `doc/` directory, for example
+`:helptags {path-to-codex.nvim}/doc`. Plugin managers usually do this for you;
+`:helptags ALL` is the broad fallback.
 
 ## Developer Docs
 
