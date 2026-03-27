@@ -113,6 +113,42 @@ describe("codex.init public api resume", function()
     assert.equals(0, #env.provider.send_calls)
   end)
 
+  it("resume lazily reattaches a restored session before dispatching /resume", function()
+    -- ========= [A]rrange =========
+    local discover_calls = 0
+    local env = setup_with_deps({
+      _provider = function(provider, fake_vim)
+        provider.discover_restorable_fn = function()
+          discover_calls = discover_calls + 1
+          if discover_calls == 1 then
+            return {}
+          end
+          fake_vim._set_buf_lines(77, { "> " })
+          return {
+            {
+              handle = { id = "restored", alive = true, bufnr = 77, winid = 7 },
+              cmd = "codex-test",
+              cwd = "/restored",
+              bufnr = 77,
+              winid = 7,
+            },
+          }
+        end
+      end,
+    })
+
+    -- ========= [A]ct     =========
+    local ok = env.codex.resume()
+
+    -- ========= [A]ssert  =========
+    assert.is_true(ok)
+    assert.equals(2, discover_calls)
+    assert.equals(0, #env.provider.open_calls)
+    assert.equals(1, #env.provider.send_calls)
+    assert.equals("<termcoded:<C-e>><termcoded:<C-u>>/resume", env.provider.send_calls[1].text)
+    assert.equals("restored", env.store.get_active().handle.id)
+  end)
+
   it("resume opens `codex resume --last` when last=true and no active session exists", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()

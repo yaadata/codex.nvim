@@ -96,9 +96,17 @@
 
 ---@alias codex.ProviderHandle table
 
+---@class codex.RestoredSessionSpec
+---@field handle codex.ProviderHandle
+---@field cmd string
+---@field cwd string
+---@field bufnr integer
+---@field winid? integer
+
 ---@class codex.Provider
 ---@field is_available fun(): boolean
 ---@field open fun(cmd: string, args: string[], env: table<string, string>, config: codex.Config, focus: boolean, on_exit?: fun(handle: codex.ProviderHandle): nil): codex.ProviderHandle|nil, string|nil
+---@field discover_restorable fun(config: codex.Config, on_exit?: fun(handle: codex.ProviderHandle): nil): codex.RestoredSessionSpec[]
 ---@field close fun(handle: codex.ProviderHandle|nil): boolean, string|nil
 ---@field send fun(handle: codex.ProviderHandle|nil, text: string): boolean, string|nil
 ---@field focus fun(handle: codex.ProviderHandle|nil): boolean, string|nil

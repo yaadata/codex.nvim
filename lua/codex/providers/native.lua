@@ -1,5 +1,6 @@
 local log = require("codex.logger")
 local keymaps = require("codex.keymaps")
+local terminal_utils = require("codex.providers.terminal_utils")
 
 local M = {}
 
@@ -31,14 +32,21 @@ local function build_cmd(cmd, args)
   return table.concat(parts, " ")
 end
 
---- Find the first window displaying a given buffer.
+---Resolve the live terminal job id from a buffer.
 ---@param bufnr integer
----@return integer|nil winid
-local function find_win_for_buf(bufnr)
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    if vim.api.nvim_win_get_buf(win) == bufnr then
-      return win
+---@return integer|nil
+local function resolve_terminal_jobid(bufnr)
+  local api = vim.api or {}
+  if type(api.nvim_get_option_value) == "function" then
+    local ok_channel, channel = pcall(api.nvim_get_option_value, "channel", { buf = bufnr })
+    if ok_channel and type(channel) == "number" and channel > 0 then
+      return channel
     end
+  end
+
+  local jobid = terminal_utils.get_buffer_var(bufnr, "terminal_job_id")
+  if type(jobid) == "number" and jobid > 0 then
+    return jobid
   end
   return nil
 end
@@ -164,6 +172,32 @@ local function cleanup_window_and_buffer(handle)
   handle.bufnr = nil
 end
 
+---Register TermClose handling for a recovered terminal buffer.
+---@param handle codex.ProviderHandle
+---@param term_config codex.TerminalConfig|table
+---@param on_exit? fun(handle: codex.ProviderHandle): nil
+---@return nil
+local function register_restored_exit_autocmd(handle, term_config, on_exit)
+  local api = vim.api or {}
+  if type(api.nvim_create_autocmd) ~= "function" or type(handle.bufnr) ~= "number" then
+    return
+  end
+
+  api.nvim_create_autocmd("TermClose", {
+    buffer = handle.bufnr,
+    once = true,
+    callback = function()
+      handle.jobid = nil
+      if term_config.auto_close == true then
+        cleanup_window_and_buffer(handle)
+      end
+      if on_exit then
+        on_exit(handle)
+      end
+    end,
+  })
+end
+
 --- Spawn a terminal process in a new window and return its handle.
 ---@param cmd string
 ---@param args string[]
@@ -208,6 +242,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
 
   local jobid = vim.fn.termopen(full_cmd, termopen_opts)
   handle.jobid = jobid
+  terminal_utils.set_codex_terminal_marker(bufnr, "native", full_cmd, cwd)
 
   vim.bo[bufnr].buflisted = false
   keymaps.apply_terminal(bufnr, term_config.keymaps)
@@ -220,6 +255,71 @@ function M.open(cmd, args, env, config, focus, on_exit)
 
   log.debug("native: opened terminal (buf=%d, win=%d, job=%d)", bufnr, winid, jobid)
   return handle
+end
+
+---Discover live Codex terminal buffers that can be reattached.
+---@param config codex.Config
+---@param on_exit? fun(handle: codex.ProviderHandle): nil
+---@return codex.RestoredSessionSpec[]
+function M.discover_restorable(config, on_exit)
+  local api = vim.api or {}
+  if type(api.nvim_list_bufs) ~= "function" then
+    return {}
+  end
+
+  local launch = config.launch or {}
+  local term_config = config.terminal or {}
+  local cwd_fallback = launch.cwd or vim.fn.getcwd()
+  ---@type codex.RestoredSessionSpec[]
+  local restored = {}
+
+  for _, bufnr in ipairs(api.nvim_list_bufs()) do
+    if type(api.nvim_buf_is_valid) ~= "function" or api.nvim_buf_is_valid(bufnr) then
+      local jobid = resolve_terminal_jobid(bufnr)
+      if jobid then
+        local marker = terminal_utils.get_buffer_var(bufnr, "codex_terminal")
+        local name = type(api.nvim_buf_get_name) == "function" and api.nvim_buf_get_name(bufnr)
+          or nil
+        local cmd = nil
+        local cwd = cwd_fallback
+
+        if
+          type(marker) == "table"
+          and marker.provider == "native"
+          and terminal_utils.matches_launch_cmd(marker.cmd, launch.cmd)
+        then
+          cmd = marker.cmd
+          cwd = marker.cwd or cwd
+        else
+          local parsed_cmd = terminal_utils.extract_terminal_command(name)
+          if terminal_utils.matches_launch_cmd(parsed_cmd, launch.cmd) then
+            cmd = parsed_cmd
+            cwd = terminal_utils.extract_terminal_cwd(name) or cwd
+          end
+        end
+
+        if cmd then
+          local handle = {
+            bufnr = bufnr,
+            winid = terminal_utils.find_win_for_buf(bufnr),
+            jobid = jobid,
+            ready_at_ms = now_ms(),
+          }
+          register_restored_exit_autocmd(handle, term_config, on_exit)
+          keymaps.apply_terminal(bufnr, term_config.keymaps)
+          table.insert(restored, {
+            handle = handle,
+            cmd = cmd,
+            cwd = cwd,
+            bufnr = bufnr,
+            winid = handle.winid,
+          })
+        end
+      end
+    end
+  end
+
+  return restored
 end
 
 --- Stop the terminal job and clean up its window and buffer.
@@ -270,7 +370,7 @@ function M.focus(handle)
 
   local winid = handle.winid
   if not winid or not vim.api.nvim_win_is_valid(winid) then
-    winid = find_win_for_buf(handle.bufnr)
+    winid = terminal_utils.find_win_for_buf(handle.bufnr)
   end
 
   if not winid then
@@ -308,7 +408,7 @@ function M.toggle(handle, cmd, args, env, config)
 
   local winid = handle.winid
   if not winid or not vim.api.nvim_win_is_valid(winid) then
-    winid = find_win_for_buf(handle.bufnr)
+    winid = terminal_utils.find_win_for_buf(handle.bufnr)
   end
 
   if winid then

@@ -23,10 +23,21 @@ end
 local function with_stubbed_vim_api(run)
   local original_create_autocmd = vim.api.nvim_create_autocmd
   local original_get_current_buf = vim.api.nvim_get_current_buf
+  local original_list_bufs = vim.api.nvim_list_bufs
+  local original_list_wins = vim.api.nvim_list_wins
+  local original_win_get_buf = vim.api.nvim_win_get_buf
   local original_set_current_win = vim.api.nvim_set_current_win
   local original_win_is_valid = vim.api.nvim_win_is_valid
+  local original_win_close = vim.api.nvim_win_close
+  local original_buf_is_valid = vim.api.nvim_buf_is_valid
+  local original_buf_delete = vim.api.nvim_buf_delete
+  local original_buf_get_name = vim.api.nvim_buf_get_name
+  local original_buf_get_var = vim.api.nvim_buf_get_var
+  local original_buf_set_var = vim.api.nvim_buf_set_var
+  local original_get_option_value = vim.api.nvim_get_option_value
   local original_keymap_set = vim.keymap.set
   local original_cmd = vim.cmd
+  local original_jobstop = vim.fn.jobstop
   local autocmds = {}
   local keymap_set_calls = {}
   local cmd_calls = {}
@@ -35,6 +46,11 @@ local function with_stubbed_vim_api(run)
     current_win = 1,
     win_buf = { [1] = 1 },
     win_valid = { [1] = true },
+    buf_valid = { [1] = true },
+    buf_names = {},
+    buf_vars = {},
+    buf_channels = {},
+    jobstop_calls = {},
     set_current_win_calls = {},
   }
 
@@ -45,6 +61,29 @@ local function with_stubbed_vim_api(run)
   vim.api.nvim_get_current_buf = function()
     return state.current_buf
   end
+  vim.api.nvim_list_bufs = function()
+    local bufs = {}
+    for bufnr, valid in pairs(state.buf_valid) do
+      if valid then
+        table.insert(bufs, bufnr)
+      end
+    end
+    table.sort(bufs)
+    return bufs
+  end
+  vim.api.nvim_list_wins = function()
+    local wins = {}
+    for winid, valid in pairs(state.win_valid) do
+      if valid then
+        table.insert(wins, winid)
+      end
+    end
+    table.sort(wins)
+    return wins
+  end
+  vim.api.nvim_win_get_buf = function(winid)
+    return state.win_buf[winid]
+  end
   vim.api.nvim_set_current_win = function(winid)
     table.insert(state.set_current_win_calls, winid)
     state.current_win = winid
@@ -54,6 +93,39 @@ local function with_stubbed_vim_api(run)
   end
   vim.api.nvim_win_is_valid = function(winid)
     return state.win_valid[winid] == true
+  end
+  vim.api.nvim_win_close = function(winid)
+    state.win_valid[winid] = false
+  end
+  vim.api.nvim_buf_is_valid = function(bufnr)
+    return state.buf_valid[bufnr] == true
+  end
+  vim.api.nvim_buf_delete = function(bufnr)
+    state.buf_valid[bufnr] = false
+  end
+  vim.api.nvim_buf_get_name = function(bufnr)
+    return state.buf_names[bufnr] or ""
+  end
+  vim.api.nvim_buf_get_var = function(bufnr, name)
+    local vars = state.buf_vars[bufnr] or {}
+    local value = vars[name]
+    if value == nil then
+      error("missing buffer var")
+    end
+    return value
+  end
+  vim.api.nvim_buf_set_var = function(bufnr, name, value)
+    state.buf_vars[bufnr] = state.buf_vars[bufnr] or {}
+    state.buf_vars[bufnr][name] = value
+  end
+  vim.api.nvim_get_option_value = function(name, opts)
+    if name ~= "channel" then
+      if type(original_get_option_value) == "function" then
+        return original_get_option_value(name, opts)
+      end
+      return 0
+    end
+    return state.buf_channels[opts.buf] or 0
   end
   vim.keymap.set = function(mode, lhs, rhs, opts)
     table.insert(keymap_set_calls, {
@@ -66,14 +138,28 @@ local function with_stubbed_vim_api(run)
   vim.cmd = function(cmd)
     table.insert(cmd_calls, cmd)
   end
+  vim.fn.jobstop = function(jobid)
+    table.insert(state.jobstop_calls, jobid)
+  end
 
   local ok, err = pcall(run, autocmds, keymap_set_calls, cmd_calls, state)
   vim.api.nvim_create_autocmd = original_create_autocmd
   vim.api.nvim_get_current_buf = original_get_current_buf
+  vim.api.nvim_list_bufs = original_list_bufs
+  vim.api.nvim_list_wins = original_list_wins
+  vim.api.nvim_win_get_buf = original_win_get_buf
   vim.api.nvim_set_current_win = original_set_current_win
   vim.api.nvim_win_is_valid = original_win_is_valid
+  vim.api.nvim_win_close = original_win_close
+  vim.api.nvim_buf_is_valid = original_buf_is_valid
+  vim.api.nvim_buf_delete = original_buf_delete
+  vim.api.nvim_buf_get_name = original_buf_get_name
+  vim.api.nvim_buf_get_var = original_buf_get_var
+  vim.api.nvim_buf_set_var = original_buf_set_var
+  vim.api.nvim_get_option_value = original_get_option_value
   vim.keymap.set = original_keymap_set
   vim.cmd = original_cmd
+  vim.fn.jobstop = original_jobstop
 
   if not ok then
     error(err)
@@ -962,6 +1048,115 @@ describe("codex.providers.snacks", function()
 
       -- ========= [A]ssert  =========
       assert.is_nil(captured_opts.win)
+    end)
+  end)
+
+  it("discover_restorable matches snacks terminal metadata with extra Codex args", function()
+    with_stubbed_vim_api(function(_, _, _, state)
+      -- ========= [A]rrange =========
+      state.buf_valid[42] = true
+      state.buf_channels[42] = 55
+      state.buf_vars[42] = {
+        snacks_terminal = {
+          cmd = "codex --model o3",
+          cwd = "/tmp/snacks",
+        },
+      }
+      state.win_valid[8] = true
+      state.win_buf[8] = 42
+      state.current_win = 8
+      state.current_buf = 42
+
+      package.loaded["snacks"] = {
+        terminal = {},
+        win = function(opts)
+          return {
+            buf = opts.buf,
+            show = function(self)
+              self.win = 10
+              state.win_valid[10] = true
+              state.win_buf[10] = self.buf
+            end,
+          }
+        end,
+      }
+      local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
+      local restored = provider.discover_restorable({
+        launch = { cmd = "codex", cwd = nil },
+        terminal = {
+          auto_close = false,
+          startup = { grace_ms = 0 },
+          keymaps = {},
+          provider_opts = {},
+        },
+      }, nil)
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, #restored)
+      assert.equals(42, restored[1].bufnr)
+      assert.equals(8, restored[1].winid)
+      assert.equals("codex --model o3", restored[1].cmd)
+      assert.equals("/tmp/snacks", restored[1].cwd)
+      assert.equals(42, provider.get_bufnr(restored[1].handle))
+      assert.is_true(provider.is_alive(restored[1].handle))
+    end)
+  end)
+
+  it("discover_restorable accepts callable snacks.win modules", function()
+    with_stubbed_vim_api(function(_, _, _, state)
+      -- ========= [A]rrange =========
+      state.buf_valid[42] = true
+      state.buf_channels[42] = 55
+      state.buf_vars[42] = {
+        snacks_terminal = {
+          cmd = "codex --model o3",
+          cwd = "/tmp/snacks",
+        },
+      }
+      state.win_valid[8] = true
+      state.win_buf[8] = 42
+      state.current_win = 8
+      state.current_buf = 42
+
+      local win_module = setmetatable({}, {
+        __call = function(_, opts)
+          return {
+            buf = opts.buf,
+            show = function(self)
+              self.win = 10
+              state.win_valid[10] = true
+              state.win_buf[10] = self.buf
+            end,
+          }
+        end,
+      })
+
+      package.loaded["snacks"] = {
+        terminal = {},
+        win = win_module,
+      }
+      local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct     =========
+      local restored = provider.discover_restorable({
+        launch = { cmd = "codex", cwd = nil },
+        terminal = {
+          auto_close = false,
+          startup = { grace_ms = 0 },
+          keymaps = {},
+          provider_opts = {},
+        },
+      }, nil)
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, #restored)
+      assert.equals(42, restored[1].bufnr)
+      assert.equals(8, restored[1].winid)
+      assert.equals("codex --model o3", restored[1].cmd)
+      assert.equals(42, provider.get_bufnr(restored[1].handle))
+      assert.is_true(provider.is_alive(restored[1].handle))
     end)
   end)
 end)

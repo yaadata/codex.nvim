@@ -62,6 +62,7 @@ end
 local function with_stubbed_native_env(run)
   local api_methods = {
     "nvim_list_wins",
+    "nvim_list_bufs",
     "nvim_win_get_buf",
     "nvim_get_current_win",
     "nvim_get_current_buf",
@@ -75,6 +76,11 @@ local function with_stubbed_native_env(run)
     "nvim_win_close",
     "nvim_buf_is_valid",
     "nvim_buf_delete",
+    "nvim_buf_get_name",
+    "nvim_buf_get_var",
+    "nvim_buf_set_var",
+    "nvim_get_option_value",
+    "nvim_create_autocmd",
   }
   local fn_methods = { "getcwd", "termopen", "chansend", "jobstop" }
 
@@ -85,6 +91,7 @@ local function with_stubbed_native_env(run)
   local original_keymap_set = vim.keymap.set
   local original_columns = vim.o.columns
   local original_lines = vim.o.lines
+  local original_get_option_value = vim.api.nvim_get_option_value
 
   for _, method in ipairs(api_methods) do
     original_api[method] = vim.api[method]
@@ -100,6 +107,10 @@ local function with_stubbed_native_env(run)
     current_win = 1,
     wins = { [1] = { bufnr = 1, valid = true } },
     buf_valid = { [1] = true },
+    buf_names = {},
+    buf_vars = {},
+    buf_channels = {},
+    autocmds = {},
     cmd_calls = {},
     win_width_calls = {},
     win_height_calls = {},
@@ -135,6 +146,17 @@ local function with_stubbed_native_env(run)
     end
     table.sort(wins)
     return wins
+  end
+
+  local function nvim_list_bufs()
+    local bufs = {}
+    for bufnr, valid in pairs(state.buf_valid) do
+      if valid then
+        table.insert(bufs, bufnr)
+      end
+    end
+    table.sort(bufs)
+    return bufs
   end
 
   local function nvim_win_get_buf(winid)
@@ -207,6 +229,39 @@ local function with_stubbed_native_env(run)
     state.buf_valid[bufnr] = false
   end
 
+  local function nvim_buf_get_name(bufnr)
+    return state.buf_names[bufnr] or ""
+  end
+
+  local function nvim_buf_get_var(bufnr, name)
+    local vars = state.buf_vars[bufnr] or {}
+    local value = vars[name]
+    if value == nil then
+      error("missing buffer var")
+    end
+    return value
+  end
+
+  local function nvim_buf_set_var(bufnr, name, value)
+    state.buf_vars[bufnr] = state.buf_vars[bufnr] or {}
+    state.buf_vars[bufnr][name] = value
+  end
+
+  local function nvim_get_option_value(name, opts)
+    if name ~= "channel" then
+      if type(original_get_option_value) == "function" then
+        return original_get_option_value(name, opts)
+      end
+      return 0
+    end
+    return state.buf_channels[opts.buf] or 0
+  end
+
+  local function nvim_create_autocmd(event, spec)
+    table.insert(state.autocmds, { event = event, spec = spec })
+    return #state.autocmds
+  end
+
   local function getcwd()
     return "/test/cwd"
   end
@@ -261,6 +316,7 @@ local function with_stubbed_native_env(run)
   end
 
   vim.api.nvim_list_wins = nvim_list_wins
+  vim.api.nvim_list_bufs = nvim_list_bufs
   vim.api.nvim_win_get_buf = nvim_win_get_buf
   vim.api.nvim_get_current_win = nvim_get_current_win
   vim.api.nvim_get_current_buf = nvim_get_current_buf
@@ -274,6 +330,11 @@ local function with_stubbed_native_env(run)
   vim.api.nvim_win_close = nvim_win_close
   vim.api.nvim_buf_is_valid = nvim_buf_is_valid
   vim.api.nvim_buf_delete = nvim_buf_delete
+  vim.api.nvim_buf_get_name = nvim_buf_get_name
+  vim.api.nvim_buf_get_var = nvim_buf_get_var
+  vim.api.nvim_buf_set_var = nvim_buf_set_var
+  vim.api.nvim_get_option_value = nvim_get_option_value
+  vim.api.nvim_create_autocmd = nvim_create_autocmd
   vim.fn.getcwd = getcwd
   vim.fn.termopen = termopen
   vim.fn.chansend = chansend
@@ -1034,6 +1095,30 @@ describe("codex.providers.native", function()
       assert.equals("rounded", open_call.opts.border)
       assert.equals(" Codex ", open_call.opts.title)
       assert.equals("center", open_call.opts.title_pos)
+    end)
+  end)
+
+  it("discover_restorable matches terminal buffer names with extra Codex args", function()
+    with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
+      local provider = require("codex.providers.native")
+      state.buf_valid[21] = true
+      state.buf_names[21] = "term:///tmp/project//123:codex --model o3"
+      state.buf_channels[21] = 91
+      state.wins[9] = { bufnr = 21, valid = true }
+      local cfg = make_config()
+      cfg.launch.cmd = "codex"
+
+      -- ========= [A]ct     =========
+      local restored = provider.discover_restorable(cfg, nil)
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, #restored)
+      assert.equals(21, restored[1].bufnr)
+      assert.equals(9, restored[1].winid)
+      assert.equals("codex --model o3", restored[1].cmd)
+      assert.equals("/tmp/project", restored[1].cwd)
+      assert.equals(91, restored[1].handle.jobid)
     end)
   end)
 end)

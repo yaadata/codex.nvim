@@ -45,6 +45,22 @@ local function get_deps()
   return state.deps or default_deps
 end
 
+---Schedule a restore attempt after startup/session restore work has finished.
+---@return nil
+local function schedule_restore_attempt()
+  if not state.initialized or not state.config then
+    return
+  end
+
+  local deps = get_deps()
+  deps.vim.schedule(function()
+    if not state.initialized or not state.config then
+      return
+    end
+    session_lifecycle.restore_session_if_needed(get_deps(), state.config)
+  end)
+end
+
 ---Initializes codex.nvim state, commands, queue, and lifecycle hooks.
 ---@param opts? table
 ---@return nil
@@ -136,15 +152,16 @@ function M.setup(opts)
     end,
   })
 
-  deps.vim.api.nvim_create_autocmd("VimLeavePre", {
-    group = deps.vim.api.nvim_create_augroup("codex_cleanup", { clear = true }),
+  deps.vim.api.nvim_create_autocmd({ "VimEnter", "SessionLoadPost" }, {
+    group = deps.vim.api.nvim_create_augroup("codex_session_restore", { clear = true }),
     callback = function()
-      M.close()
+      schedule_restore_attempt()
     end,
   })
 
   state.initialized = true
   deps.logger.debug("codex.nvim initialized")
+  session_lifecycle.restore_session_if_needed(get_deps(), state.config)
 
   if state.config.launch.auto_start then
     deps.vim.schedule(function()
@@ -220,7 +237,8 @@ end
 function M.clear_input()
   ensure_setup()
   local deps = get_deps()
-  local session, provider = session_lifecycle.get_active_session_and_provider(deps, state.config)
+  local session, provider =
+    session_lifecycle.get_or_restore_active_session_and_provider(deps, state.config)
 
   if not session_lifecycle.session_is_alive(session, provider) then
     return false, "no active Codex session"
@@ -271,7 +289,8 @@ function M.resume(opts)
   opts = opts or {}
 
   local deps = get_deps()
-  local session, provider = session_lifecycle.get_active_session_and_provider(deps, state.config)
+  local session, provider =
+    session_lifecycle.get_or_restore_active_session_and_provider(deps, state.config)
 
   if session and session.alive and provider.is_alive(session.handle) then
     return M.execute_slash_command({ command = "resume" })

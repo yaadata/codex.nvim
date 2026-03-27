@@ -57,7 +57,7 @@ function M.create(opts)
           local submit_ok, submit_err
           if existing_input and existing_input:find("\n", 1, true) then
             local submit_session, submit_provider =
-              session_lifecycle.get_active_session_and_provider(deps, config)
+              session_lifecycle.get_or_restore_active_session_and_provider(deps, config)
             if not session_lifecycle.session_is_alive(submit_session, submit_provider) then
               submit_ok, submit_err = false, "no active Codex session"
             else

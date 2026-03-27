@@ -1,6 +1,7 @@
 local required_methods = {
   "is_available",
   "open",
+  "discover_restorable",
   "close",
   "send",
   "focus",

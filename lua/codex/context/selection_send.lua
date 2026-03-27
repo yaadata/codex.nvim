@@ -142,7 +142,8 @@ function M.create(opts)
   ---@return nil
   local function run_post_send_focus_now()
     local deps = get_deps()
-    local session, provider = session_lifecycle.get_active_session_and_provider(deps, get_config())
+    local session, provider =
+      session_lifecycle.get_or_restore_active_session_and_provider(deps, get_config())
     if not session_lifecycle.session_is_alive(session, provider) then
       return
     end

@@ -1,5 +1,6 @@
 local log = require("codex.logger")
 local keymaps = require("codex.keymaps")
+local terminal_utils = require("codex.providers.terminal_utils")
 
 local M = {}
 
@@ -62,6 +63,152 @@ local function build_cmd(cmd, args)
   return table.concat(parts, " ")
 end
 
+---Build an attached terminal wrapper around an already-running terminal buffer.
+---@param snacks table
+---@param config codex.Config
+---@param bufnr integer
+---@return table|nil
+local function create_attached_terminal(snacks, config, bufnr)
+  local win_factory = snacks.win
+  if type(win_factory) == "table" then
+    local mt = getmetatable(win_factory)
+    if type(mt) == "table" and type(mt.__call) == "function" then
+      win_factory = function(...)
+        return snacks.win(...)
+      end
+    end
+  end
+
+  if type(win_factory) ~= "function" then
+    return nil
+  end
+
+  local provider_opts = config.terminal.provider_opts or {}
+  local snacks_opts = provider_opts.snacks or {}
+  local win_obj = nil
+  local terminal = {
+    buf = bufnr,
+    win = terminal_utils.find_win_for_buf(bufnr),
+  }
+
+  local function sync_win()
+    local api = vim.api or {}
+    if
+      type(terminal.win) == "number"
+      and type(api.nvim_win_is_valid) == "function"
+      and api.nvim_win_is_valid(terminal.win)
+      and type(api.nvim_win_get_buf) == "function"
+      and api.nvim_win_get_buf(terminal.win) == terminal.buf
+    then
+      return terminal.win
+    end
+    terminal.win = terminal_utils.find_win_for_buf(terminal.buf)
+    return terminal.win
+  end
+
+  local function ensure_win_obj()
+    if win_obj then
+      return win_obj
+    end
+    win_obj = win_factory(vim.tbl_deep_extend("force", snacks_opts.win or {}, {
+      buf = terminal.buf,
+      show = false,
+    }))
+    return win_obj
+  end
+
+  function terminal:show()
+    local existing = sync_win()
+    if existing then
+      self.win = existing
+      return
+    end
+    local win = ensure_win_obj()
+    if win and win.show then
+      win:show()
+      self.win = win.win or terminal_utils.find_win_for_buf(self.buf)
+    end
+  end
+
+  function terminal:focus()
+    self:show()
+    local winid = sync_win()
+    if type(winid) == "number" and vim.api.nvim_win_is_valid(winid) then
+      vim.api.nvim_set_current_win(winid)
+      self.win = winid
+    end
+  end
+
+  function terminal:toggle()
+    local winid = sync_win()
+    if type(winid) == "number" and vim.api.nvim_win_is_valid(winid) then
+      vim.api.nvim_win_close(winid, false)
+      self.win = nil
+      return self
+    end
+    self:show()
+    return self
+  end
+
+  function terminal:close()
+    local jobid = resolve_jobid(self)
+    if jobid then
+      pcall(vim.fn.jobstop, jobid)
+      self.jobid = nil
+    end
+    local winid = sync_win()
+    if type(winid) == "number" and vim.api.nvim_win_is_valid(winid) then
+      pcall(vim.api.nvim_win_close, winid, true)
+    end
+    if self.buf and vim.api.nvim_buf_is_valid(self.buf) then
+      pcall(vim.api.nvim_buf_delete, self.buf, { force = true })
+    end
+    self.buf = nil
+    self.win = nil
+  end
+
+  return terminal
+end
+
+---Register TermClose handling for a restored terminal buffer.
+---@param handle codex.ProviderHandle
+---@param auto_close boolean
+---@param on_exit? fun(handle: codex.ProviderHandle): nil
+---@return nil
+local function register_restored_exit_autocmd(handle, auto_close, on_exit)
+  local api = vim.api or {}
+  local term = handle.terminal
+  if
+    type(api.nvim_create_autocmd) ~= "function"
+    or type(term) ~= "table"
+    or type(term.buf) ~= "number"
+  then
+    return
+  end
+
+  api.nvim_create_autocmd("TermClose", {
+    buffer = term.buf,
+    once = true,
+    callback = function()
+      if on_exit then
+        on_exit(handle)
+      end
+
+      if auto_close and handle.terminal and handle.terminal.close then
+        vim.schedule(function()
+          local ok, err = pcall(function()
+            handle.terminal:close()
+          end)
+          if not ok then
+            log.debug("snacks: failed to auto-close recovered terminal: %s", tostring(err))
+          end
+          pcall(vim.cmd, "checktime")
+        end)
+      end
+    end,
+  })
+end
+
 --- Open a terminal via snacks.terminal and return its handle.
 ---@param cmd string
 ---@param args string[]
@@ -107,6 +254,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   }
 
   if type(terminal.buf) == "number" then
+    terminal_utils.set_codex_terminal_marker(terminal.buf, "snacks", full_cmd, cwd)
     keymaps.apply_terminal(terminal.buf, config.terminal.keymaps)
   end
 
@@ -136,6 +284,85 @@ function M.open(cmd, args, env, config, focus, on_exit)
 
   log.debug("snacks: opened terminal")
   return handle
+end
+
+---Discover live Codex terminal buffers that can be reattached.
+---@param config codex.Config
+---@param on_exit? fun(handle: codex.ProviderHandle): nil
+---@return codex.RestoredSessionSpec[]
+function M.discover_restorable(config, on_exit)
+  if not M.is_available() then
+    return {}
+  end
+
+  local api = vim.api or {}
+  if type(api.nvim_list_bufs) ~= "function" then
+    return {}
+  end
+
+  local snacks = require("snacks")
+  local launch = config.launch or {}
+  local auto_close = config.terminal.auto_close == true
+  local cwd_fallback = launch.cwd or vim.fn.getcwd()
+  ---@type codex.RestoredSessionSpec[]
+  local restored = {}
+
+  for _, bufnr in ipairs(api.nvim_list_bufs()) do
+    if type(api.nvim_buf_is_valid) ~= "function" or api.nvim_buf_is_valid(bufnr) then
+      local jobid = resolve_jobid({ buf = bufnr })
+      if jobid then
+        local marker = terminal_utils.get_buffer_var(bufnr, "codex_terminal")
+        local snacks_term = terminal_utils.get_buffer_var(bufnr, "snacks_terminal")
+        local name = type(api.nvim_buf_get_name) == "function" and api.nvim_buf_get_name(bufnr)
+          or nil
+        local cmd = nil
+        local cwd = cwd_fallback
+
+        if
+          type(marker) == "table"
+          and marker.provider == "snacks"
+          and terminal_utils.matches_launch_cmd(marker.cmd, launch.cmd)
+        then
+          cmd = marker.cmd
+          cwd = marker.cwd or cwd
+        elseif
+          type(snacks_term) == "table"
+          and terminal_utils.matches_launch_cmd(snacks_term.cmd, launch.cmd)
+        then
+          cmd = snacks_term.cmd
+          cwd = snacks_term.cwd or cwd
+        else
+          local parsed_cmd = terminal_utils.extract_terminal_command(name)
+          if terminal_utils.matches_launch_cmd(parsed_cmd, launch.cmd) then
+            cmd = parsed_cmd
+            cwd = terminal_utils.extract_terminal_cwd(name) or cwd
+          end
+        end
+
+        if cmd then
+          local terminal = create_attached_terminal(snacks, config, bufnr)
+          if terminal then
+            local handle = {
+              terminal = terminal,
+              provider = "snacks",
+              ready_at_ms = now_ms(),
+            }
+            register_restored_exit_autocmd(handle, auto_close, on_exit)
+            keymaps.apply_terminal(bufnr, config.terminal.keymaps)
+            table.insert(restored, {
+              handle = handle,
+              cmd = cmd,
+              cwd = cwd,
+              bufnr = bufnr,
+              winid = terminal.win,
+            })
+          end
+        end
+      end
+    end
+  end
+
+  return restored
 end
 
 --- Close the snacks terminal session.

@@ -87,7 +87,7 @@ describe("codex.init public api lifecycle", function()
     assert.is_true(env.logger.set_verboses[1])
     assert.equals(2, #env.fake_vim._autocmds)
     assert.same({ "WinEnter", "BufEnter" }, env.fake_vim._autocmds[1].event)
-    assert.equals("VimLeavePre", env.fake_vim._autocmds[2].event)
+    assert.same({ "VimEnter", "SessionLoadPost" }, env.fake_vim._autocmds[2].event)
 
     local cfg = env.codex.get_config()
     assert.equals("codex-test", cfg.launch.cmd)
@@ -108,6 +108,84 @@ describe("codex.init public api lifecycle", function()
     env.codex.clear_logs()
     local cleared = env.codex.get_logs()
     assert.equals(0, #cleared)
+  end)
+
+  it("setup reattaches the visible restored session and closes extras", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps({
+      _provider = function(provider, fake_vim)
+        fake_vim._set_window_buf(7, 71)
+        provider.discover_restorable_fn = function()
+          return {
+            {
+              handle = { id = "hidden", alive = true, bufnr = 41 },
+              cmd = "codex-test resume",
+              cwd = "/hidden",
+              bufnr = 41,
+            },
+            {
+              handle = { id = "visible", alive = true, bufnr = 71, winid = 7 },
+              cmd = "codex-test",
+              cwd = "/visible",
+              bufnr = 71,
+              winid = 7,
+            },
+          }
+        end
+      end,
+    })
+
+    -- ========= [A]ct     =========
+    local session = env.store.get_active()
+
+    -- ========= [A]ssert  =========
+    assert.is_not_nil(session)
+    assert.equals("visible", session.handle.id)
+    assert.equals("codex-test", session.cmd)
+    assert.equals("/visible", session.cwd)
+    assert.equals(1, #env.provider.close_calls)
+    assert.equals("hidden", env.provider.close_calls[1].id)
+  end)
+
+  it("SessionLoadPost schedules a restore after session buffers appear", function()
+    -- ========= [A]rrange =========
+    local restored = false
+    local env = setup_with_deps({
+      _provider = function(provider, fake_vim)
+        provider.discover_restorable_fn = function()
+          if not restored then
+            return {}
+          end
+          return {
+            {
+              handle = { id = "restored", alive = true, bufnr = 71, winid = 7 },
+              cmd = "codex-test",
+              cwd = "/restored",
+              bufnr = 71,
+              winid = 7,
+            },
+          }
+        end
+        fake_vim._set_window_buf(7, 71)
+      end,
+    })
+
+    -- ========= [A]ct     =========
+    restored = true
+    local scheduled_before = #env.fake_vim._scheduled
+    env.fake_vim._fire_autocmd("SessionLoadPost")
+
+    -- ========= [A]ssert  =========
+    assert.is_nil(env.store.get_active())
+    assert.equals(scheduled_before + 1, #env.fake_vim._scheduled)
+
+    env.fake_vim._scheduled[#env.fake_vim._scheduled]()
+
+    local session = env.store.get_active()
+    assert.is_not_nil(session)
+    assert.equals("restored", session.handle.id)
+    assert.equals("codex-test", session.cmd)
+    assert.equals("/restored", session.cwd)
   end)
 
   it("open creates a new session when none exists", function()
@@ -172,6 +250,7 @@ describe("codex.init public api lifecycle", function()
     local env = setup_with_deps({
       terminal = { provider = "auto" },
     })
+    env.providers.resolve_calls = {}
     -- ========= [A]ct     =========
     env.codex.toggle()
     -- ========= [A]ssert  =========
@@ -604,6 +683,37 @@ describe("codex.init public api lifecycle", function()
     assert.equals(1, #env.provider.close_calls)
     assert.is_nil(env.store.get_active())
     assert.is_false(env.codex.is_running())
+  end)
+
+  it("is_running remains read-only and does not trigger restore", function()
+    -- ========= [A]rrange =========
+    local discover_calls = 0
+    local env = setup_with_deps({
+      _provider = function(provider)
+        provider.discover_restorable_fn = function()
+          discover_calls = discover_calls + 1
+          if discover_calls == 1 then
+            return {}
+          end
+          return {
+            {
+              handle = { id = "restored", alive = true, bufnr = 77 },
+              cmd = "codex-test",
+              cwd = "/restored",
+              bufnr = 77,
+            },
+          }
+        end
+      end,
+    })
+
+    -- ========= [A]ct     =========
+    local running = env.codex.is_running()
+
+    -- ========= [A]ssert  =========
+    assert.is_false(running)
+    assert.equals(1, discover_calls)
+    assert.is_nil(env.store.get_active())
   end)
 
   it("auto_start schedules open(false)", function()

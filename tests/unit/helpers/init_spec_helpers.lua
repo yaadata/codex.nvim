@@ -82,12 +82,15 @@ local function make_provider()
     focus_sequence = nil,
     toggle_return_new = nil,
     on_exit_callbacks = {},
+    discover_restorable_calls = {},
+    discover_restorable_result = {},
     is_alive_fn = nil,
     is_ready_fn = nil,
     send_fn = nil,
     open_fn = nil,
     focus_fn = nil,
     get_bufnr_fn = nil,
+    discover_restorable_fn = nil,
     next_open_handle = nil,
   }
 
@@ -185,6 +188,17 @@ local function make_provider()
       return handle.bufnr
     end
     return nil
+  end
+
+  function provider.discover_restorable(config, on_exit)
+    table.insert(provider.discover_restorable_calls, {
+      config = config,
+      on_exit = on_exit,
+    })
+    if provider.discover_restorable_fn then
+      return provider.discover_restorable_fn(config, on_exit)
+    end
+    return vim.deepcopy(provider.discover_restorable_result)
   end
 
   return provider
@@ -595,6 +609,8 @@ end
 local function setup_with_deps(overrides)
   package.loaded["codex"] = nil
 
+  overrides = overrides or {}
+
   local provider = make_provider()
   local store = make_session_store()
   local logger = make_logger()
@@ -602,6 +618,10 @@ local function setup_with_deps(overrides)
   local formatter = make_formatter()
   local selection = make_selection()
   local call_order = {}
+
+  if type(overrides._provider) == "function" then
+    overrides._provider(provider, fake_vim, store, logger)
+  end
 
   local commands = { register_calls = 0 }
   function commands.register()
@@ -616,6 +636,8 @@ local function setup_with_deps(overrides)
   end
 
   local codex = require("codex")
+  local setup_overrides = vim.deepcopy(overrides)
+  setup_overrides._provider = nil
   codex.setup(vim.tbl_deep_extend("force", {
     launch = {
       cmd = "codex-test",
@@ -632,7 +654,7 @@ local function setup_with_deps(overrides)
       selection = selection,
       vim = fake_vim,
     },
-  }, overrides or {}))
+  }, setup_overrides))
 
   return {
     codex = codex,

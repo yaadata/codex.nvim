@@ -92,6 +92,111 @@ function M.get_provider(deps, config)
   return deps.providers.resolve(config.terminal.provider)
 end
 
+---Build the on-exit callback used for newly opened or reattached sessions.
+---@param deps table
+---@return fun(handle: codex.ProviderHandle): nil
+local function make_on_exit_callback(deps)
+  return function(exited_handle)
+    M.mark_session_dead_by_handle(deps, exited_handle)
+  end
+end
+
+---Store a session spec as the active in-memory session.
+---@param deps table
+---@param provider_name string
+---@param spec codex.SessionSpec
+---@return codex.Session
+local function create_active_session(deps, provider_name, spec)
+  local id = deps.session_store.create({
+    handle = spec.handle,
+    cmd = spec.cmd,
+    cwd = spec.cwd,
+    provider_name = provider_name,
+  })
+  return deps.session_store.get(id)
+end
+
+---Return whether a restored candidate is currently visible in a valid window.
+---@param deps table
+---@param spec codex.RestoredSessionSpec
+---@return boolean
+local function restored_session_is_visible(deps, spec)
+  local api = deps.vim.api or {}
+  if type(api.nvim_win_is_valid) ~= "function" then
+    return false
+  end
+  return type(spec.winid) == "number" and api.nvim_win_is_valid(spec.winid)
+end
+
+---Attach to a provider-discovered restored session when no alive session is tracked.
+---@param deps table
+---@param config table
+---@param provider codex.Provider
+---@param provider_name string
+---@return codex.Session|nil
+local function restore_session_if_needed(deps, config, provider, provider_name)
+  local session = deps.session_store.get_active()
+  if M.session_is_alive(session, provider) then
+    return session
+  end
+
+  if session then
+    vdebug(deps, "restore_session_if_needed removing stale active session id=%s", session.id)
+    provider.close(session.handle)
+    deps.session_store.remove(session.id)
+  end
+
+  local discover = provider.discover_restorable
+  if type(discover) ~= "function" then
+    return nil
+  end
+
+  local ok, restored = pcall(discover, config, make_on_exit_callback(deps))
+  if not ok then
+    deps.logger.error("failed to discover restored Codex sessions: %s", restored)
+    return nil
+  end
+  if type(restored) ~= "table" or #restored == 0 then
+    return nil
+  end
+
+  table.sort(restored, function(left, right)
+    local left_visible = restored_session_is_visible(deps, left)
+    local right_visible = restored_session_is_visible(deps, right)
+    if left_visible ~= right_visible then
+      return left_visible
+    end
+    return (left.bufnr or 0) > (right.bufnr or 0)
+  end)
+
+  local selected = restored[1]
+  for idx = 2, #restored do
+    local extra = restored[idx]
+    provider.close(extra.handle)
+  end
+
+  if #restored > 1 then
+    deps.logger.warn(
+      "multiple restored Codex sessions found; reattached buffer %d and closed %d extras",
+      selected.bufnr,
+      #restored - 1
+    )
+  else
+    deps.logger.info(
+      "reattached restored Codex session (provider=%s, bufnr=%d)",
+      provider_name,
+      selected.bufnr
+    )
+  end
+
+  return create_active_session(deps, provider_name, {
+    handle = selected.handle,
+    cmd = selected.cmd,
+    cwd = selected.cwd,
+    provider_name = provider_name,
+  })
+end
+
 ---Opens or reuses a terminal session with a pre-resolved provider.
 ---@param deps table
 ---@param config table
@@ -134,14 +239,12 @@ local function open_or_reuse_session(deps, config, args, focus, provider, provid
       config.launch.env,
       config,
       focus,
-      function(exited_handle)
-        M.mark_session_dead_by_handle(deps, exited_handle)
-      end
+      make_on_exit_callback(deps)
     )
   end)
   vdebug(deps, "open_session created new session provider=%s", provider_name)
 
-  deps.session_store.create({
+  create_active_session(deps, provider_name, {
     handle = handle,
     cmd = config.launch.cmd,
     cwd = config.launch.cwd or deps.vim.fn.getcwd(),
@@ -190,10 +293,33 @@ end
 ---@param config table
 ---@return codex.Session|nil
 ---@return codex.Provider
+---@return string provider_name
 function M.get_active_session_and_provider(deps, config)
+  local provider, provider_name = M.get_provider(deps, config)
   local session = deps.session_store.get_active()
-  local provider = M.get_provider(deps, config)
-  return session, provider
+  return session, provider, provider_name
+end
+
+---Attempt to attach to a restored session for the configured provider.
+---@param deps table
+---@param config table
+---@return codex.Session|nil
+function M.restore_session_if_needed(deps, config)
+  local provider, provider_name = M.get_provider(deps, config)
+  return restore_session_if_needed(deps, config, provider, provider_name)
+end
+
+---Return the active session and provider, restoring when needed for command flows.
+---@param deps table
+---@param config table
+---@return codex.Session|nil
+---@return codex.Provider
+---@return string provider_name
+function M.get_or_restore_active_session_and_provider(deps, config)
+  local provider, provider_name = M.get_provider(deps, config)
+  local session = restore_session_if_needed(deps, config, provider, provider_name)
+    or deps.session_store.get_active()
+  return session, provider, provider_name
 end
 
 ---Return whether the current editor focus is on the active Codex buffer.
@@ -203,11 +329,12 @@ end
 ---@param provider? codex.Provider
 ---@return boolean
 function M.is_session_focused(deps, config, session, provider)
-  session = session or deps.session_store.get_active()
+  if not session or not provider then
+    session, provider = M.get_active_session_and_provider(deps, config)
+  end
   if not session then
     return false
   end
-  provider = provider or M.get_provider(deps, config)
   local term_bufnr = get_session_bufnr(session, provider)
   if type(term_bufnr) ~= "number" then
     return false
@@ -269,8 +396,8 @@ end
 ---@param focus boolean
 ---@return nil
 function M.open_session(deps, config, args, focus)
-  local session = deps.session_store.get_active()
-  local provider, provider_name = M.get_provider(deps, config)
+  local session, provider, provider_name =
+    M.get_or_restore_active_session_and_provider(deps, config)
   open_or_reuse_session(deps, config, args, focus, provider, provider_name, session)
 end
 
@@ -280,7 +407,7 @@ end
 ---@param send_queue codex.SendQueue|nil
 ---@return nil
 function M.close_session(deps, config, send_queue)
-  local session = deps.session_store.get_active()
+  local session, provider = M.get_or_restore_active_session_and_provider(deps, config)
   if not session then
     vdebug(deps, "close_session no active session")
     if send_queue then
@@ -289,7 +416,6 @@ function M.close_session(deps, config, send_queue)
     return
   end
 
-  local provider = M.get_provider(deps, config)
   vdebug(deps, "close_session closing session id=%s", session.id)
   provider.close(session.handle)
   deps.session_store.remove(session.id)
@@ -303,8 +429,8 @@ end
 ---@param config table
 ---@return nil
 function M.toggle_session(deps, config)
-  local session = deps.session_store.get_active()
-  local provider, provider_name = M.get_provider(deps, config)
+  local session, provider, provider_name =
+    M.get_or_restore_active_session_and_provider(deps, config)
 
   if session and session.alive and provider.is_alive(session.handle) then
     vdebug(deps, "toggle_session toggling alive session id=%s", session.id)
@@ -332,8 +458,7 @@ end
 ---@param config table
 ---@return boolean focused True when an active session was focused.
 function M.focus_session(deps, config)
-  local session = deps.session_store.get_active()
-  local provider = M.get_provider(deps, config)
+  local session, provider = M.get_or_restore_active_session_and_provider(deps, config)
 
   if session and session.alive and provider.is_alive(session.handle) then
     M.record_non_codex_focus(deps, config, session, provider)
@@ -353,12 +478,10 @@ end
 ---@param config table
 ---@return boolean
 function M.is_running(deps, config)
-  local session = deps.session_store.get_active()
+  local session, provider = M.get_active_session_and_provider(deps, config)
   if not session or not session.alive then
     return false
   end
-
-  local provider = M.get_provider(deps, config)
   return provider.is_alive(session.handle)
 end
 

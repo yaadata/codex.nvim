@@ -45,7 +45,8 @@ function M.capture_prompt_input(get_deps, get_config)
       deps.logger.vdebug(msg, ...)
     end
   end
-  local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
+  local session, provider =
+    session_lifecycle.get_or_restore_active_session_and_provider(deps, config)
   if not session_lifecycle.session_is_alive(session, provider) then
     vdebug("capture_prompt_input unavailable session")
     return nil, "unavailable_session", 1
@@ -218,7 +219,8 @@ function M.capture_active_prompt_input(get_deps, get_config)
       deps.logger.vdebug(msg, ...)
     end
   end
-  local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
+  local session, provider =
+    session_lifecycle.get_or_restore_active_session_and_provider(deps, config)
   if session_lifecycle.session_is_alive(session, provider) then
     -- Capture depends on terminal buffer/window state; focus first to ensure buffer visibility.
     vdebug("capture_active_prompt_input focusing active session before prompt capture")
@@ -280,7 +282,8 @@ function M.submit_with_enter_key(get_deps, get_config, target)
       deps.logger.vdebug(msg, ...)
     end
   end
-  local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
+  local session, provider =
+    session_lifecycle.get_or_restore_active_session_and_provider(deps, config)
   if not session_lifecycle.session_is_alive(session, provider) then
     vdebug("submit_with_enter_key no active session target=%s", target)
     return false, "no active Codex session"

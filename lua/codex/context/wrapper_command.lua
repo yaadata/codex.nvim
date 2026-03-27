@@ -120,7 +120,8 @@ function M.create(opts)
         if submit_via_channel then
           local deps = get_deps()
           local config = get_config()
-          local session, provider = session_lifecycle.get_active_session_and_provider(deps, config)
+          local session, provider =
+            session_lifecycle.get_or_restore_active_session_and_provider(deps, config)
           if not session_lifecycle.session_is_alive(session, provider) then
             submit_ok, submit_err = false, "no active Codex session"
           else
