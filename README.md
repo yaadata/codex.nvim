@@ -15,7 +15,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 > [!CAUTION]
 > You are reading the `main` branch README. Install and configuration details
 > may differ from tagged releases. The current latest release tag is
-> [`v0.6.0`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.6.0). For
+> [`v0.6.1`](https://codeberg.org/yaadata/codex.nvim/src/tag/v0.6.1). For
 > version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -24,7 +24,7 @@ Neovim plugin for running the Codex CLI in an embedded terminal.
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "0.6.0",
+  version = "0.6.1",
   cmd = {
     "Codex",
     "CodexFocus",
@@ -144,7 +144,7 @@ in your lazy.nvim plugin spec `keys`:
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "0.6.0",
+  version = "0.6.1",
   main = "codex",
   cmd = {
     "Codex",
