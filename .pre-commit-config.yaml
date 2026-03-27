@@ -32,7 +32,7 @@ repos:
         pass_filenames: false
       - id: codex-md-fmt-check
         name: codex md-fmt-check
-        entry: mise exec -- mdformat --number --check docs/ README.md
+        entry: mise exec -- mdformat --number --check doc/ README.md
         language: system
         pass_filenames: false
       - id: codex-test-unit

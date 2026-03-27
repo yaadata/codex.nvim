@@ -117,7 +117,7 @@ codex.nvim/
 │   └── contract/
 │       └── provider_contract_spec.lua  # Structural compliance tests verifying every
 │                                       # provider exports the required 9 methods.
-├── docs/                            # Internal planning and user/developer documentation.
+├── doc/                             # User/developer documentation and Neovim helpfiles.
 ├── justfile                         # Task runner (test, fmt, lint, bootstrap).
 ├── .stylua.toml                     # Stylua formatter configuration.
 ├── selene.toml                      # Selene linter configuration.
@@ -306,7 +306,7 @@ session/open/reopen decisions. Providers apply a startup grace delay via
 ## Component Interaction
 
 Component-level command and setup flow diagrams are maintained in
-[`docs/command-interactions.md`](./command-interactions.md).
+[`doc/command-interactions.md`](./command-interactions.md).
 
 ## Type System
 

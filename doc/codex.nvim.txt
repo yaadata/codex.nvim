@@ -1,0 +1,668 @@
+*codex.nvim.txt*
+*codex.nvim* *codex*
+==============================================================================
+codex.nvim
+
+Neovim plugin for running the Codex CLI in an embedded terminal.
+
+CONTENTS                                                 *codex-nvim-contents*
+
+1. Introduction                                      |codex-nvim-introduction|
+2. Requirements                                      |codex-nvim-requirements|
+3. Install                                                |codex-nvim-install|
+4. Setup                                                    |codex-nvim-setup|
+5. Configuration Reference                                 |codex-nvim-config|
+6. Commands                                              |codex-nvim-commands|
+7. Lua API                                                    |codex-nvim-api|
+8. Command Behavior                              |codex-nvim-command-behavior|
+9. Keymaps                                                |codex-nvim-keymaps|
+10. Examples                                             |codex-nvim-examples|
+11. See Also                                             |codex-nvim-see-also|
+
+==============================================================================
+INTRODUCTION                                         *codex-nvim-introduction*
+
+`codex.nvim` embeds the Codex CLI inside Neovim. It provides:
+
+- session lifecycle commands for opening, focusing, toggling, and closing the
+  terminal
+- send helpers for raw text, file references, and visual selections
+- `/mention` helpers for files and directories
+- wrapper-command helpers for slash commands and `resume`
+
+The authoritative user-facing reference is this helpfile. You should not need
+browser Markdown docs for normal installation, configuration, commands, API
+lookup, or common examples.
+
+==============================================================================
+REQUIREMENTS                                         *codex-nvim-requirements*
+
+- Neovim >= 0.11.0
+- `codex` available on your `PATH`, or a custom `launch.cmd`
+
+If help tags are missing after installation, run:
+
+>
+  :helptags ALL
+<
+
+==============================================================================
+INSTALL                                                   *codex-nvim-install*
+
+Example lazy.nvim spec:
+
+>lua
+  {
+    url = "https://codeberg.org/yaadata/codex.nvim.git",
+    version = "0.6.1",
+    cmd = {
+      "Codex",
+      "CodexFocus",
+      "CodexClose",
+      "CodexClearInput",
+      "CodexSendSelection",
+      "CodexSendFile",
+      "CodexMentionFile",
+      "CodexMentionDirectory",
+      "CodexResume",
+    },
+    opts = {},
+    config = function(_, opts)
+      require("codex").setup(opts)
+    end,
+  }
+<
+
+The `cmd` list allows lazy loading on first `:Codex*` command use.
+
+==============================================================================
+SETUP                                                       *codex-nvim-setup*
+
+Minimal setup:
+
+>lua
+  require("codex").setup({})
+<
+
+When using lazy.nvim with `cmd` and `opts`, prefer:
+
+>lua
+  config = function(_, opts)
+    require("codex").setup(opts)
+  end
+<
+
+`setup()` registers the `:Codex*` commands and wires the runtime state used by
+the public Lua API.
+
+==============================================================================
+CONFIGURATION REFERENCE                                    *codex-nvim-config*
+
+The resolved default options table is:
+
+>lua
+  {
+    launch = {
+      cmd = "codex",
+      args = {},
+      env = {},
+      auto_start = true,
+      cwd = nil,
+    },
+    log = {
+      level = "warn",
+      verbose = false,
+    },
+    terminal = {
+      provider = "auto",
+      provider_opts = {
+        native = {
+          window = "vsplit",
+          vsplit = {
+            side = "right",
+            size_pct = 40,
+          },
+          hsplit = {
+            side = "bottom",
+            size_pct = 30,
+          },
+          float = {
+            width_pct = 80,
+            height_pct = 80,
+            border = "rounded",
+            title = " Codex ",
+            title_pos = "center",
+          },
+        },
+        snacks = {
+          -- pass-through for snacks.terminal(..., opts)
+        },
+      },
+      auto_close = true,
+      startup = {
+        timeout_ms = 2000,
+        retry_interval_ms = 50,
+        grace_ms = 800,
+      },
+      keymaps = {},
+    },
+  }
+<
+
+launch                                                     *codex-nvim-launch*
+    Process launch settings.
+
+    `cmd`
+      Executable to start. Defaults to `codex`.
+
+    `args`
+      Additional CLI arguments appended to `cmd`.
+
+    `env`
+      Extra environment variables merged into the process environment.
+
+    `auto_start`
+      When true, the terminal can be opened automatically for send-like flows.
+
+    `cwd`
+      Working directory override. When nil, use Neovim's current working
+      directory.
+
+log                                                           *codex-nvim-log*
+    Logging controls.
+
+    `level`
+      Log threshold string such as `"warn"` or `"debug"`.
+
+    `verbose`
+      When true, capture extra debug-oriented log entries.
+
+terminal                                                 *codex-nvim-terminal*
+    Terminal presentation and startup behavior.
+
+    `provider`
+      One of `"auto"`, `"snacks"`, or `"native"`.
+
+      `"auto"` prefers `snacks` when available and falls back to `native`.
+
+    `provider_opts`
+      Provider-specific configuration. The native provider supports window
+      layout control; the snacks provider receives pass-through options for
+      `snacks.terminal(..., opts)`.
+
+    `auto_close`
+      When true, provider windows auto-close only after the terminal process
+      exits.
+
+    `startup`
+      Send-queue startup timing.
+
+      `timeout_ms`
+        Max time to wait for terminal readiness before dropping queued sends.
+
+      `retry_interval_ms`
+        Poll interval while waiting for startup readiness.
+
+      `grace_ms`
+        Minimum delay after terminal open before the first send.
+
+    `keymaps`
+      Terminal-local mappings. No defaults are registered. See
+      |codex-nvim-keymaps|.
+
+native provider                                   *codex-nvim-terminal-native*
+    Layout options for the built-in provider.
+
+    `window`
+      One of `"vsplit"`, `"hsplit"`, or `"float"`.
+
+    `vsplit.side`
+      `"left"` or `"right"`.
+
+    `vsplit.size_pct`
+      Integer width percentage, 10-90.
+
+    `hsplit.side`
+      `"top"` or `"bottom"`.
+
+    `hsplit.size_pct`
+      Integer height percentage, 10-90.
+
+    `float.width_pct`, `float.height_pct`
+      Float size percentages, 10-100.
+
+    `float.border`
+      Floating-window border style.
+
+    `float.title`
+      Float title string.
+
+    `float.title_pos`
+      `"left"`, `"center"`, or `"right"`.
+
+snacks provider                                   *codex-nvim-terminal-snacks*
+    `terminal.provider_opts.snacks` is passed through to
+    `snacks.terminal(..., opts)`.
+
+terminal.keymaps entries                              *codex-nvim-terminal-km*
+    Each entry is a table with:
+
+    `mode`
+      A string or list of modes accepted by `vim.keymap.set`.
+
+    `action`
+      A function to run. For builtins, use
+      `require("codex.keymaps").builtins`.
+
+    `desc`
+      Optional for builtin actions, required for custom functions.
+
+==============================================================================
+COMMANDS                                                 *codex-nvim-commands*
+
+Codex[!]                                                    *:Codex* *:Codex!*
+    `:Codex` toggles the active Codex terminal or opens one when none exists.
+    `:Codex!` force-opens and focuses the terminal.
+
+CodexFocus                                                       *:CodexFocus*
+    Focus the active Codex terminal, opening one if needed.
+
+CodexClose                                                       *:CodexClose*
+    Close the active Codex terminal session and reset queued sends.
+
+CodexClearInput                                             *:CodexClearInput*
+    Clear the active Codex terminal input line by sending `<C-c>`.
+
+CodexSendSelection                                       *:CodexSendSelection*
+    Send the active visual selection with file path and line-range context.
+    This command is available only from visual mode.
+
+CodexSendFile                                                 *:CodexSendFile*
+    Send the current buffer path as an ACP file reference (`@path`).
+
+CodexMentionFile [path]                                    *:CodexMentionFile*
+    Send `/mention` for a file path. When `[path]` is omitted, use the current
+    buffer path.
+
+CodexMentionDirectory [path]                          *:CodexMentionDirectory*
+    Send `/mention` for a directory path. When `[path]` is omitted, use the
+    current buffer directory.
+
+CodexResume[!]                                                  *:CodexResume*
+    Resume in-process when a session is active, or launch `codex resume`.
+    With `!`, use `codex resume --last` when launching a new process.
+
+==============================================================================
+LUA API                                                       *codex-nvim-api*
+
+Return conventions                                    *codex-nvim-api-returns*
+
+- Send-like, input-control, wrapper-command, unfocus, resume, and mention APIs
+  return `ok, err`.
+- Query-style APIs return their documented values directly.
+
+Setup and runtime                                     *codex-nvim-api-runtime*
+
+setup({opts})                                                    *codex.setup*
+    Initialize plugin config and runtime state, and register `:Codex*`
+    commands.
+    Returns: `nil`
+
+is_running()                                                *codex.is_running*
+    Return whether the active Codex session is alive.
+    Returns: `boolean`
+
+is_focused()                                                *codex.is_focused*
+    Return whether editor focus is on the active Codex session.
+    Returns: `boolean`
+
+get_config()                                                *codex.get_config*
+    Return a deep-copied snapshot of the resolved config.
+    Returns: `table|nil`
+
+get_logs()                                                    *codex.get_logs*
+    Return captured in-memory log entries.
+    Returns: `codex.LogEntry[]`
+
+clear_logs()                                                *codex.clear_logs*
+    Clear captured in-memory log entries.
+    Returns: `nil`
+
+Session control                                     *codex-nvim-api-lifecycle*
+
+open({focus})                                                     *codex.open*
+    Open a Codex terminal session.
+    `focus` defaults to true when omitted.
+    Returns: `nil`
+
+close()                                                          *codex.close*
+    Close the active session and reset the send queue.
+    Returns: `nil`
+
+toggle()                                                        *codex.toggle*
+    Toggle the active terminal, or open one when none exists.
+    Returns: `nil`
+
+focus()                                                          *codex.focus*
+    Focus the active session, or open one when none is running.
+    Returns: `nil`
+
+unfocus()                                                      *codex.unfocus*
+    Return to the last tracked non-Codex editor location.
+    Returns: `ok, err`
+
+Sending and input                                        *codex-nvim-api-send*
+
+send({text})                                                      *codex.send*
+    Send raw text through the standard send pipeline.
+    `text` is required.
+    Returns: `ok, err`
+
+clear_input()                                              *codex.clear_input*
+    Send `<C-c>` to clear the current prompt input.
+    Returns: `ok, err`
+
+copy_input()                                                *codex.copy_input*
+    Copy the current prompt input to the unnamed register.
+    Returns: `ok, err`
+
+submit_input()                                            *codex.submit_input*
+    Send Enter to submit the current prompt input.
+    Returns: `ok, err`
+
+send_file({opts})                                            *codex.send_file*
+    Send a file reference as `@path` with a trailing space.
+
+    `opts.path`
+      Explicit file path. Takes precedence over `opts.bufnr`.
+
+    `opts.bufnr`
+      Buffer to resolve when `opts.path` is omitted.
+
+    `opts.focus`
+      Set to `false` to keep editor focus after sending.
+
+    Returns: `ok, err`
+
+send_selection({opts})                                  *codex.send_selection*
+    Send a formatted selection reference plus fenced code block.
+
+    `opts.line1`, `opts.line2`
+      Explicit start and end lines.
+
+    `opts.visual_mode`
+      Visual-mode override for custom callers.
+
+    When omitted, `opts` falls back to the current visual selection or range.
+
+    Returns: `ok, err`
+
+Slash and wrapper commands                              *codex-nvim-api-slash*
+
+execute_slash_command({opts})                    *codex.execute_slash_command*
+    Run a slash command with the same autosubmit flow used by mentions and
+    in-process `resume`.
+
+    `opts.command`
+      Required command name, with or without a leading `/`.
+
+    `opts.args`
+      Optional inline args appended after the command when non-empty.
+
+    Returns: `ok, err`
+
+resume({opts})                                                  *codex.resume*
+    Resume in-process when an active session exists, otherwise launch
+    `codex resume`.
+
+    `opts.last`
+      When launching a new process, use `codex resume --last`.
+
+    Returns: `ok, err` for in-process `/resume`; `true` after opening a new
+    resume process.
+
+Mention helpers                                       *codex-nvim-api-mention*
+
+mention_file({path})                                      *codex.mention_file*
+    Send `/mention` for a file path, auto-submit it, then restore previously
+    captured prompt input.
+
+    `path`
+      Explicit file path. When omitted, use the current buffer path.
+
+    Returns: `ok, err`
+
+mention_directory({path})                            *codex.mention_directory*
+    Send `/mention` for a directory path, auto-submit it, then restore
+    previously captured prompt input.
+
+    `path`
+      Explicit directory path. When omitted, use the current buffer directory.
+
+    Returns: `ok, err`
+
+Terminal keymap builtins                             *codex-nvim-api-builtins*
+
+require("codex.keymaps").builtins                     *codex.keymaps.builtins*
+    Builtin terminal-local actions for `terminal.keymaps`.
+
+    Available actions:
+      `toggle`, `clear_input`, `unfocus`, `close`, `nav_left`, `nav_down`,
+      `nav_up`, `nav_right`
+
+==============================================================================
+COMMAND BEHAVIOR                                 *codex-nvim-command-behavior*
+
+This section captures the user-visible behavior that was previously split
+across the Markdown command docs.
+
+Selection sends                                   *codex-nvim-behavior-select*
+
+- `:CodexSendSelection` is visual-only.
+- The payload includes a path reference, selected line range, and a fenced
+  code block containing the selected text.
+- The command opens a session when needed through the normal send pipeline.
+
+File sends                                          *codex-nvim-behavior-file*
+
+- `:CodexSendFile` uses the current buffer path.
+- The path must resolve to a regular file.
+- The sent payload is an ACP-style `@path` reference with a trailing space.
+
+Mention helpers                                  *codex-nvim-behavior-mention*
+
+- Mention commands accept an explicit path or fall back to the current buffer
+  file or directory.
+- Paths are normalized to the current working directory when possible.
+- Directory mentions are forced to end with a trailing separator.
+- The mention flow captures prompt input when possible, clears the line, sends
+  `/mention`, auto-submits it, and then restores the captured prompt input.
+
+Slash commands                                     *codex-nvim-behavior-slash*
+
+- `execute_slash_command()` accepts `command` with or without a leading `/`.
+- Empty or whitespace-only `args` are ignored.
+- Existing prompt input is copied to the unnamed register before submission.
+- Slash-command submission auto-submits Enter after the command is sent.
+- Unlike mention helpers, wrapper-command input is not restored afterward.
+
+Resume                                            *codex-nvim-behavior-resume*
+
+- `:CodexResume` uses in-process `/resume` when a session is already active.
+- When no session is active, it launches `codex resume`.
+- `:CodexResume!` uses `codex resume --last` for the launched-process path.
+
+Session opening                                     *codex-nvim-behavior-open*
+
+- Send-like and mention-like flows can auto-open a terminal when needed.
+- `:CodexFocus` is the explicit "bring it to the front" command.
+- `:Codex` owns the normal toggle behavior; `:Codex!` force-opens and focuses.
+
+==============================================================================
+KEYMAPS                                                   *codex-nvim-keymaps*
+
+`codex.nvim` does not register global mappings in `setup()`. Define any global
+maps in your plugin spec or config.
+
+Example lazy.nvim global mappings:
+
+>lua
+  {
+    url = "https://codeberg.org/yaadata/codex.nvim.git",
+    version = "0.6.1",
+    main = "codex",
+    cmd = {
+      "Codex",
+      "CodexFocus",
+      "CodexClose",
+      "CodexClearInput",
+      "CodexSendSelection",
+      "CodexSendFile",
+      "CodexMentionFile",
+      "CodexMentionDirectory",
+      "CodexResume",
+    },
+    opts = {},
+    config = function(_, opts)
+      require("codex").setup(opts)
+    end,
+    keys = {
+      {
+        "<leader>ot",
+        function()
+          require("codex").toggle()
+        end,
+        desc = "Codex: Toggle terminal",
+        mode = { "n", "v" },
+      },
+      {
+        "<leader>os",
+        function()
+          require("codex").send_file()
+        end,
+        desc = "Codex: Send @{file_path}",
+        mode = "n",
+      },
+      {
+        "<leader>os",
+        function()
+          require("codex").send_selection()
+        end,
+        desc = "Codex: Send selection",
+        mode = "x",
+      },
+      {
+        "<leader>om",
+        function()
+          require("codex").mention_file()
+        end,
+        desc = "Codex: Mention current file",
+        mode = { "n", "v" },
+      },
+      {
+        "<leader>oM",
+        function()
+          require("codex").mention_directory()
+        end,
+        desc = "Codex: Mention current directory",
+        mode = { "n", "v" },
+      },
+      {
+        "<leader>or",
+        function()
+          require("codex").resume()
+        end,
+        desc = "Codex: Resume session",
+        mode = { "n", "v" },
+      },
+    },
+  }
+<
+
+Set `vim.g.mapleader` before plugin setup so `<leader>` expands as expected.
+
+Example terminal-local mappings:
+
+>lua
+  local km = require("codex.keymaps").builtins
+
+  require("codex").setup({
+    terminal = {
+      keymaps = {
+        ["<C-c>"] = { mode = { "t", "n" }, action = km.toggle },
+        ["<M-BS>"] = { mode = { "t", "n" }, action = km.clear_input },
+        ["<C-g>"] = { mode = { "t", "n" }, action = km.unfocus },
+        ["<C-x>"] = { mode = { "t", "n" }, action = km.close },
+        ["<A-h>"] = { mode = { "t", "n" }, action = km.nav_left },
+        ["<A-j>"] = { mode = { "t", "n" }, action = km.nav_down },
+        ["<A-k>"] = { mode = { "t", "n" }, action = km.nav_up },
+        ["<A-l>"] = { mode = { "t", "n" }, action = km.nav_right },
+      },
+    },
+  })
+<
+
+==============================================================================
+EXAMPLES                                                 *codex-nvim-examples*
+
+Slash-command examples:
+
+>lua
+  local codex = require("codex")
+
+  vim.api.nvim_create_user_command("CodexModel", function()
+    codex.execute_slash_command({ command = "model" })
+  end, {
+    desc = "Open Codex model picker",
+    nargs = 0,
+  })
+
+  vim.api.nvim_create_user_command("CodexStatus", function()
+    codex.execute_slash_command({ command = "status" })
+  end, {
+    desc = "Show Codex status summary",
+    nargs = 0,
+  })
+
+  vim.api.nvim_create_user_command("CodexPermissions", function()
+    codex.execute_slash_command({ command = "permissions" })
+  end, {
+    desc = "Open Codex permissions selector",
+    nargs = 0,
+  })
+
+  vim.api.nvim_create_user_command("CodexCompact", function()
+    codex.execute_slash_command({ command = "compact" })
+  end, {
+    desc = "Run Codex /compact in the active session",
+    nargs = 0,
+  })
+
+  vim.api.nvim_create_user_command("CodexReview", function(opts)
+    codex.execute_slash_command({
+      command = "review",
+      args = opts.args,
+    })
+  end, {
+    desc = "Run Codex /review (or /review <instructions>)",
+    nargs = "*",
+  })
+
+  vim.api.nvim_create_user_command("CodexDiff", function()
+    codex.execute_slash_command({ command = "diff" })
+  end, {
+    desc = "Run Codex /diff in the active session",
+    nargs = 0,
+  })
+<
+
+==============================================================================
+SEE ALSO                                                 *codex-nvim-see-also*
+
+- `README.md` for the repository overview
+- `doc/architecture.md` for implementation and provider internals
+- `doc/contributing.md` for repository workflow and release process
+- `doc/troubleshooting.md` for logging-focused debugging guidance
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:

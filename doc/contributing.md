@@ -128,7 +128,10 @@ mdformat is installed via the `pipx` backend with the
 Flavored Markdown support (tables, task lists, etc.). The `--number` flag is
 used to apply consecutive numbering to ordered lists.
 
-Targets: `docs/` and `README.md`.
+Targets: Markdown files under `doc/` and `README.md`.
+
+`doc/codex.nvim.txt` is a Vim helpfile, not Markdown. Keep it wrapped and tagged
+manually; `mdformat` does not manage it.
 
 ### Linting (selene)
 
@@ -153,7 +156,7 @@ The following hooks run before every commit (`.pre-commit-config.yaml`):
 1. **codex-fmt-check** -- `mise exec -- just fmt-check`
 2. **codex-lint** -- `mise exec -- just lint`
 3. **codex-md-fmt-check** --
-   `mise exec -- mdformat --number --check docs/ README.md`
+   `mise exec -- mdformat --number --check doc/ README.md`
 4. **codex-test-unit** -- `mise exec -- just test-unit`
 5. **codex-test-contract** -- `mise exec -- just test-contract`
 
@@ -400,11 +403,11 @@ When cutting a new release tag:
    in each test.
 4. **Command dispatch tests** -- If the command exercises a new code path beyond
    existing patterns, add targeted tests.
-5. **User docs** -- Add the command to the Commands section in `README.md` and
-   update the authoritative Lua API reference in `docs/api.md` when the public
-   Lua surface changes.
+5. **User docs** -- Update `doc/codex.nvim.txt` when the public user-facing
+   behavior, configuration, commands, or Lua API surface changes. Keep
+   `README.md` aligned at the overview/install level.
 6. **Types** -- If the command introduces new option types or result types, add
    them to `lua/codex/types.lua`.
-7. **Architecture docs** -- Update `docs/command-interactions.md` for any
-   command registration or behavior changes, and keep the `docs/architecture.md`
-   component-interaction link accurate.
+7. **Architecture docs** -- Update `doc/architecture.md` when internal command
+   wiring, provider interactions, or component behavior changes in ways that are
+   relevant to contributors.
