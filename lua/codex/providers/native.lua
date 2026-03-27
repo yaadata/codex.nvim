@@ -427,16 +427,12 @@ function M.toggle(handle, cmd, args, env, config)
   end
 
   if winid then
-    local current_win = vim.api.nvim_get_current_win()
-    if current_win == winid then
-      vim.api.nvim_win_close(winid, false)
-      handle.winid = nil
-      return handle
-    else
-      vim.api.nvim_set_current_win(winid)
-      vim.cmd("startinsert")
-      return handle
+    local ok_close, close_err = pcall(vim.api.nvim_win_close, winid, false)
+    if not ok_close then
+      return nil, string.format("failed to close terminal window: %s", tostring(close_err))
     end
+    handle.winid = nil
+    return handle
   end
 
   -- Buffer exists but no window — re-show it

@@ -926,7 +926,7 @@ describe("codex.providers.native", function()
     end)
   end)
 
-  it("toggle focuses existing terminal window from another window", function()
+  it("toggle closes the window when the terminal is visible in another window", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
@@ -939,8 +939,36 @@ describe("codex.providers.native", function()
       provider.toggle(handle, "codex", {}, {}, cfg)
 
       -- ========= [A]ssert  =========
-      assert.equals(2, state.current_win)
-      assert.equals(1, state.startinsert_calls)
+      assert.equals(1, state.current_win)
+      assert.equals(1, #state.win_close_calls)
+      assert.equals(2, state.win_close_calls[1].winid)
+      assert.is_false(state.win_close_calls[1].force)
+      assert.is_nil(handle.winid)
+      assert.equals(0, state.startinsert_calls)
+    end)
+  end)
+
+  it("toggle closes a visible terminal when handle.winid is stale", function()
+    with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
+      local provider = require("codex.providers.native")
+      local cfg = make_config()
+      local handle = provider.open("codex", {}, {}, cfg, true)
+      local live_winid = handle.winid
+      handle.winid = 999
+      state.current_win = 1
+      state.startinsert_calls = 0
+
+      -- ========= [A]ct     =========
+      provider.toggle(handle, "codex", {}, {}, cfg)
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, state.current_win)
+      assert.equals(1, #state.win_close_calls)
+      assert.equals(live_winid, state.win_close_calls[1].winid)
+      assert.is_false(state.win_close_calls[1].force)
+      assert.is_nil(handle.winid)
+      assert.equals(0, state.startinsert_calls)
     end)
   end)
 
