@@ -189,7 +189,9 @@ local function register_restored_exit_autocmd(handle, term_config, on_exit)
     callback = function()
       handle.jobid = nil
       if term_config.auto_close == true then
-        cleanup_window_and_buffer(handle)
+        vim.schedule(function()
+          cleanup_window_and_buffer(handle)
+        end)
       end
       if on_exit then
         on_exit(handle)

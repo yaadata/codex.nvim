@@ -1154,4 +1154,50 @@ describe("codex.providers.native", function()
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<M-BS>"))
     end)
   end)
+
+  it("attach_restored defers auto-close cleanup until after TermClose", function()
+    with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
+      local scheduled = {}
+      local original_schedule = vim.schedule
+      vim.schedule = function(cb)
+        table.insert(scheduled, cb)
+      end
+
+      local provider = require("codex.providers.native")
+      local handle = {
+        bufnr = 21,
+        winid = 9,
+        jobid = 91,
+      }
+      state.buf_valid[21] = true
+      state.wins[9] = { bufnr = 21, valid = true }
+
+      provider.attach_restored(handle, {
+        terminal = {
+          auto_close = true,
+          keymaps = {},
+        },
+      }, function() end)
+
+      -- ========= [A]ct     =========
+      state.autocmds[1].spec.callback()
+
+      vim.schedule = original_schedule
+
+      -- ========= [A]ssert  =========
+      assert.is_nil(handle.jobid)
+      assert.equals(1, #scheduled)
+      assert.equals(0, #state.win_close_calls)
+      assert.is_true(state.buf_valid[21])
+
+      scheduled[1]()
+
+      assert.equals(1, #state.win_close_calls)
+      assert.equals(9, state.win_close_calls[1].winid)
+      assert.is_false(state.buf_valid[21])
+      assert.is_nil(handle.winid)
+      assert.is_nil(handle.bufnr)
+    end)
+  end)
 end)
