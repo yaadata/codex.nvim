@@ -61,7 +61,9 @@ Common entry points:
   `/mention`
 - `:CodexResume[!]` resumes in-process or launches `codex resume`
 
-If help tags are missing, run `:helptags ALL`.
+If `:help codex.nvim` is missing after a local/raw install, generate help tags for
+the plugin's `doc/` directory, for example `:helptags {path-to-codex.nvim}/doc`.
+Plugin managers usually do this for you; `:helptags ALL` is the broad fallback.
 
 ## Developer Docs
 

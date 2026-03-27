@@ -40,11 +40,14 @@ REQUIREMENTS                                         *codex-nvim-requirements*
 - Neovim >= 0.11.0
 - `codex` available on your `PATH`, or a custom `launch.cmd`
 
-If help tags are missing after installation, run:
+If `:help codex.nvim` is missing after a local/raw install, generate help tags
+for the plugin's `doc/` directory, for example:
 
 >
-  :helptags ALL
+  :helptags {path-to-codex.nvim}/doc
 <
+
+Plugin managers usually do this for you. `:helptags ALL` is the broad fallback.
 
 ==============================================================================
 INSTALL                                                   *codex-nvim-install*
