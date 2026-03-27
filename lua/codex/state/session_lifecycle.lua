@@ -151,7 +151,7 @@ local function restore_session_if_needed(deps, config, provider, provider_name)
     return nil
   end
 
-  local ok, restored = pcall(discover, config, make_on_exit_callback(deps))
+  local ok, restored = pcall(discover, config)
   if not ok then
     deps.logger.error("failed to discover restored Codex sessions: %s", restored)
     return nil
@@ -173,6 +173,23 @@ local function restore_session_if_needed(deps, config, provider, provider_name)
   for idx = 2, #restored do
     local extra = restored[idx]
     provider.close(extra.handle)
+  end
+
+  local attach = provider.attach_restored
+  if type(attach) ~= "function" then
+    deps.logger.error("provider %s does not support restored-session attachment", provider_name)
+    return nil
+  end
+
+  local attached, attach_err = attach(selected.handle, config, make_on_exit_callback(deps))
+  if not attached then
+    deps.logger.error(
+      "failed to attach restored Codex session (provider=%s, bufnr=%d): %s",
+      provider_name,
+      selected.bufnr,
+      tostring(attach_err)
+    )
+    return nil
   end
 
   if #restored > 1 then

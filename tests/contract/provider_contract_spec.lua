@@ -2,6 +2,7 @@ local required_methods = {
   "is_available",
   "open",
   "discover_restorable",
+  "attach_restored",
   "close",
   "send",
   "focus",

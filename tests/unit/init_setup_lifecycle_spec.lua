@@ -145,6 +145,53 @@ describe("codex.init public api lifecycle", function()
     assert.equals("/visible", session.cwd)
     assert.equals(1, #env.provider.close_calls)
     assert.equals("hidden", env.provider.close_calls[1].id)
+    assert.equals(1, #env.provider.attach_restored_calls)
+    assert.equals("visible", env.provider.attach_restored_calls[1].handle.id)
+    assert.same(env.provider.close_calls[1], {
+      id = "hidden",
+      alive = true,
+      bufnr = 41,
+    })
+  end)
+
+  it("setup attaches restored session only after extra sessions are closed", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps({
+      _provider = function(provider, fake_vim)
+        fake_vim._set_window_buf(7, 71)
+        provider.discover_restorable_fn = function()
+          return {
+            {
+              handle = { id = "hidden", alive = true, bufnr = 41 },
+              cmd = "codex-test resume",
+              cwd = "/hidden",
+              bufnr = 41,
+            },
+            {
+              handle = { id = "visible", alive = true, bufnr = 71, winid = 7 },
+              cmd = "codex-test",
+              cwd = "/visible",
+              bufnr = 71,
+              winid = 7,
+            },
+          }
+        end
+        provider.attach_restored_fn = function(handle, _, on_exit)
+          assert.equals(1, #provider.close_calls)
+          assert.equals("hidden", provider.close_calls[1].id)
+          assert.equals("visible", handle.id)
+          assert.is_function(on_exit)
+          return true
+        end
+      end,
+    })
+
+    -- ========= [A]ct     =========
+    local session = env.store.get_active()
+
+    -- ========= [A]ssert  =========
+    assert.is_not_nil(session)
+    assert.equals("visible", session.handle.id)
   end)
 
   it("SessionLoadPost schedules a restore after session buffers appear", function()
@@ -714,6 +761,37 @@ describe("codex.init public api lifecycle", function()
     assert.is_false(running)
     assert.equals(1, discover_calls)
     assert.is_nil(env.store.get_active())
+  end)
+
+  it("setup does not store a restored session when attach_restored fails", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps({
+      _provider = function(provider, fake_vim)
+        fake_vim._set_window_buf(7, 71)
+        provider.discover_restorable_fn = function()
+          return {
+            {
+              handle = { id = "restored", alive = true, bufnr = 71, winid = 7 },
+              cmd = "codex-test",
+              cwd = "/restored",
+              bufnr = 71,
+              winid = 7,
+            },
+          }
+        end
+        provider.attach_restored_ok = false
+        provider.attach_restored_err = "attach failed"
+      end,
+    })
+
+    -- ========= [A]ct     =========
+    local session = env.store.get_active()
+
+    -- ========= [A]ssert  =========
+    assert.is_nil(session)
+    assert.equals(1, #env.provider.attach_restored_calls)
+    assert.equals(1, #env.logger.errors)
+    assert.matches("failed to attach restored Codex session", env.logger.errors[1])
   end)
 
   it("auto_start schedules open(false)", function()

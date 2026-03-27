@@ -259,16 +259,14 @@ end
 
 ---Discover live Codex terminal buffers that can be reattached.
 ---@param config codex.Config
----@param on_exit? fun(handle: codex.ProviderHandle): nil
 ---@return codex.RestoredSessionSpec[]
-function M.discover_restorable(config, on_exit)
+function M.discover_restorable(config)
   local api = vim.api or {}
   if type(api.nvim_list_bufs) ~= "function" then
     return {}
   end
 
   local launch = config.launch or {}
-  local term_config = config.terminal or {}
   local cwd_fallback = launch.cwd or vim.fn.getcwd()
   ---@type codex.RestoredSessionSpec[]
   local restored = {}
@@ -305,8 +303,6 @@ function M.discover_restorable(config, on_exit)
             jobid = jobid,
             ready_at_ms = now_ms(),
           }
-          register_restored_exit_autocmd(handle, term_config, on_exit)
-          keymaps.apply_terminal(bufnr, term_config.keymaps)
           table.insert(restored, {
             handle = handle,
             cmd = cmd,
@@ -320,6 +316,23 @@ function M.discover_restorable(config, on_exit)
   end
 
   return restored
+end
+
+---Apply post-selection setup for a restored native terminal handle.
+---@param handle codex.ProviderHandle
+---@param config codex.Config
+---@param on_exit? fun(handle: codex.ProviderHandle): nil
+---@return boolean ok
+---@return string|nil err
+function M.attach_restored(handle, config, on_exit)
+  if type(handle) ~= "table" or type(handle.bufnr) ~= "number" then
+    return false, "invalid restored terminal handle"
+  end
+
+  local term_config = config.terminal or {}
+  register_restored_exit_autocmd(handle, term_config, on_exit)
+  keymaps.apply_terminal(handle.bufnr, term_config.keymaps)
+  return true
 end
 
 --- Stop the terminal job and clean up its window and buffer.

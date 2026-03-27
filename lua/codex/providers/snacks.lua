@@ -288,9 +288,8 @@ end
 
 ---Discover live Codex terminal buffers that can be reattached.
 ---@param config codex.Config
----@param on_exit? fun(handle: codex.ProviderHandle): nil
 ---@return codex.RestoredSessionSpec[]
-function M.discover_restorable(config, on_exit)
+function M.discover_restorable(config)
   if not M.is_available() then
     return {}
   end
@@ -302,7 +301,6 @@ function M.discover_restorable(config, on_exit)
 
   local snacks = require("snacks")
   local launch = config.launch or {}
-  local auto_close = config.terminal.auto_close == true
   local cwd_fallback = launch.cwd or vim.fn.getcwd()
   ---@type codex.RestoredSessionSpec[]
   local restored = {}
@@ -347,8 +345,6 @@ function M.discover_restorable(config, on_exit)
               provider = "snacks",
               ready_at_ms = now_ms(),
             }
-            register_restored_exit_autocmd(handle, auto_close, on_exit)
-            keymaps.apply_terminal(bufnr, config.terminal.keymaps)
             table.insert(restored, {
               handle = handle,
               cmd = cmd,
@@ -363,6 +359,23 @@ function M.discover_restorable(config, on_exit)
   end
 
   return restored
+end
+
+---Apply post-selection setup for a restored snacks terminal handle.
+---@param handle codex.ProviderHandle
+---@param config codex.Config
+---@param on_exit? fun(handle: codex.ProviderHandle): nil
+---@return boolean ok
+---@return string|nil err
+function M.attach_restored(handle, config, on_exit)
+  local term = type(handle) == "table" and handle.terminal or nil
+  if type(term) ~= "table" or type(term.buf) ~= "number" then
+    return false, "invalid restored terminal handle"
+  end
+
+  register_restored_exit_autocmd(handle, config.terminal.auto_close == true, on_exit)
+  keymaps.apply_terminal(term.buf, config.terminal.keymaps)
+  return true
 end
 
 --- Close the snacks terminal session.

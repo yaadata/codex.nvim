@@ -1052,7 +1052,7 @@ describe("codex.providers.snacks", function()
   end)
 
   it("discover_restorable matches snacks terminal metadata with extra Codex args", function()
-    with_stubbed_vim_api(function(_, _, _, state)
+    with_stubbed_vim_api(function(autocmds, keymap_set_calls, _, state)
       -- ========= [A]rrange =========
       state.buf_valid[42] = true
       state.buf_channels[42] = 55
@@ -1101,11 +1101,13 @@ describe("codex.providers.snacks", function()
       assert.equals("/tmp/snacks", restored[1].cwd)
       assert.equals(42, provider.get_bufnr(restored[1].handle))
       assert.is_true(provider.is_alive(restored[1].handle))
+      assert.equals(0, #autocmds)
+      assert.equals(0, #keymap_set_calls)
     end)
   end)
 
   it("discover_restorable accepts callable snacks.win modules", function()
-    with_stubbed_vim_api(function(_, _, _, state)
+    with_stubbed_vim_api(function(autocmds, keymap_set_calls, _, state)
       -- ========= [A]rrange =========
       state.buf_valid[42] = true
       state.buf_channels[42] = 55
@@ -1157,6 +1159,38 @@ describe("codex.providers.snacks", function()
       assert.equals("codex --model o3", restored[1].cmd)
       assert.equals(42, provider.get_bufnr(restored[1].handle))
       assert.is_true(provider.is_alive(restored[1].handle))
+      assert.equals(0, #autocmds)
+      assert.equals(0, #keymap_set_calls)
+    end)
+  end)
+
+  it("attach_restored registers TermClose autocmd and terminal keymaps", function()
+    with_stubbed_vim_api(function(autocmds, keymap_set_calls)
+      -- ========= [A]rrange =========
+      local provider = require("codex.providers.snacks")
+      local handle = {
+        terminal = {
+          buf = 42,
+        },
+      }
+
+      -- ========= [A]ct     =========
+      local ok, err = provider.attach_restored(handle, {
+        terminal = {
+          auto_close = false,
+          keymaps = default_terminal_keymaps(),
+        },
+      }, function() end)
+
+      -- ========= [A]ssert  =========
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(1, #autocmds)
+      assert.equals("TermClose", autocmds[1].event)
+      assert.equals(42, autocmds[1].spec.buffer)
+      assert.equals(6, #keymap_set_calls)
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<C-c>"))
+      assert.is_not_nil(find_keymap(keymap_set_calls, "<M-BS>"))
     end)
   end)
 end)

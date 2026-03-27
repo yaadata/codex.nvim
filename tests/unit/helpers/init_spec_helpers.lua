@@ -84,6 +84,9 @@ local function make_provider()
     on_exit_callbacks = {},
     discover_restorable_calls = {},
     discover_restorable_result = {},
+    attach_restored_calls = {},
+    attach_restored_ok = true,
+    attach_restored_err = nil,
     is_alive_fn = nil,
     is_ready_fn = nil,
     send_fn = nil,
@@ -91,6 +94,7 @@ local function make_provider()
     focus_fn = nil,
     get_bufnr_fn = nil,
     discover_restorable_fn = nil,
+    attach_restored_fn = nil,
     next_open_handle = nil,
   }
 
@@ -190,15 +194,26 @@ local function make_provider()
     return nil
   end
 
-  function provider.discover_restorable(config, on_exit)
+  function provider.discover_restorable(config)
     table.insert(provider.discover_restorable_calls, {
+      config = config,
+    })
+    if provider.discover_restorable_fn then
+      return provider.discover_restorable_fn(config)
+    end
+    return vim.deepcopy(provider.discover_restorable_result)
+  end
+
+  function provider.attach_restored(handle, config, on_exit)
+    table.insert(provider.attach_restored_calls, {
+      handle = handle,
       config = config,
       on_exit = on_exit,
     })
-    if provider.discover_restorable_fn then
-      return provider.discover_restorable_fn(config, on_exit)
+    if provider.attach_restored_fn then
+      return provider.attach_restored_fn(handle, config, on_exit)
     end
-    return vim.deepcopy(provider.discover_restorable_result)
+    return provider.attach_restored_ok, provider.attach_restored_err
   end
 
   return provider

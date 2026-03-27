@@ -1110,7 +1110,7 @@ describe("codex.providers.native", function()
       cfg.launch.cmd = "codex"
 
       -- ========= [A]ct     =========
-      local restored = provider.discover_restorable(cfg, nil)
+      local restored = provider.discover_restorable(cfg)
 
       -- ========= [A]ssert  =========
       assert.equals(1, #restored)
@@ -1119,6 +1119,39 @@ describe("codex.providers.native", function()
       assert.equals("codex --model o3", restored[1].cmd)
       assert.equals("/tmp/project", restored[1].cwd)
       assert.equals(91, restored[1].handle.jobid)
+      assert.equals(0, #state.autocmds)
+      assert.equals(0, #state.keymap_set_calls)
+    end)
+  end)
+
+  it("attach_restored registers TermClose autocmd and terminal keymaps", function()
+    with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
+      local provider = require("codex.providers.native")
+      local handle = {
+        bufnr = 21,
+        winid = 9,
+        jobid = 91,
+      }
+      state.buf_valid[21] = true
+
+      -- ========= [A]ct     =========
+      local ok, err = provider.attach_restored(handle, {
+        terminal = {
+          auto_close = false,
+          keymaps = default_terminal_keymaps(),
+        },
+      }, function() end)
+
+      -- ========= [A]ssert  =========
+      assert.is_true(ok)
+      assert.is_nil(err)
+      assert.equals(1, #state.autocmds)
+      assert.equals("TermClose", state.autocmds[1].event)
+      assert.equals(21, state.autocmds[1].spec.buffer)
+      assert.equals(6, #state.keymap_set_calls)
+      assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-c>"))
+      assert.is_not_nil(find_keymap(state.keymap_set_calls, "<M-BS>"))
     end)
   end)
 end)
