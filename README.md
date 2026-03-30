@@ -2,12 +2,16 @@
     <img src="logo.svg" width="288" alt="codex.nvim logo" />
 </p>
 
-<h1 align="center">codex.nvim</h1>
+<div align="center" >
 
-Neovim plugin for running the Codex CLI in an embedded terminal.
+# CODEX.NVIM
 
-- **Primary home:** [Codeberg](https://codeberg.org/yaadata/codex.nvim)
-- Mirrored on [GitHub](https://github.com/yaadata/codex.nvim)
+<i>Neovim plugin for running the Codex CLI in an embedded terminal. </i>
+
+| **Primary home:** [Codeberg](https://codeberg.org/yaadata/codex.nvim) | Mirrored on [GitHub](https://github.com/yaadata/codex.nvim) |
+| :-------------------------------------------------------------------: | :---------------------------------------------------------: |
+
+</div>
 
 ## Requirements
 
