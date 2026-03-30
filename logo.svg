@@ -1,0 +1,28 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">codex.nvim round mark</title>
+
+  <g fill="none" stroke-width="44" stroke-linecap="round">
+    <circle
+      cx="128" cy="128" r="70"
+      stroke="#95C971"
+      stroke-dasharray="122 335"
+      stroke-opacity="0.92"
+      transform="rotate(-130 128 128)" />
+
+    <circle
+      cx="128" cy="128" r="70"
+      stroke="#5D983D"
+      stroke-dasharray="160 280"
+      stroke-opacity="0.92"
+      transform="rotate(-14 128 128)" />
+
+    <circle
+      cx="128" cy="128" r="70"
+      stroke="#3E9EDA"
+      stroke-dasharray="98 348"
+      stroke-opacity="0.92"
+      transform="rotate(133 128 128)" />
+  </g>
+
+  <circle cx="128" cy="128" r="22" fill="#111827" fill-opacity="0.96"/>
+</svg>

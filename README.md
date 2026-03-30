@@ -1,4 +1,8 @@
-# codex.nvim
+<p align="center">
+  <img src="logo.svg" alt="codex.nvim logo" width="96" />
+</p>
+
+<h2 align="center">codex.nvim</h2>
 
 Neovim plugin for running the Codex CLI in an embedded terminal.
 
