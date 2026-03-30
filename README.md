@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" alt="codex.nvim logo" width="294" />
+    <img src="logo.svg" width="288" alt="codex.nvim logo" />
 </p>
 
 <h1 align="center">codex.nvim</h1>
