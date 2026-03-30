@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="logo.svg" alt="codex.nvim logo" width="96" />
+  <img src="logo.svg" alt="codex.nvim logo" width="294" />
 </p>
 
-<h2 align="center">codex.nvim</h2>
+<h1 align="center">codex.nvim</h1>
 
 Neovim plugin for running the Codex CLI in an embedded terminal.
 
