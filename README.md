@@ -41,7 +41,7 @@
 > [!CAUTION]
 > You are reading the `main` branch README. Install details may differ from
 > tagged releases. The current latest release tag is
-> [`v1.0.0-rc1`](https://codeberg.org/yaadata/codex.nvim/src/tag/v1.0.0-rc1).
+> [`v1.0.0-rc2`](https://codeberg.org/yaadata/codex.nvim/src/tag/v1.0.0-rc2).
 > For version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -50,7 +50,7 @@
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "1.0.0-rc1",
+  version = "1.0.0-rc2",
   cmd = {
     "Codex",
     "CodexFocus",
