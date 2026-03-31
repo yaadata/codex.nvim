@@ -6,12 +6,32 @@
 
 # CODEX.NVIM
 
-<i>Neovim plugin for running the Codex CLI in an embedded terminal. </i>
+<i>Bringing Openai Codex to Neovim </i>
 
 | **Primary home:** [Codeberg](https://codeberg.org/yaadata/codex.nvim) | Mirrored on [GitHub](https://github.com/yaadata/codex.nvim) |
 | :-------------------------------------------------------------------: | :---------------------------------------------------------: |
 
 </div>
+
+## ✨ Features
+
+- 🧩 Composable by default. Session control, send helpers, mention helpers,
+  slash commands, and resume flows are available as both `:Codex*` commands and
+  a public Lua API.
+- 🔌 API-first instead of UI-first. Build your own workflows on top of
+  `require("codex")` with primitives for opening, sending, mentioning, resuming,
+  clearing input, and more.
+- 🌱 Fits into the Neovim ecosystem. Lazy-load on commands, use the built-in
+  terminal provider or `snacks`, and attach your own terminal-local keymaps
+  without fighting rigid plugin assumptions.
+- 🔄 Built to evolve with Codex. The plugin wraps real Codex flows like
+  `/mention`, slash commands, ACP file references, and `codex resume` instead of
+  inventing a separate abstraction that drifts from the CLI.
+- 🎯 Comfortable for interactive use, but scriptable when you need more. Open,
+  focus, toggle, send selections, send files, or keep editor focus while
+  composing larger integrations.
+- 📚 Documented for users and plugin authors. `:help codex.nvim` covers
+  commands, config, behavior notes, examples, and the public API in one place.
 
 ## Requirements
 
