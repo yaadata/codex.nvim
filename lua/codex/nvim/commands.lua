@@ -157,9 +157,15 @@ function M.register()
   ---@param opts codex.UserCommandOpts
   vim.api.nvim_create_user_command("CodexResume", function(opts)
     local codex = require("codex")
-    codex.resume({ last = opts.bang })
+    if opts.bang then
+      codex.close()
+      codex.resume({ last = true })
+      return
+    end
+
+    codex.resume({ last = false })
   end, {
-    desc = "Resume Codex session picker (use ! to launch with --last when needed)",
+    desc = "Resume Codex session picker (! restarts into `codex resume --last`)",
     nargs = 0,
     bang = true,
   })

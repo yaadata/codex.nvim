@@ -92,7 +92,7 @@ describe("codex.nvim command registration", function()
       assert.equals("dir", registered.CodexMentionDirectory.opts.complete)
 
       assert.equals(
-        "Resume Codex session picker (use ! to launch with --last when needed)",
+        "Resume Codex session picker (! restarts into `codex resume --last`)",
         registered.CodexResume.opts.desc
       )
       assert.equals(0, registered.CodexResume.opts.nargs)
@@ -441,8 +441,12 @@ describe("codex.nvim command registration", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
       local received_opts
+      local close_calls = 0
 
       package.loaded["codex"] = {
+        close = function()
+          close_calls = close_calls + 1
+        end,
         resume = function(opts)
           received_opts = opts
         end,
@@ -454,17 +458,21 @@ describe("codex.nvim command registration", function()
 
       -- ========= [A]ssert  =========
       assert.same({ last = false }, received_opts)
+      assert.equals(0, close_calls)
     end)
   end)
 
-  it("dispatches :CodexResume! with last=true", function()
+  it("dispatches :CodexResume! by closing then reopening with last=true", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
-      local received_opts
+      local calls = {}
 
       package.loaded["codex"] = {
+        close = function()
+          table.insert(calls, { method = "close" })
+        end,
         resume = function(opts)
-          received_opts = opts
+          table.insert(calls, { method = "resume", opts = opts })
         end,
       }
 
@@ -473,7 +481,10 @@ describe("codex.nvim command registration", function()
       registered.CodexResume.callback({ bang = true })
 
       -- ========= [A]ssert  =========
-      assert.same({ last = true }, received_opts)
+      assert.same({
+        { method = "close" },
+        { method = "resume", opts = { last = true } },
+      }, calls)
     end)
   end)
 end)

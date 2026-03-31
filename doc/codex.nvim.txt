@@ -293,7 +293,7 @@ CodexMentionDirectory [path]                          *:CodexMentionDirectory*
 
 CodexResume[!]                                                  *:CodexResume*
     Resume in-process when a session is active, or launch `codex resume`.
-    With `!`, use `codex resume --last` when launching a new process.
+    With `!`, close any active session first, then launch `codex resume --last`.
 
 ==============================================================================
 LUA API                                                       *codex-nvim-api*
@@ -493,7 +493,7 @@ Resume                                            *codex-nvim-behavior-resume*
 
 - `:CodexResume` uses in-process `/resume` when a session is already active.
 - When no session is active, it launches `codex resume`.
-- `:CodexResume!` uses `codex resume --last` for the launched-process path.
+- `:CodexResume!` closes any active session, then launches `codex resume --last`.
 
 Session opening                                     *codex-nvim-behavior-open*
 
