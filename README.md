@@ -8,6 +8,8 @@
 
 <i>Bringing Openai Codex to Neovim </i>
 
+![codex.nvim within neovim session](images/codex_nvim.jpeg "codex.nvim")
+
 | **Primary home:** [Codeberg](https://codeberg.org/yaadata/codex.nvim) | Mirrored on [GitHub](https://github.com/yaadata/codex.nvim) |
 | :-------------------------------------------------------------------: | :---------------------------------------------------------: |
 
