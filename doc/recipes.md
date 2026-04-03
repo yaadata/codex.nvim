@@ -1,5 +1,17 @@
 # Recipes
 
+- [Context](#context)
+- [Lua API Recipes](#lua-api-recipes)
+  - [Send arbitrary text from a normal-mode keymap](#send-arbitrary-text)
+  - [Prompt for text, then send it to Codex](#prompt-and-send)
+  - [Send a visual selection, then add a follow-up instruction](#send-selection-follow-up)
+  - [Copy the current prompt input](#copy-prompt-input)
+  - [Copy the latest Codex response with `/copy`](#copy-latest-response)
+- [Integrations](#integrations)
+  - [`oil.nvim`](#oilnvim)
+
+### Context
+
 Most user-facing examples now live in `:help codex.nvim`, especially:
 
 - `|codex-nvim-install|`
@@ -12,6 +24,141 @@ slash-command examples.
 
 This Markdown page is kept for integration-specific examples that are easier to
 scan outside the helpfile.
+
+## Lua API Recipes
+
+These recipes build custom editor keymaps on top of the public Lua API
+documented in `:help codex.nvim`, especially `|codex-nvim-api-send|`,
+`|codex.execute_slash_command|`, `|codex.copy_input|`, and
+`|codex-nvim-keymaps|`.
+
+<a id="send-arbitrary-text"></a>
+
+### Send arbitrary text from a normal-mode keymap
+
+Use `require("codex").send()` when you want a keymap to write text directly into
+the active Codex prompt.
+
+```lua
+vim.keymap.set("n", "<leader>aw", function()
+  local ok, err = require("codex").send("Write a failing test for the current buffer")
+  if not ok then
+    vim.notify(
+      ("Codex: failed to send text%s"):format(err and (": " .. err) or ""),
+      vim.log.levels.ERROR
+    )
+  end
+end, { desc = "Codex: Write a test" })
+```
+
+<a id="prompt-and-send"></a>
+
+### Prompt for text, then send it to Codex
+
+This pattern is useful when the prompt should be decided at runtime instead of
+hardcoded into the keymap.
+
+```lua
+vim.keymap.set("n", "<leader>ap", function()
+  vim.ui.input({ prompt = "Send to Codex: " }, function(input)
+    if not input or input == "" then
+      return
+    end
+
+    local ok, err = require("codex").send(input)
+    if not ok then
+      vim.notify(
+        ("Codex: failed to send text%s"):format(err and (": " .. err) or ""),
+        vim.log.levels.ERROR
+      )
+    end
+  end)
+end, { desc = "Codex: Prompt and send" })
+```
+
+<a id="send-selection-follow-up"></a>
+
+### Send a visual selection, then add a follow-up instruction
+
+This mirrors the pattern from a real user config: send the selected code first,
+append an instruction, then submit the prompt explicitly.
+
+```lua
+vim.keymap.set("x", "<leader>ar", function()
+  local codex = require("codex")
+  local ok, err = codex.send_selection()
+  if not ok then
+    vim.notify(
+      ("Codex: failed to collect selection%s"):format(err and (": " .. err) or ""),
+      vim.log.levels.ERROR
+    )
+    return
+  end
+
+  ok, err = codex.send("$code-review the current selection ")
+  if not ok then
+    vim.notify(
+      ("Codex: failed to send follow-up text%s"):format(err and (": " .. err) or ""),
+      vim.log.levels.ERROR
+    )
+    return
+  end
+
+  ok, err = codex.submit_input()
+  if not ok then
+    vim.notify(
+      ("Codex: failed to submit input%s"):format(err and (": " .. err) or ""),
+      vim.log.levels.ERROR
+    )
+  end
+end, { desc = "Codex: Review selection" })
+```
+
+<a id="copy-prompt-input"></a>
+
+### Copy the current prompt input
+
+`copy_input()` copies whatever is currently typed in the Codex prompt into the
+unnamed register.
+
+```lua
+vim.keymap.set("n", "<leader>ayi", function()
+  local ok, err = require("codex").copy_input()
+  if not ok then
+    vim.notify(
+      ("Codex: failed to copy prompt input%s"):format(err and (": " .. err) or ""),
+      vim.log.levels.ERROR
+    )
+  end
+end, { desc = "Codex: Copy prompt input" })
+```
+
+<a id="copy-latest-response"></a>
+
+### Copy the latest Codex response with `/copy`
+
+Use the slash-command wrapper when you want the same flow as typing `/copy`
+inside the terminal.
+
+```lua
+vim.keymap.set("n", "<leader>ayr", function()
+  local codex = require("codex")
+  local ok, err = codex.execute_slash_command({ command = "copy" })
+  if not ok then
+    vim.notify(
+      ("Codex: failed to copy latest response%s"):format(err and (": " .. err) or ""),
+      vim.log.levels.ERROR
+    )
+    return
+  end
+
+  vim.defer_fn(function()
+    if codex.is_focused() then
+      codex.unfocus()
+    end
+  end, 300)
+end, { desc = "Codex: Copy latest response" })
+```
 
 ## Integrations
 
