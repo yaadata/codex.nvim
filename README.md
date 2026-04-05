@@ -71,15 +71,89 @@
 }
 ```
 
+## Configuration
+
+Use this as a quick-reference setup example. For full behavior notes and the
+complete user-facing reference, see `:help codex.nvim`.
+
+```lua
+-- codex.Config
+-- :help codex-nvim-config
+require("codex").setup({
+
+  -- codex.LaunchConfig
+  -- :help codex-nvim-launch
+  launch = {
+    cmd = "codex", -- executable to launch
+    args = {}, -- extra CLI args
+    env = {}, -- extra environment variables
+    auto_start = true, -- auto-open for send-like flows
+    cwd = nil, -- nil = current Neovim working directory
+  },
+
+  -- codex.TerminalConfig
+  -- :help codex-nvim-terminal
+  terminal = {
+    provider = "auto", -- prefer snacks when available, otherwise native
+    auto_close = true, -- close after the Codex process exits
+
+    -- codex.StartupConfig
+    startup = {
+      timeout_ms = 2000,
+      retry_interval_ms = 50,
+      grace_ms = 800,
+    },
+
+    -- codex.TerminalKeymapConfig
+    -- :help codex-nvim-keymaps
+    keymaps = {},
+
+    -- codex.ProviderOptsConfig
+    provider_opts = {
+      -- codex.NativeProviderOpts
+      native = {
+        window = "vsplit",
+        -- codex.VsplitConfig
+        vsplit = {
+          side = "right",
+          size_pct = 40,
+        },
+        -- codex.HsplitConfig
+        hsplit = {
+          side = "bottom",
+          size_pct = 30,
+        },
+        -- codex.FloatConfig
+        float = {
+          width_pct = 80,
+          height_pct = 80,
+          border = "rounded",
+          title = " Codex ",
+          title_pos = "center",
+        },
+      },
+      snacks = {}, -- snacks.terminal(..., opts) pass-through
+    },
+  },
+
+  -- codex.LogConfig
+  -- :help codex-nvim-log
+  log = {
+    level = "warn",
+    verbose = false,
+  },
+})
+```
+
 ## Usage
 
-After installation, open `:help codex.nvim` inside Neovim for the full
-user-facing reference, including:
+After installation, use the quick-reference config above and open
+`:help codex.nvim` inside Neovim for the full user-facing reference, including:
 
-- setup and the full default options table
+- setup and the full default options table via `:help codex-nvim-config`
 - command reference and behavior notes
 - public Lua API
-- keymap examples
+- keymap examples via `:help codex-nvim-keymaps`
 - slash-command examples
 
 Common entry points:
