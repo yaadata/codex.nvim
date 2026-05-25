@@ -8,6 +8,7 @@ local send_dispatch_mod = require("codex.runtime.send_dispatch")
 local mention_mod = require("codex.context.mention")
 local wrapper_command_mod = require("codex.context.wrapper_command")
 local prompt_ops = require("codex.context.prompt_ops")
+local hooks = require("codex.hooks")
 
 local default_deps = {
   config = require("codex.config"),
@@ -161,6 +162,10 @@ function M.setup(opts)
 
   state.initialized = true
   deps.logger.debug("codex.nvim initialized")
+  hooks.dispatch(deps, state.config, "on_setup", {
+    event = "on_setup",
+    config = state.config,
+  })
   session_lifecycle.restore_session_if_needed(get_deps(), state.config)
 
   if state.config.launch.auto_start then

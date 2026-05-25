@@ -1,5 +1,6 @@
 local M = {}
 local keymaps = require("codex.keymaps")
+local hooks = require("codex.hooks")
 
 ---@type codex.Config
 M.defaults = {
@@ -47,6 +48,7 @@ M.defaults = {
     level = "warn",
     verbose = false,
   },
+  hooks = {},
 }
 
 local valid_providers = { auto = true, snacks = true, native = true }
@@ -66,6 +68,7 @@ local valid_config_keys = {
   launch = true,
   terminal = true,
   log = true,
+  hooks = true,
 }
 ---@param source table
 ---@param known table
@@ -76,6 +79,27 @@ local function collect_unknown_keys(source, known, prefix, unknown)
     if known[key] == nil then
       table.insert(unknown, prefix .. "." .. key)
     end
+  end
+end
+
+---@param config codex.Config
+---@return nil
+local function validate_hooks(config)
+  vim.validate({
+    hooks = { config.hooks, "table" },
+  })
+
+  local unknown = {}
+  for key, value in pairs(config.hooks) do
+    if not hooks.is_valid_hook_key(key) then
+      table.insert(unknown, "hooks." .. tostring(key))
+    elseif type(value) ~= "function" and value ~= nil then
+      error(string.format("codex: hooks.%s must be a function or nil", key))
+    end
+  end
+  if #unknown > 0 then
+    table.sort(unknown)
+    error("codex: unknown hook key(s): " .. table.concat(unknown, ", "))
   end
 end
 
@@ -147,6 +171,7 @@ function M.validate(config)
     launch = { config.launch, "table" },
     terminal = { config.terminal, "table" },
     log = { config.log, "table" },
+    hooks = { config.hooks, "table" },
   })
 
   local launch = config.launch or {}
@@ -240,6 +265,8 @@ function M.validate(config)
     table.sort(unknown_log)
     error("codex: unknown log config key(s): " .. table.concat(unknown_log, ", "))
   end
+
+  validate_hooks(config)
 
   for key, value in pairs(config.launch.env) do
     if type(key) ~= "string" then

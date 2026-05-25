@@ -28,6 +28,7 @@ codex-nvim-commands	codex.nvim.txt	/*codex-nvim-commands*
 codex-nvim-config	codex.nvim.txt	/*codex-nvim-config*
 codex-nvim-contents	codex.nvim.txt	/*codex-nvim-contents*
 codex-nvim-examples	codex.nvim.txt	/*codex-nvim-examples*
+codex-nvim-hooks	codex.nvim.txt	/*codex-nvim-hooks*
 codex-nvim-install	codex.nvim.txt	/*codex-nvim-install*
 codex-nvim-introduction	codex.nvim.txt	/*codex-nvim-introduction*
 codex-nvim-keymaps	codex.nvim.txt	/*codex-nvim-keymaps*

@@ -2,6 +2,7 @@
 
 - [Context](#context)
 - [Lua API Recipes](#lua-api-recipes)
+  - [Disable spellcheck in Codex terminal buffers](#disable-spellcheck)
   - [Send arbitrary text from a normal-mode keymap](#send-arbitrary-text)
   - [Prompt for text, then send it to Codex](#prompt-and-send)
   - [Send a visual selection, then add a follow-up instruction](#send-selection-follow-up)
@@ -31,6 +32,30 @@ These recipes build custom editor keymaps on top of the public Lua API
 documented in `:help codex.nvim`, especially `|codex-nvim-api-send|`,
 `|codex.execute_slash_command|`, `|codex.copy_input|`, and
 `|codex-nvim-keymaps|`.
+
+<a id="disable-spellcheck"></a>
+
+### Disable spellcheck in Codex terminal buffers
+
+Use lifecycle hooks when you want editor-local behavior applied whenever a Codex
+terminal is opened or restored.
+
+```lua
+require("codex").setup({
+  hooks = {
+    on_terminal_open = function(ctx)
+      if ctx.bufnr then
+        vim.bo[ctx.bufnr].spell = false
+      end
+    end,
+    on_terminal_restore = function(ctx)
+      if ctx.bufnr then
+        vim.bo[ctx.bufnr].spell = false
+      end
+    end,
+  },
+})
+```
 
 <a id="send-arbitrary-text"></a>
 

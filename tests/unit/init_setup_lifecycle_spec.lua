@@ -94,6 +94,48 @@ describe("codex.init public api lifecycle", function()
     assert.is_nil(cfg._deps)
   end)
 
+  it("fires on_setup after setup internals are ready and before restore or auto-start", function()
+    -- ========= [A]rrange =========
+    local seen = nil
+
+    -- ========= [A]ct     =========
+    local env = setup_with_deps({
+      hooks = {
+        on_setup = function(ctx)
+          seen = {
+            event = ctx.event,
+            config = ctx.config,
+            commands = ctx.config.launch.cmd,
+          }
+        end,
+      },
+    })
+
+    -- ========= [A]ssert  =========
+    assert.same({ "commands" }, env.call_order)
+    assert.is_not_nil(seen)
+    assert.equals("on_setup", seen.event)
+    assert.equals("codex-test", seen.commands)
+    assert.equals(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
+    assert.equals(0, #env.provider.open_calls)
+    assert.equals(1, #env.provider.discover_restorable_calls)
+  end)
+
+  it("warns and continues when a lifecycle hook fails", function()
+    -- ========= [A]ct     =========
+    local env = setup_with_deps({
+      hooks = {
+        on_setup = function()
+          error("hook boom")
+        end,
+      },
+    })
+
+    -- ========= [A]ssert  =========
+    assert.equals(1, env.commands.register_calls)
+    assert.matches("codex hook on_setup failed: .*hook boom", env.logger.warns[1])
+  end)
+
   it("get_logs returns captured logs and clear_logs empties them", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
@@ -124,7 +166,7 @@ describe("codex.init public api lifecycle", function()
               bufnr = 41,
             },
             {
-              handle = { id = "visible", alive = true, bufnr = 71, winid = 7 },
+              handle = { id = "visible", alive = true },
               cmd = "codex-test",
               cwd = "/visible",
               bufnr = 71,
@@ -152,6 +194,46 @@ describe("codex.init public api lifecycle", function()
       alive = true,
       bufnr = 41,
     })
+  end)
+
+  it("fires on_terminal_restore after a restored session is attached", function()
+    -- ========= [A]rrange =========
+    local seen = nil
+    local env = setup_with_deps({
+      hooks = {
+        on_terminal_restore = function(ctx)
+          seen = ctx
+        end,
+      },
+      _provider = function(provider, fake_vim)
+        fake_vim._set_window_buf(7, 71)
+        provider.discover_restorable_fn = function()
+          return {
+            {
+              handle = { id = "visible", alive = true, bufnr = 71, winid = 7 },
+              cmd = "codex-test",
+              cwd = "/visible",
+              bufnr = 71,
+              winid = 7,
+            },
+          }
+        end
+      end,
+    })
+
+    -- ========= [A]ct     =========
+    local session = env.store.get_active()
+
+    -- ========= [A]ssert  =========
+    assert.is_not_nil(session)
+    assert.is_not_nil(seen)
+    assert.equals("on_terminal_restore", seen.event)
+    assert.equals("native", seen.provider)
+    assert.equals(71, seen.bufnr)
+    assert.equals(7, seen.winid)
+    assert.equals("codex-test", seen.cmd)
+    assert.equals("/visible", seen.cwd)
+    assert.equals(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
   end)
 
   it("setup attaches restored session only after extra sessions are closed", function()
@@ -249,6 +331,67 @@ describe("codex.init public api lifecycle", function()
     assert.equals("/test/cwd", session.cwd)
     assert.equals(1, #env.provider.open_calls)
     assert.is_false(env.provider.open_calls[1].focus)
+  end)
+
+  it("fires on_terminal_open after a new session starts", function()
+    -- ========= [A]rrange =========
+    local seen = nil
+    local env = setup_with_deps({
+      hooks = {
+        on_terminal_open = function(ctx)
+          seen = ctx
+        end,
+      },
+      _provider = function(provider)
+        provider.open_fn = function(_, handle)
+          handle.bufnr = 211
+          handle.winid = 21
+        end
+      end,
+    })
+
+    -- ========= [A]ct     =========
+    env.codex.open(false)
+
+    -- ========= [A]ssert  =========
+    assert.is_not_nil(seen)
+    assert.equals("on_terminal_open", seen.event)
+    assert.equals("native", seen.provider)
+    assert.equals(211, seen.bufnr)
+    assert.equals(21, seen.winid)
+    assert.equals("codex-test", seen.cmd)
+    assert.equals("/test/cwd", seen.cwd)
+    assert.equals(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
+  end)
+
+  it("includes Snacks terminal window fields in on_terminal_open context", function()
+    -- ========= [A]rrange =========
+    local seen = nil
+    local env = setup_with_deps({
+      hooks = {
+        on_terminal_open = function(ctx)
+          seen = ctx
+        end,
+      },
+      _provider = function(provider)
+        provider.next_open_handle = {
+          id = "snacks_handle",
+          alive = true,
+          terminal = {
+            buf = 212,
+            win = 22,
+          },
+        }
+      end,
+    })
+
+    -- ========= [A]ct     =========
+    env.codex.open(false)
+
+    -- ========= [A]ssert  =========
+    assert.is_not_nil(seen)
+    assert.equals(212, seen.bufnr)
+    assert.equals(22, seen.winid)
   end)
 
   it("open reuses live session and focuses when requested", function()
@@ -551,6 +694,122 @@ describe("codex.init public api lifecycle", function()
     assert.is_nil(err)
     assert.equals(9, env.fake_vim._get_current_win())
     assert.equals(91, env.fake_vim._get_current_buf())
+  end)
+
+  it("fires on_terminal_close once for explicit session teardown", function()
+    -- ========= [A]rrange =========
+    local events = {}
+    local env = setup_with_deps({
+      hooks = {
+        on_terminal_close = function(ctx)
+          table.insert(events, ctx)
+        end,
+      },
+    })
+    env.codex.open(false)
+
+    -- ========= [A]ct     =========
+    env.codex.close()
+
+    -- ========= [A]ssert  =========
+    assert.equals(1, #events)
+    assert.equals("on_terminal_close", events[1].event)
+    assert.equals("native", events[1].provider)
+    assert.equals("codex-test", events[1].cmd)
+    assert.equals("/test/cwd", events[1].cwd)
+    assert.is_nil(env.store.get_active())
+  end)
+
+  it("captures terminal fields before explicit provider close mutates the handle", function()
+    -- ========= [A]rrange =========
+    local seen = nil
+    local env = setup_with_deps({
+      hooks = {
+        on_terminal_close = function(ctx)
+          seen = ctx
+        end,
+      },
+      _provider = function(provider)
+        provider.open_fn = function(_, handle)
+          handle.bufnr = 213
+          handle.winid = 23
+        end
+        provider.close_fn = function(handle)
+          handle.bufnr = nil
+          handle.winid = nil
+          return true
+        end
+      end,
+    })
+    env.codex.open(false)
+
+    -- ========= [A]ct     =========
+    env.codex.close()
+
+    -- ========= [A]ssert  =========
+    assert.is_not_nil(seen)
+    assert.equals(213, seen.bufnr)
+    assert.equals(23, seen.winid)
+  end)
+
+  it("captures terminal fields before stale-session provider close mutates the handle", function()
+    -- ========= [A]rrange =========
+    local events = {}
+    local env = setup_with_deps({
+      hooks = {
+        on_terminal_close = function(ctx)
+          table.insert(events, ctx)
+        end,
+      },
+      _provider = function(provider)
+        provider.open_fn = function(_, handle)
+          handle.bufnr = 214
+          handle.winid = 24
+        end
+        provider.close_fn = function(handle)
+          handle.bufnr = nil
+          handle.winid = nil
+          return true
+        end
+      end,
+    })
+    env.codex.open(false)
+    env.store.get_active().handle.alive = false
+
+    -- ========= [A]ct     =========
+    env.codex.open(false)
+
+    -- ========= [A]ssert  =========
+    assert.equals(1, #events)
+    assert.equals(214, events[1].bufnr)
+    assert.equals(24, events[1].winid)
+  end)
+
+  it("deduplicates on_terminal_close when provider close also reports process exit", function()
+    -- ========= [A]rrange =========
+    local close_count = 0
+    local env = setup_with_deps({
+      hooks = {
+        on_terminal_close = function()
+          close_count = close_count + 1
+        end,
+      },
+      _provider = function(provider)
+        provider.close_fn = function(handle)
+          handle.alive = false
+          provider.on_exit_callbacks[1]()
+          return true
+        end
+      end,
+    })
+    env.codex.open(false)
+
+    -- ========= [A]ct     =========
+    env.codex.close()
+
+    -- ========= [A]ssert  =========
+    assert.equals(1, close_count)
+    assert.is_nil(env.store.get_active())
   end)
 
   it("send auto-opens when missing and logs provider errors", function()

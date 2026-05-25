@@ -116,6 +116,12 @@ The resolved default options table is:
       level = "warn",
       verbose = false,
     },
+    hooks = {
+      on_setup = nil,
+      on_terminal_open = nil,
+      on_terminal_restore = nil,
+      on_terminal_close = nil,
+    },
     terminal = {
       provider = "auto",
       provider_opts = {
@@ -179,6 +185,56 @@ log                                                           *codex-nvim-log*
 
     `verbose`
       When true, capture extra debug-oriented log entries.
+
+hooks                                                     *codex-nvim-hooks*
+    Lifecycle callbacks for editor-side customization. All hooks receive one
+    context table, run synchronously with protected errors, ignore return
+    values, and never abort Codex behavior. Hook errors are logged as warnings.
+
+    Supported callbacks:
+
+      `on_setup`
+        Fires after setup has initialized config, state, commands, and autocmds,
+        before restore or auto-start can open a terminal.
+
+      `on_terminal_open`
+        Fires after a new Codex terminal session starts.
+
+      `on_terminal_restore`
+        Fires after codex.nvim reattaches to a restored Codex terminal.
+
+      `on_terminal_close`
+        Fires once when a Codex session is torn down or marked dead. Window
+        hiding alone is not a close event.
+
+    Context fields:
+
+      `event`
+        Hook event name.
+
+      `config`
+        Resolved codex.nvim config. Treat as read-only.
+
+      `provider`, `bufnr`, `winid`, `cmd`, `cwd`
+        Included when available for terminal lifecycle events.
+
+    Example:
+>lua
+  require("codex").setup({
+    hooks = {
+      on_terminal_open = function(ctx)
+        if ctx.bufnr then
+          vim.bo[ctx.bufnr].spell = false
+        end
+      end,
+      on_terminal_restore = function(ctx)
+        if ctx.bufnr then
+          vim.bo[ctx.bufnr].spell = false
+        end
+      end,
+    },
+  })
+<
 
 terminal                                                 *codex-nvim-terminal*
     Terminal presentation and startup behavior.

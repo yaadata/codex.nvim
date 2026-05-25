@@ -4,6 +4,7 @@ The authoritative user-facing Lua API reference now lives in
 `:help codex.nvim`, especially:
 
 - `|codex-nvim-api|`
+- `|codex-nvim-hooks|`
 - `|codex-nvim-api-runtime|`
 - `|codex-nvim-api-lifecycle|`
 - `|codex-nvim-api-send|`

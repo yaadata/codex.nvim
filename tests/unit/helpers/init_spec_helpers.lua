@@ -90,6 +90,7 @@ local function make_provider()
     is_alive_fn = nil,
     is_ready_fn = nil,
     send_fn = nil,
+    close_fn = nil,
     open_fn = nil,
     focus_fn = nil,
     get_bufnr_fn = nil,
@@ -132,6 +133,9 @@ local function make_provider()
 
   function provider.close(handle)
     table.insert(provider.close_calls, handle)
+    if provider.close_fn then
+      return provider.close_fn(handle)
+    end
     return true
   end
 

@@ -22,6 +22,23 @@
 ---@field message string
 ---@field verbose boolean
 
+---@class codex.HookContext
+---@field event string
+---@field config codex.Config
+---@field provider? string
+---@field bufnr? integer
+---@field winid? integer
+---@field cmd? string
+---@field cwd? string
+
+---@alias codex.LifecycleHook fun(ctx: codex.HookContext)
+
+---@class codex.HooksConfig
+---@field on_setup? codex.LifecycleHook
+---@field on_terminal_open? codex.LifecycleHook
+---@field on_terminal_restore? codex.LifecycleHook
+---@field on_terminal_close? codex.LifecycleHook
+
 ---@alias codex.WindowType
 ---| "vsplit"
 ---| "hsplit"
@@ -83,6 +100,7 @@
 ---@field launch codex.LaunchConfig
 ---@field terminal codex.TerminalConfig
 ---@field log codex.LogConfig
+---@field hooks codex.HooksConfig
 
 ---@class codex.SessionSpec
 ---@field handle codex.ProviderHandle

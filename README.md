@@ -142,6 +142,15 @@ require("codex").setup({
     level = "warn",
     verbose = false,
   },
+
+  -- codex.HooksConfig
+  -- :help codex-nvim-hooks
+  hooks = {
+    on_setup = nil,
+    on_terminal_open = nil,
+    on_terminal_restore = nil,
+    on_terminal_close = nil,
+  },
 })
 ```
 
@@ -153,6 +162,7 @@ After installation, use the quick-reference config above and open
 - setup and the full default options table via `:help codex-nvim-config`
 - command reference and behavior notes
 - public Lua API
+- lifecycle hooks via `:help codex-nvim-hooks`
 - keymap examples via `:help codex-nvim-keymaps`
 - slash-command examples
 

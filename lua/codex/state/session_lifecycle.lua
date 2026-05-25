@@ -1,4 +1,5 @@
 local M = {}
+local hooks = require("codex.hooks")
 
 ---Return the shared focus-state table, creating one when missing.
 ---@param deps table
@@ -94,11 +95,96 @@ end
 
 ---Build the on-exit callback used for newly opened or reattached sessions.
 ---@param deps table
+---@param config table
 ---@return fun(handle: codex.ProviderHandle): nil
-local function make_on_exit_callback(deps)
+local function make_on_exit_callback(deps, config)
   return function(exited_handle)
-    M.mark_session_dead_by_handle(deps, exited_handle)
+    M.mark_session_dead_by_handle(deps, exited_handle, config)
   end
+end
+
+---Return provider-derived buffer/window fields for hook context when available.
+---@param session codex.Session
+---@param provider codex.Provider
+---@return integer|nil bufnr
+---@return integer|nil winid
+local function get_session_terminal_fields(session, provider)
+  local bufnr = nil
+  if type(provider.get_bufnr) == "function" then
+    bufnr = provider.get_bufnr(session.handle)
+  end
+  if type(bufnr) ~= "number" and type(session.handle) == "table" then
+    bufnr = session.handle.bufnr
+  end
+  if
+    type(bufnr) ~= "number"
+    and type(session.handle) == "table"
+    and type(session.handle.terminal) == "table"
+  then
+    bufnr = session.handle.terminal.buf
+  end
+
+  local winid = nil
+  if type(session.handle) == "table" then
+    winid = session.handle.winid
+  end
+  if
+    type(winid) ~= "number"
+    and type(session.handle) == "table"
+    and type(session.handle.terminal) == "table"
+  then
+    winid = session.handle.terminal.win
+  end
+  return bufnr, winid
+end
+
+---Build the public lifecycle hook context for a session event.
+---@param event string
+---@param config table
+---@param session codex.Session
+---@param provider codex.Provider
+---@return table
+local function make_session_hook_context(event, config, session, provider)
+  local bufnr, winid = get_session_terminal_fields(session, provider)
+  return {
+    event = event,
+    provider = session.provider_name,
+    bufnr = bufnr,
+    winid = winid,
+    cmd = session.cmd,
+    cwd = session.cwd,
+    config = config,
+  }
+end
+
+---Emit a session lifecycle hook.
+---@param deps table
+---@param config table
+---@param hook_name string
+---@param session codex.Session
+---@param provider codex.Provider
+---@return nil
+local function dispatch_session_hook(deps, config, hook_name, session, provider)
+  hooks.dispatch(
+    deps,
+    config,
+    hook_name,
+    make_session_hook_context(hook_name, config, session, provider)
+  )
+end
+
+---Mark a live session as closed and emit the close hook once.
+---@param deps table
+---@param config table
+---@param session codex.Session
+---@param provider codex.Provider
+---@return nil
+local function mark_session_closed(deps, config, session, provider)
+  if not session or session.alive == false then
+    return
+  end
+  dispatch_session_hook(deps, config, "on_terminal_close", session, provider)
+  deps.session_store.mark_dead(session.id)
 end
 
 ---Store a session spec as the active in-memory session.
@@ -142,6 +228,7 @@ local function restore_session_if_needed(deps, config, provider, provider_name)
 
   if session then
     vdebug(deps, "restore_session_if_needed removing stale active session id=%s", session.id)
+    mark_session_closed(deps, config, session, provider)
     provider.close(session.handle)
     deps.session_store.remove(session.id)
   end
@@ -181,7 +268,7 @@ local function restore_session_if_needed(deps, config, provider, provider_name)
     return nil
   end
 
-  local attached, attach_err = attach(selected.handle, config, make_on_exit_callback(deps))
+  local attached, attach_err = attach(selected.handle, config, make_on_exit_callback(deps, config))
   if not attached then
     deps.logger.error(
       "failed to attach restored Codex session (provider=%s, bufnr=%d): %s",
@@ -206,12 +293,17 @@ local function restore_session_if_needed(deps, config, provider, provider_name)
     )
   end
 
-  return create_active_session(deps, provider_name, {
+  local restored_session = create_active_session(deps, provider_name, {
     handle = selected.handle,
     cmd = selected.cmd,
     cwd = selected.cwd,
     provider_name = provider_name,
   })
+  local ctx = make_session_hook_context("on_terminal_restore", config, restored_session, provider)
+  ctx.bufnr = ctx.bufnr or selected.bufnr
+  ctx.winid = ctx.winid or selected.winid
+  hooks.dispatch(deps, config, "on_terminal_restore", ctx)
+  return restored_session
 end
 
 ---Opens or reuses a terminal session with a pre-resolved provider.
@@ -241,6 +333,7 @@ local function open_or_reuse_session(deps, config, args, focus, provider, provid
   -- Close stale session if any
   if session then
     vdebug(deps, "open_session closing stale session id=%s", session.id)
+    mark_session_closed(deps, config, session, provider)
     provider.close(session.handle)
     deps.session_store.remove(session.id)
   end
@@ -256,31 +349,37 @@ local function open_or_reuse_session(deps, config, args, focus, provider, provid
       config.launch.env,
       config,
       focus,
-      make_on_exit_callback(deps)
+      make_on_exit_callback(deps, config)
     )
   end)
   vdebug(deps, "open_session created new session provider=%s", provider_name)
 
-  create_active_session(deps, provider_name, {
+  local new_session = create_active_session(deps, provider_name, {
     handle = handle,
     cmd = config.launch.cmd,
     cwd = config.launch.cwd or deps.vim.fn.getcwd(),
     provider_name = provider_name,
   })
+  dispatch_session_hook(deps, config, "on_terminal_open", new_session, provider)
 end
 
 ---Marks the session that owns `dead_handle` as no longer alive.
 ---@param deps table
 ---@param dead_handle codex.ProviderHandle|nil
 ---@return nil
-function M.mark_session_dead_by_handle(deps, dead_handle)
+function M.mark_session_dead_by_handle(deps, dead_handle, config)
   if not dead_handle then
     return
   end
 
   for _, session in ipairs(deps.session_store.list()) do
     if session.handle == dead_handle then
-      deps.session_store.mark_dead(session.id)
+      if config then
+        local provider = M.get_provider(deps, config)
+        mark_session_closed(deps, config, session, provider)
+      else
+        deps.session_store.mark_dead(session.id)
+      end
       return
     end
   end
@@ -434,6 +533,7 @@ function M.close_session(deps, config, send_queue)
   end
 
   vdebug(deps, "close_session closing session id=%s", session.id)
+  mark_session_closed(deps, config, session, provider)
   provider.close(session.handle)
   deps.session_store.remove(session.id)
   if send_queue then

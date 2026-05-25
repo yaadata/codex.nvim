@@ -32,6 +32,7 @@ describe("codex.config", function()
       assert.same({}, config.defaults.terminal.keymaps)
       assert.equals("warn", config.defaults.log.level)
       assert.is_false(config.defaults.log.verbose)
+      assert.same({}, config.defaults.hooks)
     end)
   end)
 
@@ -105,6 +106,21 @@ describe("codex.config", function()
       assert.is_true(cfg.log.verbose)
     end)
 
+    it("merges hook callbacks", function()
+      -- ========= [A]rrange =========
+      local function on_setup() end
+
+      -- ========= [A]ct     =========
+      local cfg = config.apply({
+        hooks = {
+          on_setup = on_setup,
+        },
+      })
+
+      -- ========= [A]ssert  =========
+      assert.equals(on_setup, cfg.hooks.on_setup)
+    end)
+
     it("does not mutate defaults", function()
       -- ========= [A]ct     =========
       config.apply({ launch = { cmd = "other" } })
@@ -153,6 +169,24 @@ describe("codex.config", function()
       -- ========= [A]ssert  =========
       assert.is_false(ok)
       assert.matches("unknown log config key%(s%): log.extra", err)
+    end)
+
+    it("rejects unknown hook keys", function()
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { hooks = { on_focus = function() end } })
+
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("unknown hook key%(s%): hooks.on_focus", err)
+    end)
+
+    it("rejects non-function hook values", function()
+      -- ========= [A]ct     =========
+      local ok, err = pcall(config.apply, { hooks = { on_setup = true } })
+
+      -- ========= [A]ssert  =========
+      assert.is_false(ok)
+      assert.matches("hooks.on_setup must be a function or nil", err)
     end)
 
     it("rejects invalid native window type", function()
