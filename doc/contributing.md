@@ -265,6 +265,20 @@ Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) which
 provides busted-style test primitives: `describe`, `it`, `before_each`,
 `after_each`, and `assert`.
 
+Plenary also bundles luassert. Use `luassert.stub` when a test needs to replace
+real global APIs such as `vim.api.nvim_create_user_command`, `vim.notify`, or
+`vim.schedule`. Prefer `assert:snapshot()` in `before_each` and
+`snapshot:revert()` in `after_each` for luassert-managed stubs instead of
+hand-written save/restore blocks.
+
+Direct non-stub global assignments, such as replacing option tables or scalar
+values, still need explicit restore handling.
+
+Do not replace dependency-injected `fake_vim` functions with luassert stubs when
+the production code checks `type(api_fn) == "function"`. Luassert stubs are
+callable test doubles, but they do not behave like plain Lua functions for
+those type checks. Keep those fake-vim overrides as real functions.
+
 ### Test Structure
 
 Every test should use explicit `Arrange / Act / Assert` section comments:

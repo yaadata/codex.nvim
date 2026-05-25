@@ -1,46 +1,43 @@
+local stub = require("luassert.stub")
+
 local function with_stubbed_keymap_set(run)
-  local original_keymap_set = vim.keymap.set
   local calls = {}
 
-  vim.keymap.set = function(mode, lhs, rhs, opts)
+  stub(vim.keymap, "set", function(mode, lhs, rhs, opts)
     table.insert(calls, { mode = mode, lhs = lhs, rhs = rhs, opts = opts })
-  end
+  end)
 
-  local ok, err = pcall(run, calls)
-  vim.keymap.set = original_keymap_set
-
-  if not ok then
-    error(err)
-  end
+  run(calls)
 end
 
 local function with_stubbed_feedkeys(run)
-  local original_replace_termcodes = vim.api.nvim_replace_termcodes
-  local original_feedkeys = vim.api.nvim_feedkeys
   local seen = {}
 
-  vim.api.nvim_replace_termcodes = function(keys)
+  stub(vim.api, "nvim_replace_termcodes", function(keys)
     seen.input = keys
     return "ENCODED"
-  end
-  vim.api.nvim_feedkeys = function(keys, mode, escape)
+  end)
+  stub(vim.api, "nvim_feedkeys", function(keys, mode, escape)
     seen.keys = keys
     seen.mode = mode
     seen.escape = escape
-  end
+  end)
 
-  local ok, err = pcall(run, seen)
-  vim.api.nvim_replace_termcodes = original_replace_termcodes
-  vim.api.nvim_feedkeys = original_feedkeys
-
-  if not ok then
-    error(err)
-  end
+  run(seen)
 end
 
 describe("codex.keymaps", function()
+  local stub_snapshot
+
   before_each(function()
+    stub_snapshot = assert:snapshot()
     package.loaded["codex.keymaps"] = nil
+    package.loaded["codex"] = nil
+  end)
+
+  after_each(function()
+    stub_snapshot:revert()
+    package.loaded["codex"] = nil
   end)
 
   it("exposes builtin actions and descriptions", function()
@@ -140,7 +137,6 @@ describe("codex.keymaps", function()
 
   it("unfocus builtin dispatches to codex.unfocus", function()
     -- ========= [A]rrange =========
-    local original_codex = package.loaded["codex"]
     local calls = 0
 
     package.loaded["codex"] = {
@@ -150,21 +146,14 @@ describe("codex.keymaps", function()
     }
 
     -- ========= [A]ct     =========
-    local ok, err = pcall(function()
-      local keymaps = require("codex.keymaps")
-      keymaps.builtins.unfocus()
+    local keymaps = require("codex.keymaps")
+    keymaps.builtins.unfocus()
 
-      -- ========= [A]ssert  =========
-      assert.equals(1, calls)
-      assert.equals(
-        "Codex: Return to previous buffer",
-        keymaps.get_builtin_desc(keymaps.builtins.unfocus)
-      )
-    end)
-    package.loaded["codex"] = original_codex
-
-    if not ok then
-      error(err)
-    end
+    -- ========= [A]ssert  =========
+    assert.equals(1, calls)
+    assert.equals(
+      "Codex: Return to previous buffer",
+      keymaps.get_builtin_desc(keymaps.builtins.unfocus)
+    )
   end)
 end)

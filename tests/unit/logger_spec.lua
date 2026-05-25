@@ -1,23 +1,25 @@
+local stub = require("luassert.stub")
+
 describe("codex.logger", function()
   local logger
-  local original_notify
   local notify_calls
+  local stub_snapshot
 
   before_each(function()
+    stub_snapshot = assert:snapshot()
     package.loaded["codex.logger"] = nil
     logger = require("codex.logger")
-    original_notify = vim.notify
     notify_calls = {}
-    vim.notify = function(msg, level)
+    stub(vim, "notify", function(msg, level)
       table.insert(notify_calls, { msg = msg, level = level })
-    end
+    end)
     logger.set_level("warn")
     logger.set_verbose(false)
     logger.clear_logs()
   end)
 
   after_each(function()
-    vim.notify = original_notify
+    stub_snapshot:revert()
   end)
 
   it("captures and notifies only entries that pass the level filter", function()

@@ -1,33 +1,29 @@
+local stub = require("luassert.stub")
+
 local function with_stubbed_command_registration(run)
-  local original_create_user_command = vim.api.nvim_create_user_command
   local registered = {}
 
-  vim.api.nvim_create_user_command = function(name, callback, opts)
+  stub(vim.api, "nvim_create_user_command", function(name, callback, opts)
     registered[name] = {
       callback = callback,
       opts = opts,
     }
-  end
+  end)
 
-  local ok, err = pcall(run, registered)
-  vim.api.nvim_create_user_command = original_create_user_command
-
-  if not ok then
-    error(err)
-  end
+  run(registered)
 end
 
 describe("codex.nvim command registration", function()
-  local original_notify
+  local stub_snapshot
 
   before_each(function()
+    stub_snapshot = assert:snapshot()
     package.loaded["codex"] = nil
     package.loaded["codex.nvim.commands"] = nil
-    original_notify = vim.notify
   end)
 
   after_each(function()
-    vim.notify = original_notify
+    stub_snapshot:revert()
   end)
 
   it("registers Codex commands with expected options", function()
@@ -223,29 +219,23 @@ describe("codex.nvim command registration", function()
         end,
       }
 
-      local original_get_current_buf = vim.api.nvim_get_current_buf
-      local original_get_mark = vim.api.nvim_buf_get_mark
-      local original_visualmode = vim.fn.visualmode
-      vim.api.nvim_get_current_buf = function()
+      stub(vim.api, "nvim_get_current_buf", function()
         return 3
-      end
-      vim.api.nvim_buf_get_mark = function(_, mark)
+      end)
+      stub(vim.api, "nvim_buf_get_mark", function(_, mark)
         if mark == "<" then
           return { 2, 0 }
         end
         return { 6, 4 }
-      end
-      vim.fn.visualmode = function()
+      end)
+      stub(vim.fn, "visualmode", function()
         return "V"
-      end
+      end)
 
       require("codex.nvim.commands").register()
 
       -- ========= [A]ct     =========
       registered.CodexSendSelection.callback({ line1 = 2, line2 = 6, range = 2 })
-      vim.api.nvim_get_current_buf = original_get_current_buf
-      vim.api.nvim_buf_get_mark = original_get_mark
-      vim.fn.visualmode = original_visualmode
 
       -- ========= [A]ssert  =========
       assert.equals(1, #calls)
@@ -256,15 +246,12 @@ describe("codex.nvim command registration", function()
   it("dispatches :CodexSendSelection with visual_mode when range matches visual marks", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
-      local original_get_current_buf = vim.api.nvim_get_current_buf
-      local original_get_mark = vim.api.nvim_buf_get_mark
-      local original_visualmode = vim.fn.visualmode
       local calls = {}
 
-      vim.api.nvim_get_current_buf = function()
+      stub(vim.api, "nvim_get_current_buf", function()
         return 1
-      end
-      vim.api.nvim_buf_get_mark = function(_, mark)
+      end)
+      stub(vim.api, "nvim_buf_get_mark", function(_, mark)
         if mark == "<" then
           return { 2, 1 }
         end
@@ -272,10 +259,10 @@ describe("codex.nvim command registration", function()
           return { 6, 3 }
         end
         return { 0, 0 }
-      end
-      vim.fn.visualmode = function()
+      end)
+      stub(vim.fn, "visualmode", function()
         return string.char(22)
-      end
+      end)
 
       package.loaded["codex"] = {
         send_selection = function(opts)
@@ -286,9 +273,6 @@ describe("codex.nvim command registration", function()
       require("codex.nvim.commands").register()
       -- ========= [A]ct     =========
       registered.CodexSendSelection.callback({ line1 = 2, line2 = 6, range = 2 })
-      vim.api.nvim_get_current_buf = original_get_current_buf
-      vim.api.nvim_buf_get_mark = original_get_mark
-      vim.fn.visualmode = original_visualmode
       -- ========= [A]ssert  =========
       assert.equals(1, #calls)
       assert.same({ line1 = 2, line2 = 6, visual_mode = string.char(22) }, calls[1])
@@ -306,9 +290,9 @@ describe("codex.nvim command registration", function()
           table.insert(calls, opts)
         end,
       }
-      vim.notify = function(msg, level)
+      stub(vim, "notify", function(msg, level)
         table.insert(notifications, { msg = msg, level = level })
-      end
+      end)
 
       require("codex.nvim.commands").register()
 

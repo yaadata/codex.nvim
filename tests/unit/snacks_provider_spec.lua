@@ -1,4 +1,11 @@
+local stub = require("luassert.stub")
 local builtins = require("codex.keymaps").builtins
+
+-- Register luassert cleanup, then keep a plain function for type checks.
+local function stub_real_function(target, key, replacement)
+  stub(target, key)
+  target[key] = replacement
+end
 
 local function default_terminal_keymaps()
   return {
@@ -21,23 +28,7 @@ local function find_keymap(calls, lhs)
 end
 
 local function with_stubbed_vim_api(run)
-  local original_create_autocmd = vim.api.nvim_create_autocmd
-  local original_get_current_buf = vim.api.nvim_get_current_buf
-  local original_list_bufs = vim.api.nvim_list_bufs
-  local original_list_wins = vim.api.nvim_list_wins
-  local original_win_get_buf = vim.api.nvim_win_get_buf
-  local original_set_current_win = vim.api.nvim_set_current_win
-  local original_win_is_valid = vim.api.nvim_win_is_valid
-  local original_win_close = vim.api.nvim_win_close
-  local original_buf_is_valid = vim.api.nvim_buf_is_valid
-  local original_buf_delete = vim.api.nvim_buf_delete
-  local original_buf_get_name = vim.api.nvim_buf_get_name
-  local original_buf_get_var = vim.api.nvim_buf_get_var
-  local original_buf_set_var = vim.api.nvim_buf_set_var
   local original_get_option_value = vim.api.nvim_get_option_value
-  local original_keymap_set = vim.keymap.set
-  local original_cmd = vim.cmd
-  local original_jobstop = vim.fn.jobstop
   local autocmds = {}
   local keymap_set_calls = {}
   local cmd_calls = {}
@@ -54,14 +45,14 @@ local function with_stubbed_vim_api(run)
     set_current_win_calls = {},
   }
 
-  vim.api.nvim_create_autocmd = function(event, spec)
+  stub_real_function(vim.api, "nvim_create_autocmd", function(event, spec)
     table.insert(autocmds, { event = event, spec = spec })
     return #autocmds
-  end
-  vim.api.nvim_get_current_buf = function()
+  end)
+  stub(vim.api, "nvim_get_current_buf", function()
     return state.current_buf
-  end
-  vim.api.nvim_list_bufs = function()
+  end)
+  stub_real_function(vim.api, "nvim_list_bufs", function()
     local bufs = {}
     for bufnr, valid in pairs(state.buf_valid) do
       if valid then
@@ -70,8 +61,8 @@ local function with_stubbed_vim_api(run)
     end
     table.sort(bufs)
     return bufs
-  end
-  vim.api.nvim_list_wins = function()
+  end)
+  stub_real_function(vim.api, "nvim_list_wins", function()
     local wins = {}
     for winid, valid in pairs(state.win_valid) do
       if valid then
@@ -80,45 +71,45 @@ local function with_stubbed_vim_api(run)
     end
     table.sort(wins)
     return wins
-  end
-  vim.api.nvim_win_get_buf = function(winid)
+  end)
+  stub_real_function(vim.api, "nvim_win_get_buf", function(winid)
     return state.win_buf[winid]
-  end
-  vim.api.nvim_set_current_win = function(winid)
+  end)
+  stub(vim.api, "nvim_set_current_win", function(winid)
     table.insert(state.set_current_win_calls, winid)
     state.current_win = winid
     if state.win_buf[winid] then
       state.current_buf = state.win_buf[winid]
     end
-  end
-  vim.api.nvim_win_is_valid = function(winid)
+  end)
+  stub(vim.api, "nvim_win_is_valid", function(winid)
     return state.win_valid[winid] == true
-  end
-  vim.api.nvim_win_close = function(winid)
+  end)
+  stub(vim.api, "nvim_win_close", function(winid)
     state.win_valid[winid] = false
-  end
-  vim.api.nvim_buf_is_valid = function(bufnr)
+  end)
+  stub_real_function(vim.api, "nvim_buf_is_valid", function(bufnr)
     return state.buf_valid[bufnr] == true
-  end
-  vim.api.nvim_buf_delete = function(bufnr)
+  end)
+  stub(vim.api, "nvim_buf_delete", function(bufnr)
     state.buf_valid[bufnr] = false
-  end
-  vim.api.nvim_buf_get_name = function(bufnr)
+  end)
+  stub_real_function(vim.api, "nvim_buf_get_name", function(bufnr)
     return state.buf_names[bufnr] or ""
-  end
-  vim.api.nvim_buf_get_var = function(bufnr, name)
+  end)
+  stub_real_function(vim.api, "nvim_buf_get_var", function(bufnr, name)
     local vars = state.buf_vars[bufnr] or {}
     local value = vars[name]
     if value == nil then
       error("missing buffer var")
     end
     return value
-  end
-  vim.api.nvim_buf_set_var = function(bufnr, name, value)
+  end)
+  stub_real_function(vim.api, "nvim_buf_set_var", function(bufnr, name, value)
     state.buf_vars[bufnr] = state.buf_vars[bufnr] or {}
     state.buf_vars[bufnr][name] = value
-  end
-  vim.api.nvim_get_option_value = function(name, opts)
+  end)
+  stub(vim.api, "nvim_get_option_value", function(name, opts)
     if name ~= "channel" then
       if type(original_get_option_value) == "function" then
         return original_get_option_value(name, opts)
@@ -126,98 +117,74 @@ local function with_stubbed_vim_api(run)
       return 0
     end
     return state.buf_channels[opts.buf] or 0
-  end
-  vim.keymap.set = function(mode, lhs, rhs, opts)
+  end)
+  stub(vim.keymap, "set", function(mode, lhs, rhs, opts)
     table.insert(keymap_set_calls, {
       mode = mode,
       lhs = lhs,
       rhs = rhs,
       opts = opts,
     })
-  end
-  vim.cmd = function(cmd)
+  end)
+  stub(vim, "cmd", function(cmd)
     table.insert(cmd_calls, cmd)
-  end
-  vim.fn.jobstop = function(jobid)
+  end)
+  stub(vim.fn, "jobstop", function(jobid)
     table.insert(state.jobstop_calls, jobid)
-  end
+  end)
 
-  local ok, err = pcall(run, autocmds, keymap_set_calls, cmd_calls, state)
-  vim.api.nvim_create_autocmd = original_create_autocmd
-  vim.api.nvim_get_current_buf = original_get_current_buf
-  vim.api.nvim_list_bufs = original_list_bufs
-  vim.api.nvim_list_wins = original_list_wins
-  vim.api.nvim_win_get_buf = original_win_get_buf
-  vim.api.nvim_set_current_win = original_set_current_win
-  vim.api.nvim_win_is_valid = original_win_is_valid
-  vim.api.nvim_win_close = original_win_close
-  vim.api.nvim_buf_is_valid = original_buf_is_valid
-  vim.api.nvim_buf_delete = original_buf_delete
-  vim.api.nvim_buf_get_name = original_buf_get_name
-  vim.api.nvim_buf_get_var = original_buf_get_var
-  vim.api.nvim_buf_set_var = original_buf_set_var
-  vim.api.nvim_get_option_value = original_get_option_value
-  vim.keymap.set = original_keymap_set
-  vim.cmd = original_cmd
-  vim.fn.jobstop = original_jobstop
-
-  if not ok then
-    error(err)
-  end
+  run(autocmds, keymap_set_calls, cmd_calls, state)
 end
 
 local function with_stubbed_send_env(run)
-  local original_buf_is_valid = vim.api.nvim_buf_is_valid
-  local original_buf_get_var = vim.api.nvim_buf_get_var
-  local original_get_option_value = vim.api.nvim_get_option_value
-  local original_chansend = vim.fn.chansend
   local chansend_calls = {}
   local buf_valid = {}
   local buf_vars = {}
   local buf_channels = {}
 
-  vim.api.nvim_buf_is_valid = function(bufnr)
+  stub_real_function(vim.api, "nvim_buf_is_valid", function(bufnr)
     return buf_valid[bufnr] == true
-  end
-  vim.api.nvim_buf_get_var = function(bufnr, name)
+  end)
+  stub_real_function(vim.api, "nvim_buf_get_var", function(bufnr, name)
     local vars = buf_vars[bufnr] or {}
     local value = vars[name]
     if value == nil then
       error("missing buffer var")
     end
     return value
-  end
-  vim.api.nvim_get_option_value = function(name, opts)
+  end)
+  stub(vim.api, "nvim_get_option_value", function(name, opts)
     if name ~= "channel" then
       error("unsupported option")
     end
     return buf_channels[opts.buf] or 0
-  end
-  vim.fn.chansend = function(jobid, text)
+  end)
+  stub(vim.fn, "chansend", function(jobid, text)
     table.insert(chansend_calls, { jobid = jobid, text = text })
-  end
+  end)
 
-  local ok, err = pcall(run, {
+  run({
     chansend_calls = chansend_calls,
     buf_valid = buf_valid,
     buf_vars = buf_vars,
     buf_channels = buf_channels,
   })
-
-  vim.api.nvim_buf_is_valid = original_buf_is_valid
-  vim.api.nvim_buf_get_var = original_buf_get_var
-  vim.api.nvim_get_option_value = original_get_option_value
-  vim.fn.chansend = original_chansend
-
-  if not ok then
-    error(err)
-  end
 end
 
 describe("codex.providers.snacks", function()
+  local stub_snapshot
+
   before_each(function()
+    stub_snapshot = assert:snapshot()
     package.loaded["snacks"] = nil
+    package.loaded["codex"] = nil
     package.loaded["codex.providers.snacks"] = nil
+  end)
+
+  after_each(function()
+    stub_snapshot:revert()
+    package.loaded["snacks"] = nil
+    package.loaded["codex"] = nil
   end)
 
   it("registers a TermClose autocmd and keymaps when on_exit callback is provided", function()
@@ -420,10 +387,9 @@ describe("codex.providers.snacks", function()
         end,
       }
       local scheduled = {}
-      local original_schedule = vim.schedule
-      vim.schedule = function(cb)
+      stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
-      end
+      end)
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
@@ -438,8 +404,6 @@ describe("codex.providers.snacks", function()
 
       -- ========= [A]ct     =========
       close_map.rhs()
-
-      vim.schedule = original_schedule
 
       -- ========= [A]ssert  =========
       assert.equals(1, #scheduled)
@@ -456,10 +420,9 @@ describe("codex.providers.snacks", function()
         end,
       }
       local scheduled = {}
-      local original_schedule = vim.schedule
-      vim.schedule = function(cb)
+      stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
-      end
+      end)
       local clear_input_calls = 0
       package.loaded["codex"] = {
         clear_input = function()
@@ -480,9 +443,6 @@ describe("codex.providers.snacks", function()
 
       -- ========= [A]ct     =========
       clear_map.rhs()
-
-      vim.schedule = original_schedule
-      package.loaded["codex"] = nil
 
       -- ========= [A]ssert  =========
       assert.equals(1, clear_input_calls)
@@ -826,10 +786,9 @@ describe("codex.providers.snacks", function()
         end,
       }
       local scheduled = {}
-      local original_schedule = vim.schedule
-      vim.schedule = function(cb)
+      stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
-      end
+      end)
       local on_exit_calls = 0
       local provider = require("codex.providers.snacks")
       provider.open(
@@ -851,8 +810,6 @@ describe("codex.providers.snacks", function()
 
       -- ========= [A]ct     =========
       autocmds[1].spec.callback()
-
-      vim.schedule = original_schedule
 
       -- ========= [A]ssert  =========
       assert.equals(1, on_exit_calls)
@@ -876,10 +833,9 @@ describe("codex.providers.snacks", function()
         end,
       }
       local scheduled = {}
-      local original_schedule = vim.schedule
-      vim.schedule = function(cb)
+      stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
-      end
+      end)
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
@@ -892,8 +848,6 @@ describe("codex.providers.snacks", function()
 
       -- ========= [A]ct     =========
       scheduled[1]()
-
-      vim.schedule = original_schedule
 
       -- ========= [A]ssert  =========
       assert.equals(1, close_calls)

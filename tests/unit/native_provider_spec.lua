@@ -1,4 +1,11 @@
+local stub = require("luassert.stub")
 local builtins = require("codex.keymaps").builtins
+
+-- Register luassert cleanup, then keep a plain function for type checks.
+local function stub_real_function(target, key, replacement)
+  stub(target, key)
+  target[key] = replacement
+end
 
 local function default_terminal_keymaps()
   return {
@@ -60,45 +67,10 @@ local function make_config(overrides)
 end
 
 local function with_stubbed_native_env(run)
-  local api_methods = {
-    "nvim_list_wins",
-    "nvim_list_bufs",
-    "nvim_win_get_buf",
-    "nvim_get_current_win",
-    "nvim_get_current_buf",
-    "nvim_create_buf",
-    "nvim_win_set_buf",
-    "nvim_win_set_width",
-    "nvim_win_set_height",
-    "nvim_open_win",
-    "nvim_win_is_valid",
-    "nvim_set_current_win",
-    "nvim_win_close",
-    "nvim_buf_is_valid",
-    "nvim_buf_delete",
-    "nvim_buf_get_name",
-    "nvim_buf_get_var",
-    "nvim_buf_set_var",
-    "nvim_get_option_value",
-    "nvim_create_autocmd",
-  }
-  local fn_methods = { "getcwd", "termopen", "chansend", "jobstop" }
-
-  local original_api = {}
-  local original_fn = {}
-  local original_cmd = vim.cmd
   local original_bo = vim.bo
-  local original_keymap_set = vim.keymap.set
   local original_columns = vim.o.columns
   local original_lines = vim.o.lines
   local original_get_option_value = vim.api.nvim_get_option_value
-
-  for _, method in ipairs(api_methods) do
-    original_api[method] = vim.api[method]
-  end
-  for _, method in ipairs(fn_methods) do
-    original_fn[method] = vim.fn[method]
-  end
 
   local state = {
     next_buf = 2,
@@ -315,47 +287,39 @@ local function with_stubbed_native_env(run)
     })
   end
 
-  vim.api.nvim_list_wins = nvim_list_wins
-  vim.api.nvim_list_bufs = nvim_list_bufs
-  vim.api.nvim_win_get_buf = nvim_win_get_buf
-  vim.api.nvim_get_current_win = nvim_get_current_win
-  vim.api.nvim_get_current_buf = nvim_get_current_buf
-  vim.api.nvim_create_buf = nvim_create_buf
-  vim.api.nvim_win_set_buf = nvim_win_set_buf
-  vim.api.nvim_win_set_width = nvim_win_set_width
-  vim.api.nvim_win_set_height = nvim_win_set_height
-  vim.api.nvim_open_win = nvim_open_win
-  vim.api.nvim_win_is_valid = nvim_win_is_valid
-  vim.api.nvim_set_current_win = nvim_set_current_win
-  vim.api.nvim_win_close = nvim_win_close
-  vim.api.nvim_buf_is_valid = nvim_buf_is_valid
-  vim.api.nvim_buf_delete = nvim_buf_delete
-  vim.api.nvim_buf_get_name = nvim_buf_get_name
-  vim.api.nvim_buf_get_var = nvim_buf_get_var
-  vim.api.nvim_buf_set_var = nvim_buf_set_var
-  vim.api.nvim_get_option_value = nvim_get_option_value
-  vim.api.nvim_create_autocmd = nvim_create_autocmd
-  vim.fn.getcwd = getcwd
-  vim.fn.termopen = termopen
-  vim.fn.chansend = chansend
-  vim.fn.jobstop = jobstop
-  vim.cmd = fake_cmd
+  stub_real_function(vim.api, "nvim_list_wins", nvim_list_wins)
+  stub_real_function(vim.api, "nvim_list_bufs", nvim_list_bufs)
+  stub_real_function(vim.api, "nvim_win_get_buf", nvim_win_get_buf)
+  stub(vim.api, "nvim_get_current_win", nvim_get_current_win)
+  stub(vim.api, "nvim_get_current_buf", nvim_get_current_buf)
+  stub(vim.api, "nvim_create_buf", nvim_create_buf)
+  stub(vim.api, "nvim_win_set_buf", nvim_win_set_buf)
+  stub(vim.api, "nvim_win_set_width", nvim_win_set_width)
+  stub(vim.api, "nvim_win_set_height", nvim_win_set_height)
+  stub(vim.api, "nvim_open_win", nvim_open_win)
+  stub(vim.api, "nvim_win_is_valid", nvim_win_is_valid)
+  stub(vim.api, "nvim_set_current_win", nvim_set_current_win)
+  stub(vim.api, "nvim_win_close", nvim_win_close)
+  stub_real_function(vim.api, "nvim_buf_is_valid", nvim_buf_is_valid)
+  stub(vim.api, "nvim_buf_delete", nvim_buf_delete)
+  stub_real_function(vim.api, "nvim_buf_get_name", nvim_buf_get_name)
+  stub_real_function(vim.api, "nvim_buf_get_var", nvim_buf_get_var)
+  stub_real_function(vim.api, "nvim_buf_set_var", nvim_buf_set_var)
+  stub_real_function(vim.api, "nvim_get_option_value", nvim_get_option_value)
+  stub_real_function(vim.api, "nvim_create_autocmd", nvim_create_autocmd)
+  stub(vim.fn, "getcwd", getcwd)
+  stub(vim.fn, "termopen", termopen)
+  stub(vim.fn, "chansend", chansend)
+  stub(vim.fn, "jobstop", jobstop)
+  stub(vim, "cmd", fake_cmd)
+  stub(vim.keymap, "set", keymap_set)
   vim.bo = fake_bo
-  vim.keymap.set = keymap_set
   vim.o.columns = 120
   vim.o.lines = 50
 
   local ok, err = pcall(run, state)
 
-  for _, method in ipairs(api_methods) do
-    vim.api[method] = original_api[method]
-  end
-  for _, method in ipairs(fn_methods) do
-    vim.fn[method] = original_fn[method]
-  end
-  vim.cmd = original_cmd
   vim.bo = original_bo
-  vim.keymap.set = original_keymap_set
   vim.o.columns = original_columns
   vim.o.lines = original_lines
 
@@ -365,8 +329,17 @@ local function with_stubbed_native_env(run)
 end
 
 describe("codex.providers.native", function()
+  local stub_snapshot
+
   before_each(function()
+    stub_snapshot = assert:snapshot()
+    package.loaded["codex"] = nil
     package.loaded["codex.providers.native"] = nil
+  end)
+
+  after_each(function()
+    stub_snapshot:revert()
+    package.loaded["codex"] = nil
   end)
 
   it("opens vsplit windows and restores previous window when focus=false", function()
@@ -502,10 +475,9 @@ describe("codex.providers.native", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
       local scheduled = {}
-      local original_schedule = vim.schedule
-      vim.schedule = function(cb)
+      stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
-      end
+      end)
       local provider = require("codex.providers.native")
       local cfg = make_config({
         terminal = {
@@ -520,8 +492,6 @@ describe("codex.providers.native", function()
       -- ========= [A]ct     =========
       close_map.rhs()
 
-      vim.schedule = original_schedule
-
       -- ========= [A]ssert  =========
       assert.equals(1, #scheduled)
       assert.is_function(scheduled[1])
@@ -532,10 +502,9 @@ describe("codex.providers.native", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
       local scheduled = {}
-      local original_schedule = vim.schedule
-      vim.schedule = function(cb)
+      stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
-      end
+      end)
       local clear_input_calls = 0
       package.loaded["codex"] = {
         clear_input = function()
@@ -560,9 +529,6 @@ describe("codex.providers.native", function()
 
       -- ========= [A]ct     =========
       clear_map.rhs()
-
-      vim.schedule = original_schedule
-      package.loaded["codex"] = nil
 
       -- ========= [A]ssert  =========
       assert.equals(1, clear_input_calls)
@@ -781,10 +747,9 @@ describe("codex.providers.native", function()
         },
       })
       local notify_calls = 0
-      local original_notify = vim.notify
-      vim.notify = function()
+      stub(vim, "notify", function()
         notify_calls = notify_calls + 1
-      end
+      end)
       local exited_handle = nil
       local handle = provider.open("codex", {}, {}, cfg, true, function(cb_handle)
         exited_handle = cb_handle
@@ -793,8 +758,6 @@ describe("codex.providers.native", function()
 
       -- ========= [A]ct     =========
       state.termopen_calls[1].opts.on_exit(nil, -1)
-
-      vim.notify = original_notify
 
       -- ========= [A]ssert  =========
       assert.same(handle, exited_handle)
@@ -1187,10 +1150,9 @@ describe("codex.providers.native", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
       local scheduled = {}
-      local original_schedule = vim.schedule
-      vim.schedule = function(cb)
+      stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
-      end
+      end)
 
       local provider = require("codex.providers.native")
       local handle = {
@@ -1210,8 +1172,6 @@ describe("codex.providers.native", function()
 
       -- ========= [A]ct     =========
       state.autocmds[1].spec.callback()
-
-      vim.schedule = original_schedule
 
       -- ========= [A]ssert  =========
       assert.is_nil(handle.jobid)
