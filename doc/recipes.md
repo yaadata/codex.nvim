@@ -41,18 +41,26 @@ Use lifecycle hooks when you want editor-local behavior applied whenever a Codex
 terminal is opened or restored.
 
 ```lua
+local function disable_spell(ctx)
+  if type(ctx.winid) == "number" and vim.api.nvim_win_is_valid(ctx.winid) then
+    vim.wo[ctx.winid].spell = false
+    return
+  end
+
+  if type(ctx.bufnr) ~= "number" then
+    return
+  end
+
+  for _, winid in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_buf(winid) == ctx.bufnr then
+      vim.wo[winid].spell = false
+    end
+  end
+end
 require("codex").setup({
   hooks = {
-    on_terminal_open = function(ctx)
-      if ctx.bufnr then
-        vim.bo[ctx.bufnr].spell = false
-      end
-    end,
-    on_terminal_restore = function(ctx)
-      if ctx.bufnr then
-        vim.bo[ctx.bufnr].spell = false
-      end
-    end,
+    on_terminal_open = disable_spell,
+    on_terminal_restore = disable_spell,
   },
 })
 ```
