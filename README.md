@@ -37,13 +37,13 @@
 
 ## Requirements
 
-- Neovim >= 0.11.0
+- Neovim >= 0.12.0
 - `codex` available on your `PATH` (or configure `launch.cmd`)
 
 > [!CAUTION]
 > You are reading the `main` branch README. Install details may differ from
 > tagged releases. The current latest release tag is
-> [`v1.0.0`](https://codeberg.org/yaadata/codex.nvim/src/tag/v1.0.0). For
+> [`v1.1.0`](https://codeberg.org/yaadata/codex.nvim/src/tag/v1.1.0). For
 > version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -52,7 +52,7 @@
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "1.0.0",
+  version = "1.1.0",
   cmd = {
     "Codex",
     "CodexFocus",
@@ -172,7 +172,8 @@ Common entry points:
 - `:Codex` toggles the Codex terminal
 - `:CodexSendSelection` sends the active visual selection
 - `:CodexSendFile` sends the current buffer as an ACP file reference
-- `:CodexSendSkill code:comment` inserts the `comment` skill from the `code` plugin
+- `:CodexSendSkill code:comment` inserts the `comment` skill from the `code`
+  plugin
 - `:CodexMentionFile [path]` and `:CodexMentionDirectory [path]` send `/mention`
 - `:CodexResume[!]` resumes in-process or launches `codex resume`
 
