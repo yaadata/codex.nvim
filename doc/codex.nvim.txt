@@ -65,6 +65,7 @@ Example lazy.nvim spec:
       "CodexClearInput",
       "CodexSendSelection",
       "CodexSendFile",
+      "CodexSendSkill",
       "CodexMentionFile",
       "CodexMentionDirectory",
       "CodexResume",
@@ -347,6 +348,10 @@ CodexSendSelection                                       *:CodexSendSelection*
 CodexSendFile                                                 *:CodexSendFile*
     Send the current buffer path as an ACP file reference (`@path`).
 
+CodexSendSkill {skill}                                       *:CodexSendSkill*
+    Insert a literal skill invocation into the Codex prompt. Use `name` for a
+    standalone skill or `plugin:name` for a skill supplied by a plugin.
+
 CodexMentionFile [path]                                    *:CodexMentionFile*
     Send `/mention` for a file path. When `[path]` is omitted, use the current
     buffer path.
@@ -423,6 +428,19 @@ Sending and input                                        *codex-nvim-api-send*
 send({text})                                                      *codex.send*
     Send raw text through the standard send pipeline.
     `text` is required.
+    Returns: `ok, err`
+
+send_skill({opts})                                          *codex.send_skill*
+    Insert a literal skill invocation as bracketed paste without focusing or
+    submitting the Codex prompt.
+
+    `opts.name`
+      Required skill name.
+
+    `opts.plugin`
+      Optional plugin name. When present, the invocation is `$plugin:name `;
+      otherwise it is `$name `.
+
     Returns: `ok, err`
 
 clear_input()                                              *codex.clear_input*
@@ -536,6 +554,12 @@ File sends                                          *codex-nvim-behavior-file*
 - The path must resolve to a regular file.
 - The sent payload is an ACP-style `@path` reference with a trailing space.
 
+Skill sends                                        *codex-nvim-behavior-skill*
+
+- `:CodexSendSkill code-comment` inserts `$code-comment `.
+- `:CodexSendSkill code:comment` inserts `$code:comment `.
+- Skill sends use bracketed paste and do not focus or submit the prompt.
+
 Mention helpers                                  *codex-nvim-behavior-mention*
 
 - Mention commands accept an explicit path or fall back to the current buffer
@@ -585,6 +609,7 @@ Example lazy.nvim global mappings:
       "CodexClearInput",
       "CodexSendSelection",
       "CodexSendFile",
+      "CodexSendSkill",
       "CodexMentionFile",
       "CodexMentionDirectory",
       "CodexResume",

@@ -16,4 +16,3 @@ coverage/
 *.out
 
 .plans/
-.claude/*.local.*

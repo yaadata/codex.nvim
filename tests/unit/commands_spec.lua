@@ -331,6 +331,51 @@ describe("codex.nvim command registration", function()
     end)
   end)
 
+  it("dispatches a plugin-qualified :CodexSendSkill argument", function()
+    with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
+      local calls = {}
+
+      package.loaded["codex"] = {
+        send_skill = function(opts)
+          table.insert(calls, opts)
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
+      registered.CodexSendSkill.callback({ args = "code:comment" })
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, #calls)
+      assert.same({ plugin = "code", name = "comment" }, calls[1])
+      assert.equals(1, registered.CodexSendSkill.opts.nargs)
+    end)
+  end)
+
+  it("dispatches an unqualified :CodexSendSkill argument", function()
+    with_stubbed_command_registration(function(registered)
+      -- ========= [A]rrange =========
+      local calls = {}
+
+      package.loaded["codex"] = {
+        send_skill = function(opts)
+          table.insert(calls, opts)
+        end,
+      }
+
+      require("codex.nvim.commands").register()
+
+      -- ========= [A]ct     =========
+      registered.CodexSendSkill.callback({ args = "code-comment" })
+
+      -- ========= [A]ssert  =========
+      assert.equals(1, #calls)
+      assert.same({ name = "code-comment" }, calls[1])
+    end)
+  end)
+
   it("dispatches :CodexMentionFile with explicit argument", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========

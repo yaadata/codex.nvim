@@ -5,6 +5,7 @@ local M = {}
 local terminal_io = require("codex.runtime.terminal_io")
 local session_lifecycle = require("codex.state.session_lifecycle")
 local send_dispatch_mod = require("codex.runtime.send_dispatch")
+local skill_send_mod = require("codex.context.skill_send")
 local mention_mod = require("codex.context.mention")
 local wrapper_command_mod = require("codex.context.wrapper_command")
 local prompt_ops = require("codex.context.prompt_ops")
@@ -31,6 +32,7 @@ local state = {
   deps = nil,
   send_queue = nil,
   send_dispatch = nil,
+  skill_send = nil,
   selection_send = nil,
   mention = nil,
   wrapper_command = nil,
@@ -103,6 +105,12 @@ function M.setup(opts)
     retry_interval_ms = state.config.terminal.startup.retry_interval_ms,
     process = function(item)
       return state.send_dispatch.process_pending_send_item(item)
+    end,
+  })
+
+  state.skill_send = skill_send_mod.create({
+    dispatch_send = function(text)
+      return state.send_dispatch.dispatch_send(text)
     end,
   })
 
@@ -234,6 +242,14 @@ function M.send(text)
     open_focus = false,
     post_focus = true,
   })
+end
+
+---@param opts codex.SendSkillOptions
+---@return codex.SendResult ok
+---@return string|nil err
+function M.send_skill(opts)
+  ensure_setup()
+  return state.skill_send.send_skill(opts)
 end
 
 ---Sends Ctrl-C to clear the current terminal input.

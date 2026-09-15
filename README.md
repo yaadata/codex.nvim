@@ -60,6 +60,7 @@
     "CodexClearInput",
     "CodexSendSelection",
     "CodexSendFile",
+    "CodexSendSkill",
     "CodexMentionFile",
     "CodexMentionDirectory",
     "CodexResume",
@@ -171,6 +172,7 @@ Common entry points:
 - `:Codex` toggles the Codex terminal
 - `:CodexSendSelection` sends the active visual selection
 - `:CodexSendFile` sends the current buffer as an ACP file reference
+- `:CodexSendSkill code:comment` inserts the `comment` skill from the `code` plugin
 - `:CodexMentionFile [path]` and `:CodexMentionDirectory [path]` send `/mention`
 - `:CodexResume[!]` resumes in-process or launches `codex resume`
 

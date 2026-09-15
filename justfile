@@ -17,6 +17,9 @@ test-unit jobs="4":
 test-contract:
 	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/contract/provider_contract_spec.lua' -c 'qa'
 
+test-file file:
+	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c "PlenaryBustedFile {{file}}" -c 'qa'
+
 fmt:
 	stylua lua plugin tests
 	mdformat --number doc/ README.md
