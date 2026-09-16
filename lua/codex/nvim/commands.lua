@@ -1,5 +1,17 @@
 local M = {}
 local CTRL_V = string.char(22)
+local COMMAND_NAMES = {
+  "Codex",
+  "CodexFocus",
+  "CodexClose",
+  "CodexClearInput",
+  "CodexSendSelection",
+  "CodexSendFile",
+  "CodexSendSkill",
+  "CodexMentionFile",
+  "CodexMentionDirectory",
+  "CodexResume",
+}
 
 --- Return the two line numbers in ascending order.
 ---@param line1 integer
@@ -185,6 +197,14 @@ function M.register()
     nargs = 0,
     bang = true,
   })
+end
+
+--- Unregister all :Codex* user commands owned by the plugin.
+---@return nil
+function M.unregister()
+  for _, name in ipairs(COMMAND_NAMES) do
+    pcall(vim.api.nvim_del_user_command, name)
+  end
 end
 
 return M

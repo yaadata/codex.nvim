@@ -10,6 +10,7 @@ local mention_mod = require("codex.context.mention")
 local wrapper_command_mod = require("codex.context.wrapper_command")
 local prompt_ops = require("codex.context.prompt_ops")
 local hooks = require("codex.hooks")
+local AUGROUP_NAMES = { "codex_focus_tracking", "codex_session_restore" }
 
 local default_deps = {
   config = require("codex.config"),
@@ -62,6 +63,51 @@ local function schedule_restore_attempt()
     end
     session_lifecycle.restore_session_if_needed(get_deps(), state.config)
   end)
+end
+
+---Deactivate codex.nvim before lazy.nvim unloads its Lua modules.
+---@return nil
+function M.deactivate()
+  local deps = state.deps
+  local config = state.config
+
+  state.initialized = false
+
+  if state.send_queue then
+    state.send_queue:reset()
+  end
+
+  if deps and config then
+    session_lifecycle.close_session(deps, config, nil)
+  end
+
+  if deps then
+    if deps.commands and type(deps.commands.unregister) == "function" then
+      deps.commands.unregister()
+    end
+
+    local api = deps.vim and deps.vim.api or {}
+    if type(api.nvim_del_augroup_by_name) == "function" then
+      for _, name in ipairs(AUGROUP_NAMES) do
+        pcall(api.nvim_del_augroup_by_name, name)
+      end
+    end
+
+    if deps.session_store and type(deps.session_store.reset) == "function" then
+      deps.session_store.reset()
+    end
+  end
+
+  state.config = nil
+  state.deps = nil
+  state.send_queue = nil
+  state.send_dispatch = nil
+  state.skill_send = nil
+  state.selection_send = nil
+  state.mention = nil
+  state.wrapper_command = nil
+  state.focus_state.previous = nil
+  state.focus_state.last_non_codex = nil
 end
 
 ---Initializes codex.nvim state, commands, queue, and lifecycle hooks.
@@ -178,6 +224,9 @@ function M.setup(opts)
 
   if state.config.launch.auto_start then
     deps.vim.schedule(function()
+      if not state.initialized then
+        return
+      end
       M.open(false)
     end)
   end

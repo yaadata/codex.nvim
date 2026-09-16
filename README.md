@@ -72,6 +72,9 @@
 }
 ```
 
+This configuration supports `:Lazy reload codex.nvim`. Reload closes any active
+Codex terminal.
+
 ## Configuration
 
 Use this as a quick-reference setup example. For full behavior notes and the

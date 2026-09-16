@@ -99,6 +99,8 @@ When using lazy.nvim with `cmd` and `opts`, prefer:
 `setup()` registers the `:Codex*` commands and wires the runtime state used by
 the public Lua API.
 
+lazy.nvim calls `require("codex").deactivate()` before unloading the plugin.
+
 ==============================================================================
 CONFIGURATION REFERENCE                                    *codex-nvim-config*
 
@@ -378,6 +380,12 @@ Setup and runtime                                     *codex-nvim-api-runtime*
 setup({opts})                                                    *codex.setup*
     Initialize plugin config and runtime state, and register `:Codex*`
     commands.
+    Returns: `nil`
+
+deactivate()                                               *codex.deactivate*
+    Retire plugin runtime state before unloading or reconfiguring the plugin.
+    Closes the active terminal, removes plugin commands and autocmds, and
+    invalidates pending work. lazy.nvim calls this automatically on reload.
     Returns: `nil`
 
 is_running()                                                *codex.is_running*
