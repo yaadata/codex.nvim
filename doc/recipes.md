@@ -4,6 +4,7 @@
 - [Lua API Recipes](#lua-api-recipes)
   - [Disable spellcheck in Codex terminal buffers](#disable-spellcheck)
   - [Send arbitrary text from a normal-mode keymap](#send-arbitrary-text)
+  - [Insert a skill invocation from a normal-mode keymap](#send-skill)
   - [Prompt for text, then send it to Codex](#prompt-and-send)
   - [Send a visual selection, then add a follow-up instruction](#send-selection-follow-up)
   - [Copy the current prompt input](#copy-prompt-input)
@@ -30,7 +31,7 @@ scan outside the helpfile.
 
 These recipes build custom editor keymaps on top of the public Lua API
 documented in `:help codex.nvim`, especially `|codex-nvim-api-send|`,
-`|codex.execute_slash_command|`, `|codex.copy_input|`, and
+`|codex.send_skill|`, `|codex.execute_slash_command|`, `|codex.copy_input|`, and
 `|codex-nvim-keymaps|`.
 
 <a id="disable-spellcheck"></a>
@@ -82,6 +83,29 @@ vim.keymap.set("n", "<leader>aw", function()
     )
   end
 end, { desc = "Codex: Write a test" })
+```
+
+<a id="send-skill"></a>
+
+### Insert a skill invocation from a normal-mode keymap
+
+Use `require("codex").send_skill()` to insert a skill invocation without
+focusing Codex or submitting the prompt. Pass plugin-provided skills as separate
+`plugin` and `name` fields; omit `plugin` for a standalone skill.
+
+```lua
+vim.keymap.set("n", "<leader>ac", function()
+  local ok, err = require("codex").send_skill({
+    plugin = "code",
+    name = "comment",
+  })
+  if not ok then
+    vim.notify(
+      ("Codex: failed to insert skill%s"):format(err and (": " .. err) or ""),
+      vim.log.levels.ERROR
+    )
+  end
+end, { desc = "Codex: Insert comment skill" })
 ```
 
 <a id="prompt-and-send"></a>
