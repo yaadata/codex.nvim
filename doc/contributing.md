@@ -139,13 +139,10 @@ manually; `mdformat` does not manage it.
 mise exec -- just lint
 ```
 
-Selene configuration (`selene.toml` + `codex.yml`):
+Selene configuration (`selene.toml` + `selene_std.yml`):
 
-- Uses a custom `codex` standard defined in `codex.yml`.
+- Uses a custom standard for selene lints.
 - Base standard: `lua51`.
-- Additional globals: `vim` (with `new-fields`), `describe`, `it`,
-  `before_each`, `after_each`, `assert` (with `new-fields`).
-- Excludes `.deps/**` from linting.
 
 ## Pre-Commit Hooks
 
@@ -276,8 +273,8 @@ values, still need explicit restore handling.
 
 Do not replace dependency-injected `fake_vim` functions with luassert stubs when
 the production code checks `type(api_fn) == "function"`. Luassert stubs are
-callable test doubles, but they do not behave like plain Lua functions for
-those type checks. Keep those fake-vim overrides as real functions.
+callable test doubles, but they do not behave like plain Lua functions for those
+type checks. Keep those fake-vim overrides as real functions.
 
 ### Test Structure
 

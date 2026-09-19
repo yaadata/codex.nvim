@@ -1,8 +1,11 @@
+# Used by selene.toml file (see: https://luals.github.io/wiki/settings/)
 base: lua51
 
 globals:
   vim:
-    property: new-fields
+    any: true
+  assert:
+    any: true
   describe:
     any: true
   it:
@@ -11,5 +14,3 @@ globals:
     any: true
   after_each:
     any: true
-  assert:
-    property: new-fields

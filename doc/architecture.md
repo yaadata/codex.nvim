@@ -124,7 +124,7 @@ codex.nvim/
 ├── justfile                         # Task runner (test, fmt, lint, bootstrap).
 ├── .stylua.toml                     # Stylua formatter configuration.
 ├── selene.toml                      # Selene linter configuration.
-├── codex.yml                        # Custom selene standard (lua51 + vim/test globals).
+├── selene_std.yml                   # Custom selene standard (lua51 + vim/test globals).
 ├── mise.toml                        # Mise tool version pins (stylua, selene, mdformat,
 │                                    # pre-commit).
 └── .pre-commit-config.yaml          # Pre-commit hooks (fmt-check, lint, md-fmt-check,
@@ -274,8 +274,8 @@ closure) even though the queue is created after the dispatch instance.
 After wiring, setup registers `:Codex*` commands and cleanup autocmds. In
 lazy.nvim `cmd + opts` setups, first-command discovery and plugin load are
 handled by lazy command stubs before `setup()` runs. Global keymaps are
-intentionally not managed in runtime setup; users configure them in their
-plugin manager (for example lazy.nvim `keys`).
+intentionally not managed in runtime setup; users configure them in their plugin
+manager (for example lazy.nvim `keys`).
 
 ### Error Handling
 
@@ -299,9 +299,9 @@ failures downstream.
 APIs that need an active session (`send`, `execute_slash_command`, `focus`,
 `send_selection`, `mention_file`, `mention_directory`) automatically open one
 when needed. The lower-level `send` API opens without focus, while
-command-facing flows (`:CodexSendSelection`, `:CodexMentionFile`) ensure the terminal is
-opened with focus before payload dispatch. If the provider handle is not yet
-ready, payloads are queued and retried on a timer
+command-facing flows (`:CodexSendSelection`, `:CodexMentionFile`) ensure the
+terminal is opened with focus before payload dispatch. If the provider handle is
+not yet ready, payloads are queued and retried on a timer
 (`terminal.startup.retry_interval_ms`) until ready or timeout
 (`terminal.startup.timeout_ms`). Queueing/scheduling is implemented in
 `runtime/send_queue.lua`, while `runtime/send_dispatch.lua` owns
@@ -367,5 +367,5 @@ own internal handle structure; the core never inspects handle contents.
 6. Add an entry to `provider_modules` in
    `tests/contract/provider_contract_spec.lua` so the contract tests cover it.
 7. If the provider accepts options, add a default entry under
-   `terminal.provider_opts` in `config.lua` and honor shared
-   `terminal.keymaps` semantics via `codex.keymaps.apply_terminal`.
+   `terminal.provider_opts` in `config.lua` and honor shared `terminal.keymaps`
+   semantics via `codex.keymaps.apply_terminal`.

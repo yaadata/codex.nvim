@@ -1,2 +1,1 @@
-std = "codex"
-exclude = [".deps/**"]
+std = "selene_std"
