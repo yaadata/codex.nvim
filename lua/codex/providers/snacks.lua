@@ -1,5 +1,5 @@
 local log = require("codex.logger")
-local keymaps = require("codex.keymaps")
+local keymaps = require("codex.nvim.keymaps")
 local terminal_utils = require("codex.providers.terminal_utils")
 
 local M = {}

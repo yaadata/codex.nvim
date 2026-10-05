@@ -1,36 +1,13 @@
+local result = require("codex.enums.send_result")
 local terminal_io = require("codex.runtime.terminal_io")
 local session_lifecycle = require("codex.state.session_lifecycle")
 
 ---@class codex.PendingSend
----@field text string
----@field open_focus boolean
----@field pre_focus boolean
----@field post_focus boolean
----@field command_path string|nil
----@field on_sent fun()|nil
----@field created_at integer
----@field opened_in_dispatch boolean
----@field reopen_attempted boolean
----@field has_attempted boolean
-
----@class codex.DispatchSendOpts
----@field open_focus? boolean
----@field pre_focus? boolean
----@field post_focus? boolean
----@field command_path? string
----@field on_sent? fun()
-
----@class codex.SendDispatchOpts
----@field get_deps fun(): table
----@field get_config fun(): table
----@field get_send_queue fun(): codex.SendQueue
----@field open_session fun(args: string[], focus: boolean)
-
 local M = {}
 
 ---Creates a send dispatch instance with the given accessors.
 ---@param opts codex.SendDispatchOpts
----@return { dispatch_send: fun(text: string, opts?: codex.DispatchSendOpts): codex.SendResult, string|nil, process_pending_send_item: fun(item: codex.PendingSend): "sent"|"retry"|"drop", string|nil }
+---@return codex.SendDispatch
 function M.create(opts)
   local get_deps = opts.get_deps
   local get_config = opts.get_config
@@ -117,7 +94,7 @@ function M.create(opts)
 
   ---Queue processor: ensures session readiness, retries, or drops timed-out/failed sends.
   ---@param item codex.PendingSend
-  ---@return "sent"|"retry"|"drop" outcome
+  ---@return codex.SendResult outcome
   ---@return string|nil err
   local function process_pending_send_item(item)
     local deps = get_deps()
@@ -169,14 +146,14 @@ function M.create(opts)
           elapsed_ms
         )
         log_send_timeout(item)
-        return "drop"
+        return result.DROP
       end
       vdebug(
         "process_pending_send_item retry waiting for readiness command_path=%s elapsed_ms=%d",
         item.command_path or "<text>",
         elapsed_ms
       )
-      return "retry"
+      return result.RETRY
     end
 
     local ok, err = send_item_now(item, session, provider)
@@ -190,14 +167,14 @@ function M.create(opts)
       return "drop", err
     end
     vdebug("process_pending_send_item sent command_path=%s", item.command_path or "<text>")
-    return "sent"
+    return result.SENT
   end
 
   ---Queues a payload for robust send with startup/retry semantics.
   ---@param text string
   ---@param send_opts? codex.DispatchSendOpts
-  ---@return codex.SendResult ok True when payload is sent immediately or queued for retry.
-  ---@return string|nil err
+  ---@return codex.Outcome ok True when payload is sent immediately or queued for retry.
+  ---@return codex.Error err
   local function dispatch_send(text, send_opts)
     send_opts = send_opts or {}
     local deps = get_deps()

@@ -16,7 +16,7 @@ describe("codex.context.formatter", function()
       local result = formatter.format_selection(selection_spec)
 
       -- ========= [A]ssert  =========
-      assert.equals(
+      assert.equal(
         "@/tmp/example.lua#L10-12\n\n```lua\nlocal a = 1\nlocal b = 2\nreturn a + b\n```\n",
         result
       )
@@ -36,7 +36,7 @@ describe("codex.context.formatter", function()
       local result = formatter.format_selection(selection_spec)
 
       -- ========= [A]ssert  =========
-      assert.equals("@a.txt#L1\n\n```text\nhello\n```\n", result)
+      assert.equal("@a.txt#L1\n\n```text\nhello\n```\n", result)
     end)
 
     it("uses text fence when filetype is empty", function()
@@ -105,7 +105,7 @@ describe("codex.context.formatter", function()
       local result = formatter.format_selection(selection_spec)
 
       -- ========= [A]ssert  =========
-      assert.equals("@plain.txt#L5-6\n\n```text\nline a\nline b\n```\n", result)
+      assert.equal("@plain.txt#L5-6\n\n```text\nline a\nline b\n```\n", result)
     end)
   end)
 
@@ -118,7 +118,7 @@ describe("codex.context.formatter", function()
       local result = formatter.format_mention(filepath)
 
       -- ========= [A]ssert  =========
-      assert.equals('/mention "/tmp/dir with space/file.lua"', result)
+      assert.equal('/mention "/tmp/dir with space/file.lua"', result)
     end)
 
     it("escapes double-quotes and backslashes for shell-significant paths", function()
@@ -129,7 +129,7 @@ describe("codex.context.formatter", function()
       local result = formatter.format_mention(filepath)
 
       -- ========= [A]ssert  =========
-      assert.equals('/mention "C:\\\\work\\\\my \\"file\\".lua"', result)
+      assert.equal('/mention "C:\\\\work\\\\my \\"file\\".lua"', result)
     end)
 
     it("does not include trailing newline", function()
@@ -140,7 +140,7 @@ describe("codex.context.formatter", function()
       local result = formatter.format_mention(filepath)
 
       -- ========= [A]ssert  =========
-      assert.equals("/mention file.lua", result)
+      assert.equal("/mention file.lua", result)
     end)
   end)
 
@@ -153,7 +153,7 @@ describe("codex.context.formatter", function()
       local result = formatter.format_buffer_ref(filepath)
 
       -- ========= [A]ssert  =========
-      assert.equals("@lua/codex/init.lua ", result)
+      assert.equal("@lua/codex/init.lua ", result)
     end)
   end)
 end)

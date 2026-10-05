@@ -121,8 +121,8 @@ vim.keymap.set("n", "<leader>ap", function()
     if not input or input == "" then
       return
     end
-
-    local ok, err = require("codex").send(input)
+    local codex = require("codex")
+    local ok, err = codex.prompt_builder.add(input)
     if not ok then
       vim.notify(
         ("Codex: failed to send text%s"):format(err and (": " .. err) or ""),
@@ -143,7 +143,7 @@ append an instruction, then submit the prompt explicitly.
 ```lua
 vim.keymap.set("x", "<leader>ar", function()
   local codex = require("codex")
-  local ok, err = codex.send_selection()
+  local ok, err = codex.prompt_builder.add_selection()
   if not ok then
     vim.notify(
       ("Codex: failed to collect selection%s"):format(err and (": " .. err) or ""),
@@ -152,7 +152,7 @@ vim.keymap.set("x", "<leader>ar", function()
     return
   end
 
-  ok, err = codex.send("$code-review the current selection ")
+  ok, err = codex.prompt_builder.add("$code-review the current selection ")
   if not ok then
     vim.notify(
       ("Codex: failed to send follow-up text%s"):format(err and (": " .. err) or ""),
@@ -161,7 +161,7 @@ vim.keymap.set("x", "<leader>ar", function()
     return
   end
 
-  ok, err = codex.submit_input()
+  ok, err = codex.prompt_builder.submit()
   if not ok then
     vim.notify(
       ("Codex: failed to submit input%s"):format(err and (": " .. err) or ""),
@@ -235,6 +235,7 @@ return {
   dependencies = {
     "nvim-tree/nvim-web-devicons",
     { "echasnovski/mini.icons", opts = {} },
+    "yaadata/codex.nvim",
   },
   config = function()
     local oil = require("oil")

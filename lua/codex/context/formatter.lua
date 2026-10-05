@@ -1,3 +1,4 @@
+---@class codex.Formatter
 local M = {}
 
 ---@class codex.SelectionSpec

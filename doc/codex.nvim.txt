@@ -1,5 +1,5 @@
 *codex.nvim.txt*
-*codex.nvim* *codex*
+*codex.nvim*                                                           *codex*
 ==============================================================================
 codex.nvim
 
@@ -14,6 +14,15 @@ CONTENTS                                                 *codex-nvim-contents*
 5. Configuration Reference                                 |codex-nvim-config|
 6. Commands                                              |codex-nvim-commands|
 7. Lua API                                                    |codex-nvim-api|
+   7.1 Return conventions                             |codex-nvim-api-returns|
+   7.2 Setup and runtime                              |codex-nvim-api-runtime|
+   7.3 Session                                        |codex-nvim-api-session|
+   7.4 Logs                                              |codex-nvim-api-logs|
+   7.5 Prompt builder                                 |codex-nvim-api-builder|
+   7.6 Input                                            |codex-nvim-api-input|
+   7.7 Slash and wrapper commands                       |codex-nvim-api-slash|
+   7.8 Mention helpers                                |codex-nvim-api-mention|
+   7.9 Terminal keymap builtins                      |codex-nvim-api-builtins|
 8. Command Behavior                              |codex-nvim-command-behavior|
 9. Keymaps                                                |codex-nvim-keymaps|
 10. Examples                                             |codex-nvim-examples|
@@ -26,7 +35,9 @@ INTRODUCTION                                         *codex-nvim-introduction*
 
 - session lifecycle commands for opening, focusing, toggling, and closing the
   terminal
-- send helpers for raw text, file references, and visual selections
+- a shared prompt builder for adding text, file references, visual selections
+  and skills that can be sent or submitted to as input to codex.
+- immediate skill and terminal-input helpers
 - `/mention` helpers for files and directories
 - wrapper-command helpers for slash commands and `resume`
 
@@ -37,7 +48,7 @@ lookup, or common examples.
 ==============================================================================
 REQUIREMENTS                                         *codex-nvim-requirements*
 
-- Neovim >= 0.11.0
+- Neovim >= 0.12.0
 - `codex` available on your `PATH`, or a custom `launch.cmd`
 
 If `:help codex.nvim` is missing after a local/raw install, generate help tags
@@ -57,7 +68,8 @@ Example lazy.nvim spec:
 >lua
   {
     url = "https://codeberg.org/yaadata/codex.nvim.git",
-    version = "1.1.0",
+    version = "v2.0.0-alpha.1",
+    lazy = false,
     cmd = {
       "Codex",
       "CodexFocus",
@@ -65,10 +77,8 @@ Example lazy.nvim spec:
       "CodexClearInput",
       "CodexSendSelection",
       "CodexSendFile",
-      "CodexSendSkill",
       "CodexMentionFile",
       "CodexMentionDirectory",
-      "CodexResume",
     },
     opts = {},
     config = function(_, opts)
@@ -189,7 +199,7 @@ log                                                           *codex-nvim-log*
     `verbose`
       When true, capture extra debug-oriented log entries.
 
-hooks                                                     *codex-nvim-hooks*
+hooks                                                       *codex-nvim-hooks*
     Lifecycle callbacks for editor-side customization. All hooks receive one
     context table, run synchronously with protected errors, ignore return
     values, and never abort Codex behavior. Hook errors are logged as warnings.
@@ -322,7 +332,7 @@ terminal.keymaps entries                              *codex-nvim-terminal-km*
 
     `action`
       A function to run. For builtins, use
-      `require("codex.keymaps").builtins`.
+      `require("codex.builtin").keymaps`.
 
     `desc`
       Optional for builtin actions, required for custom functions.
@@ -350,10 +360,6 @@ CodexSendSelection                                       *:CodexSendSelection*
 CodexSendFile                                                 *:CodexSendFile*
     Send the current buffer path as an ACP file reference (`@path`).
 
-CodexSendSkill {skill}                                       *:CodexSendSkill*
-    Insert a literal skill invocation into the Codex prompt. Use `name` for a
-    standalone skill or `plugin:name` for a skill supplied by a plugin.
-
 CodexMentionFile [path]                                    *:CodexMentionFile*
     Send `/mention` for a file path. When `[path]` is omitted, use the current
     buffer path.
@@ -362,18 +368,23 @@ CodexMentionDirectory [path]                          *:CodexMentionDirectory*
     Send `/mention` for a directory path. When `[path]` is omitted, use the
     current buffer directory.
 
-CodexResume[!]                                                  *:CodexResume*
-    Resume in-process when a session is active, or launch `codex resume`.
-    With `!`, close any active session first, then launch `codex resume --last`.
-
 ==============================================================================
 LUA API                                                       *codex-nvim-api*
 
 Return conventions                                    *codex-nvim-api-returns*
 
-- Send-like, input-control, wrapper-command, unfocus, resume, and mention APIs
-  return `ok, err`.
-- Query-style APIs return their documented values directly.
+- Most builder and input actions, plus `session.unfocus()`, return
+  `ok, err`: a boolean outcome and an optional error string.
+- `input.get()` returns `ok, text`, not an error string.
+- Builtin command helpers return `err`: nil on immediate success, or an error
+  string on failure. Deferred failures are reported through notifications.
+- `builtin.format_skill()` returns `text, err`.
+- Query APIs, lifecycle methods, and `prompt_builder.join()` return the values
+  documented below. `codex.Outcome` represents boolean success or failure;
+  `codex.Error` is `string|nil`.
+
+Access the core API through `require("codex")` and command helpers through
+`require("codex.builtin")`. Call methods with dot syntax.
 
 Setup and runtime                                     *codex-nvim-api-runtime*
 
@@ -382,161 +393,242 @@ setup({opts})                                                    *codex.setup*
     commands.
     Returns: `nil`
 
-deactivate()                                               *codex.deactivate*
+deactivate()                                                *codex.deactivate*
     Retire plugin runtime state before unloading or reconfiguring the plugin.
     Closes the active terminal, removes plugin commands and autocmds, and
     invalidates pending work. lazy.nvim calls this automatically on reload.
     Returns: `nil`
 
-is_running()                                                *codex.is_running*
-    Return whether the active Codex session is alive.
-    Returns: `boolean`
-
-is_focused()                                                *codex.is_focused*
-    Return whether editor focus is on the active Codex session.
-    Returns: `boolean`
-
 get_config()                                                *codex.get_config*
     Return a deep-copied snapshot of the resolved config.
     Returns: `table|nil`
 
-get_logs()                                                    *codex.get_logs*
-    Return captured in-memory log entries.
-    Returns: `codex.LogEntry[]`
+Session                                               *codex-nvim-api-session*
+                                                   *codex-nvim-api-lifecycle*
 
-clear_logs()                                                *codex.clear_logs*
-    Clear captured in-memory log entries.
-    Returns: `nil`
+Access session methods through `require("codex").session`.
 
-Session control                                     *codex-nvim-api-lifecycle*
-
-open({focus})                                                     *codex.open*
+session.open({focus}, {args})                             *codex.session.open*
     Open a Codex terminal session.
-    `focus` defaults to true when omitted.
+    `focus` defaults to true when omitted. Optional `args` is a string array
+    that overrides configured launch arguments.
     Returns: `nil`
 
-close()                                                          *codex.close*
+session.close()                                          *codex.session.close*
     Close the active session and reset the send queue.
     Returns: `nil`
 
-toggle()                                                        *codex.toggle*
+session.toggle()                                        *codex.session.toggle*
     Toggle the active terminal, or open one when none exists.
     Returns: `nil`
 
-focus()                                                          *codex.focus*
+session.focus()                                          *codex.session.focus*
     Focus the active session, or open one when none is running.
     Returns: `nil`
 
-unfocus()                                                      *codex.unfocus*
+session.unfocus()                                      *codex.session.unfocus*
     Return to the last tracked non-Codex editor location.
-    Returns: `ok, err`
+    Returns: `codex.Outcome, codex.Error`
 
-Sending and input                                        *codex-nvim-api-send*
+session.is_running()                                *codex.session.is_running*
+    Return whether the active Codex session is alive.
+    Returns: `boolean`
 
-send({text})                                                      *codex.send*
-    Send raw text through the standard send pipeline.
-    `text` is required.
-    Returns: `ok, err`
+session.is_focused()                                *codex.session.is_focused*
+    Return whether editor focus is on the active Codex session.
+    Returns: `boolean`
 
-send_skill({opts})                                          *codex.send_skill*
-    Insert a literal skill invocation as bracketed paste without focusing or
-    submitting the Codex prompt.
+Logs                                                     *codex-nvim-api-logs*
 
-    `opts.name`
-      Required skill name.
+Access log methods through `require("codex").logs`.
 
-    `opts.plugin`
-      Optional plugin name. When present, the invocation is `$plugin:name `;
-      otherwise it is `$name `.
+logs.get()                                                    *codex.logs.get*
+    Return captured in-memory log entries.
+    Returns: `codex.LogEntry[]`
 
-    Returns: `ok, err`
+logs.clear()                                                *codex.logs.clear*
+    Clear captured in-memory log entries.
+    Returns: `nil`
 
-clear_input()                                              *codex.clear_input*
-    Send `<C-c>` to clear the current prompt input.
-    Returns: `ok, err`
+Prompt builder                                        *codex-nvim-api-builder*
 
-copy_input()                                                *codex.copy_input*
-    Copy the current prompt input to the unnamed register.
-    Returns: `ok, err`
+Access the shared draft through `require("codex").prompt_builder`.
+Adding content does not open or focus the terminal. Fragments are concatenated
+in insertion order without extra separators; include spaces or newlines in
+raw text where needed. The draft is separate from the terminal's prompt input
+and from the queue that waits for terminal readiness.
 
-submit_input()                                            *codex.submit_input*
-    Send Enter to submit the current prompt input.
-    Returns: `ok, err`
+prompt_builder.add({text})                          *codex.prompt_builder.add*
+    Append raw text to the shared draft.
+    Returns: `codex.Outcome, codex.Error`
 
-send_file({opts})                                            *codex.send_file*
-    Send a file reference as `@path` with a trailing space.
+prompt_builder.add_file({opts})                *codex.prompt_builder.add_file*
+    Append an ACP-style `@path` reference with a trailing space.
 
     `opts.path`
       Explicit file path. Takes precedence over `opts.bufnr`.
 
     `opts.bufnr`
-      Buffer to resolve when `opts.path` is omitted.
+      Buffer to resolve when `opts.path` is omitted; defaults to the current
+      buffer. The resolved path must identify a regular file.
 
-    `opts.focus`
-      Set to `false` to keep editor focus after sending.
+    Returns: `codex.Outcome`, `codex.Error`
 
-    Returns: `ok, err`
-
-send_selection({opts})                                  *codex.send_selection*
-    Send a formatted selection reference plus fenced code block.
+prompt_builder.add_selection({opts})      *codex.prompt_builder.add_selection*
+    Append a path reference, selected line range, and fenced code block.
 
     `opts.line1`, `opts.line2`
-      Explicit start and end lines.
+      Optional start and end lines.
+
+    `opts.start_col`, `opts.end_col`
+      Optional zero-based, inclusive byte columns.
+
+    `opts.bufnr`
+      Optional source buffer; defaults to the current buffer.
 
     `opts.visual_mode`
-      Visual-mode override for custom callers.
+      Optional `"v"`, `"V"`, or CTRL-V character for characterwise, linewise,
+      or blockwise selection.
 
-    When omitted, `opts` falls back to the current visual selection or range.
+    When no explicit range is given, use the active visual selection or
+    saved visual marks.
+    Returns: `codex.Outcome`, `codex.Error`
 
+prompt_builder.add_skill({opts})              *codex.prompt_builder.add_skill*
+    Append a literal skill invocation with a trailing space.
+    `opts.name` is required; `opts.plugin` is optional. The invocation is
+    `$plugin:name ` or `$name `.
+    Returns: `codex.Outcome`, `codex.Error`
+
+prompt_builder.clear()                            *codex.prompt_builder.clear*
+    Discard the shared draft. Does not clear text already in the terminal
+    or cancel payloads already queued for delivery.
+    Returns: `codex.Outcome`, `codex.Error`
+
+prompt_builder.peak()                              *codex.prompt_builder.peak*
+    Return the current draft fragments as a `string[]`. The method is named
+    `peak`, not `peek`. The returned table is the live fragment array, not a
+    copy. Clearing or sending the draft replaces that array.
+
+prompt_builder.join({fragments})                   *codex.prompt_builder.join*
+    Append each string in `fragments` to the shared draft in order.
+    Returns: `nil`
+
+prompt_builder.send()                              *codex.prompt_builder.send*
+    Consume the shared draft and send it as one bracketed-paste payload.
+    Open a terminal if needed and focus it after successful delivery.
+    Does not press Enter.
+    An empty draft returns `false, "no queued message"`.
+    Returns: `codex.Outcome`, `codex.Error`
+      true means sent or accepted into the readiness queue, not necessarily
+      delivered. The draft is consumed before dispatch and is not restored if
+      dispatch fails.
+
+prompt_builder.submit()                          *codex.prompt_builder.submit*
+    Send a non-empty draft, then attempt to press Enter in the active terminal.
+    With an empty draft, attempt to submit the existing terminal prompt.
+    Returns: `codex.Outcome`, `codex.Error`
+
+    A non-empty draft may queue until the terminal is ready. After the payload
+    is written to the terminal channel, Enter is attempted after a 90 ms delay
+    by default. Set `vim.g.CODEX_SUBMIT_INPUT_DELAY_MS` to change the delay.
+    The delay does not confirm that Codex has processed the text but is a best
+    effort at the time for the text to be processed.
+
+Example: compose a prompt and send it without Enter: >lua
+
+  local prompt = require("codex").prompt_builder
+  prompt.clear()
+  prompt.add("Review this file: ")
+  local ok, err = prompt.add_file()
+  if not ok then
+    vim.notify(err, vim.log.levels.ERROR)
+    return
+  end
+  prompt.send()
+<
+
+Input                                                   *codex-nvim-api-input*
+                                                        *codex-nvim-api-send*
+
+Access terminal input methods through `require("codex").input`.
+
+input.clear()                                              *codex.input.clear*
+    Send `<C-c>` to clear the current terminal prompt input.
+    Does not clear the shared builder draft; see |codex.prompt_builder.clear|.
     Returns: `ok, err`
+
+input.copy()                                                *codex.input.copy*
+    Focus the active terminal and copy its current prompt input to the
+    unnamed register. Return failure when there is no input to copy.
+    Returns: `ok, err`
+
+input.get()                                                  *codex.input.get*
+    Focus the active terminal and capture its current prompt input.
+    Returns: `true, text` when captured, `true, nil` when there is no input,
+    or `false` when capture is unavailable or uncertain.
+
+input.feedkey({key})                                     *codex.input.feedkey*
+    Encode Neovim key notation and feed it to the terminal with
+    `nvim_feedkeys`. Focus or open the session when needed, then attempt to
+    return to the tracked editor location if it was initially unfocused.
+    Returns: `true`
 
 Slash and wrapper commands                              *codex-nvim-api-slash*
 
-execute_slash_command({opts})                    *codex.execute_slash_command*
-    Run a slash command with the same autosubmit flow used by mentions and
-    in-process `resume`.
+builtin.execute_slash_command({opts})    *codex.builtin.execute_slash_command*
+    Capture terminal input, save non-empty input to register `e`, clear the
+    terminal input, and send a slash command. Preserve the builder draft and
+    restore captured input after sending. This flow does not press Enter.
 
     `opts.command`
-      Required command name, with or without a leading `/`.
+      Required command name, with or without leading `/` characters.
 
     `opts.args`
-      Optional inline args appended after the command when non-empty.
+      Optional string. Leading and trailing whitespace is trimmed; empty
+      arguments are ignored.
 
-    Returns: `ok, err`
+    Returns: `err` (`string|nil`). A nil return schedules delivery; it does
+    not confirm delivery. Deferred failures produce error notifications.
 
-resume({opts})                                                  *codex.resume*
-    Resume in-process when an active session exists, otherwise launch
-    `codex resume`.
+builtin.format_skill({opts}, {style})             *codex.builtin.format_skill*
+    Format a skill invocation without sending it or modifying the draft.
+    `opts.name` is required; `opts.plugin` is optional.
+    Returns: `text, err` (`string|nil, string|nil`).
 
-    `opts.last`
-      When launching a new process, use `codex resume --last`.
+    The default format is `$name` or `$plugin:name`, without a trailing space.
+    Pass `require("codex.enums.skill_style").SLASH` for `/name` or
+    `/plugin:name`. Add any desired separator before appending to the draft.
 
-    Returns: `ok, err` for in-process `/resume`; `true` after opening a new
-    resume process.
+builtin.resume({opts})                                  *codex.builtin.resume*
+    With a running session, send `/resume` through
+    |codex.builtin.execute_slash_command|. Otherwise open a focused session
+    with resume arguments.
+
+    `opts.harness`
+      Defaults to `require("codex.enums.harness").CODEX`: launch `resume`,
+      or `resume --last` when `opts.last` is true. Other harness values,
+      including `CLAUDE` and `PI`, use `--resume` or `--continue`.
+
+    Returns: `err` (`string|nil`).
 
 Mention helpers                                       *codex-nvim-api-mention*
 
-mention_file({path})                                      *codex.mention_file*
-    Send `/mention` for a file path, auto-submit it, then restore previously
-    captured prompt input.
+builtin.mention_file({path})                      *codex.builtin.mention_file*
+    Send `/mention` for an explicit file path, or the current buffer path
+    when omitted. Uses |codex.builtin.execute_slash_command| to preserve
+    prompt input and the builder draft. Does not press Enter.
+    Returns: `err` (`string|nil`).
 
-    `path`
-      Explicit file path. When omitted, use the current buffer path.
-
-    Returns: `ok, err`
-
-mention_directory({path})                            *codex.mention_directory*
-    Send `/mention` for a directory path, auto-submit it, then restore
-    previously captured prompt input.
-
-    `path`
-      Explicit directory path. When omitted, use the current buffer directory.
-
-    Returns: `ok, err`
+builtin.mention_directory({path})            *codex.builtin.mention_directory*
+    Send `/mention` for an explicit directory path, or the current buffer
+    directory when omitted. Append a trailing directory separator. Uses
+    |codex.builtin.execute_slash_command|; does not press Enter.
+    Returns: `err` (`string|nil`).
 
 Terminal keymap builtins                             *codex-nvim-api-builtins*
 
-require("codex.keymaps").builtins                     *codex.keymaps.builtins*
+require("codex.builtin").keymaps                       *codex.builtin.keymaps*
     Builtin terminal-local actions for `terminal.keymaps`.
 
     Available actions:
@@ -554,19 +646,19 @@ Selection sends                                   *codex-nvim-behavior-select*
 - `:CodexSendSelection` is visual-only.
 - The payload includes a path reference, selected line range, and a fenced
   code block containing the selected text.
-- The command opens a session when needed through the normal send pipeline.
+- The command clears the shared builder draft, adds the selection, and sends
+  it without Enter. Previously accumulated draft content is discarded, even
+  if selection extraction fails.
+- The command opens a session when needed and focuses it after delivery.
 
 File sends                                          *codex-nvim-behavior-file*
 
 - `:CodexSendFile` uses the current buffer path.
 - The path must resolve to a regular file.
 - The sent payload is an ACP-style `@path` reference with a trailing space.
-
-Skill sends                                        *codex-nvim-behavior-skill*
-
-- `:CodexSendSkill code-comment` inserts `$code-comment `.
-- `:CodexSendSkill code:comment` inserts `$code:comment `.
-- Skill sends use bracketed paste and do not focus or submit the prompt.
+- The command clears the shared builder draft before resolving the file.
+  Previously accumulated draft content is discarded, even if resolution fails.
+- The command sends without Enter and focuses the terminal after delivery.
 
 Mention helpers                                  *codex-nvim-behavior-mention*
 
@@ -574,22 +666,19 @@ Mention helpers                                  *codex-nvim-behavior-mention*
   file or directory.
 - Paths are normalized to the current working directory when possible.
 - Directory mentions are forced to end with a trailing separator.
-- The mention flow captures prompt input when possible, clears the line, sends
-  `/mention`, auto-submits it, and then restores the captured prompt input.
+- Mention helpers use the builtin slash-command flow described below.
 
 Slash commands                                     *codex-nvim-behavior-slash*
 
-- `execute_slash_command()` accepts `command` with or without a leading `/`.
+- `builtin.execute_slash_command()` accepts `command` with or without `/`.
 - Empty or whitespace-only `args` are ignored.
-- Existing prompt input is copied to the unnamed register before submission.
-- Slash-command submission auto-submits Enter after the command is sent.
-- Unlike mention helpers, wrapper-command input is not restored afterward.
-
-Resume                                            *codex-nvim-behavior-resume*
-
-- `:CodexResume` uses in-process `/resume` when a session is already active.
-- When no session is active, it launches `codex resume`.
-- `:CodexResume!` closes any active session, then launches `codex resume --last`.
+- Input capture focuses the active terminal and must succeed before sending.
+- Non-empty prompt input is saved to register `e` before clearing the line.
+- The builder draft is temporarily replaced with the command, then restored.
+- Command delivery and input restoration use deferred sends with
+  `vim.g.CODEX_SUBMIT_INPUT_DELAY_MS` (90 ms by default).
+- The current implementation sends without Enter. Captured input is sent
+  afterward; these helpers do not confirm that the harness ran the command.
 
 Session opening                                     *codex-nvim-behavior-open*
 
@@ -608,7 +697,7 @@ Example lazy.nvim global mappings:
 >lua
   {
     url = "https://codeberg.org/yaadata/codex.nvim.git",
-    version = "1.1.0",
+    version = "v2.0.0-alpha.1",
     main = "codex",
     cmd = {
       "Codex",
@@ -617,10 +706,8 @@ Example lazy.nvim global mappings:
       "CodexClearInput",
       "CodexSendSelection",
       "CodexSendFile",
-      "CodexSendSkill",
       "CodexMentionFile",
       "CodexMentionDirectory",
-      "CodexResume",
     },
     opts = {},
     config = function(_, opts)
@@ -630,7 +717,7 @@ Example lazy.nvim global mappings:
       {
         "<leader>ot",
         function()
-          require("codex").toggle()
+          require("codex").session.toggle()
         end,
         desc = "Codex: Toggle terminal",
         mode = { "n", "v" },
@@ -638,7 +725,14 @@ Example lazy.nvim global mappings:
       {
         "<leader>os",
         function()
-          require("codex").send_file()
+          local prompt = require("codex").prompt_builder
+          prompt.clear()
+          local ok, err = prompt.add_file()
+          if not ok then
+            vim.notify(err, vim.log.levels.ERROR)
+            return
+          end
+          prompt.send()
         end,
         desc = "Codex: Send @{file_path}",
         mode = "n",
@@ -646,7 +740,14 @@ Example lazy.nvim global mappings:
       {
         "<leader>os",
         function()
-          require("codex").send_selection()
+          local prompt = require("codex").prompt_builder
+          prompt.clear()
+          local ok, err = prompt.add_selection()
+          if not ok then
+            vim.notify(err, vim.log.levels.ERROR)
+            return
+          end
+          prompt.send()
         end,
         desc = "Codex: Send selection",
         mode = "x",
@@ -654,7 +755,7 @@ Example lazy.nvim global mappings:
       {
         "<leader>om",
         function()
-          require("codex").mention_file()
+          require("codex.builtin").mention_file()
         end,
         desc = "Codex: Mention current file",
         mode = { "n", "v" },
@@ -662,7 +763,7 @@ Example lazy.nvim global mappings:
       {
         "<leader>oM",
         function()
-          require("codex").mention_directory()
+          require("codex.builtin").mention_directory()
         end,
         desc = "Codex: Mention current directory",
         mode = { "n", "v" },
@@ -670,7 +771,7 @@ Example lazy.nvim global mappings:
       {
         "<leader>or",
         function()
-          require("codex").resume()
+          require("codex.builtin").resume()
         end,
         desc = "Codex: Resume session",
         mode = { "n", "v" },
@@ -684,7 +785,7 @@ Set `vim.g.mapleader` before plugin setup so `<leader>` expands as expected.
 Example terminal-local mappings:
 
 >lua
-  local km = require("codex.keymaps").builtins
+  local km = require("codex.builtin").keymaps
 
   require("codex").setup({
     terminal = {
@@ -708,38 +809,38 @@ EXAMPLES                                                 *codex-nvim-examples*
 Slash-command examples:
 
 >lua
-  local codex = require("codex")
+  local builtin = require("codex.builtin")
 
   vim.api.nvim_create_user_command("CodexModel", function()
-    codex.execute_slash_command({ command = "model" })
+    builtin.execute_slash_command({ command = "model" })
   end, {
     desc = "Open Codex model picker",
     nargs = 0,
   })
 
   vim.api.nvim_create_user_command("CodexStatus", function()
-    codex.execute_slash_command({ command = "status" })
+    builtin.execute_slash_command({ command = "status" })
   end, {
     desc = "Show Codex status summary",
     nargs = 0,
   })
 
   vim.api.nvim_create_user_command("CodexPermissions", function()
-    codex.execute_slash_command({ command = "permissions" })
+    builtin.execute_slash_command({ command = "permissions" })
   end, {
     desc = "Open Codex permissions selector",
     nargs = 0,
   })
 
   vim.api.nvim_create_user_command("CodexCompact", function()
-    codex.execute_slash_command({ command = "compact" })
+    builtin.execute_slash_command({ command = "compact" })
   end, {
     desc = "Run Codex /compact in the active session",
     nargs = 0,
   })
 
   vim.api.nvim_create_user_command("CodexReview", function(opts)
-    codex.execute_slash_command({
+    builtin.execute_slash_command({
       command = "review",
       args = opts.args,
     })
@@ -749,7 +850,7 @@ Slash-command examples:
   })
 
   vim.api.nvim_create_user_command("CodexDiff", function()
-    codex.execute_slash_command({ command = "diff" })
+    builtin.execute_slash_command({ command = "diff" })
   end, {
     desc = "Run Codex /diff in the active session",
     nargs = 0,

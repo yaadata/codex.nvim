@@ -1,5 +1,5 @@
 local stub = require("luassert.stub")
-local builtins = require("codex.keymaps").builtins
+local builtins = require("codex.builtin").keymaps
 
 -- Register luassert cleanup, then keep a plain function for type checks.
 local function stub_real_function(target, key, replacement)
@@ -208,11 +208,11 @@ describe("codex.providers.snacks", function()
       }, true, function() end)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #autocmds)
-      assert.equals("TermClose", autocmds[1].event)
-      assert.equals(42, autocmds[1].spec.buffer)
+      assert.equal(1, #autocmds)
+      assert.equal("TermClose", autocmds[1].event)
+      assert.equal(42, autocmds[1].spec.buffer)
       assert.is_true(autocmds[1].spec.once)
-      assert.equals(6, #keymap_set_calls)
+      assert.equal(6, #keymap_set_calls)
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-c>"))
       assert.is_not_nil(find_keymap(keymap_set_calls, "<M-BS>"))
     end)
@@ -250,7 +250,7 @@ describe("codex.providers.snacks", function()
       autocmds[1].spec.callback()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #exited)
+      assert.equal(1, #exited)
       assert.same(handle, exited[1])
     end)
   end)
@@ -276,7 +276,7 @@ describe("codex.providers.snacks", function()
       )
 
       -- ========= [A]ssert  =========
-      assert.equals(0, #keymap_set_calls)
+      assert.equal(0, #keymap_set_calls)
     end)
   end)
 
@@ -300,13 +300,13 @@ describe("codex.providers.snacks", function()
       }, true, nil)
 
       -- ========= [A]ssert  =========
-      assert.equals(6, #keymap_set_calls)
+      assert.equal(6, #keymap_set_calls)
       local toggle_map = find_keymap(keymap_set_calls, "<C-c>")
       local clear_map = find_keymap(keymap_set_calls, "<M-BS>")
       assert.is_not_nil(toggle_map)
-      assert.equals("Codex: Toggle terminal", toggle_map.opts.desc)
+      assert.equal("Codex: Toggle terminal", toggle_map.opts.desc)
       assert.is_not_nil(clear_map)
-      assert.equals("Codex: Clear input", clear_map.opts.desc)
+      assert.equal("Codex: Clear input", clear_map.opts.desc)
     end)
   end)
 
@@ -339,7 +339,7 @@ describe("codex.providers.snacks", function()
       }, true, nil)
 
       -- ========= [A]ssert  =========
-      assert.equals(4, #keymap_set_calls)
+      assert.equal(4, #keymap_set_calls)
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-h>"))
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-j>"))
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-k>"))
@@ -371,7 +371,7 @@ describe("codex.providers.snacks", function()
       }, true, nil)
 
       -- ========= [A]ssert  =========
-      assert.equals(3, #keymap_set_calls)
+      assert.equal(3, #keymap_set_calls)
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-t>"))
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-x>"))
       assert.is_not_nil(find_keymap(keymap_set_calls, "<M-BS>"))
@@ -406,12 +406,12 @@ describe("codex.providers.snacks", function()
       close_map.rhs()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #scheduled)
+      assert.equal(1, #scheduled)
       assert.is_function(scheduled[1])
     end)
   end)
 
-  it("clear input keymap calls codex.clear_input directly", function()
+  it("clear input keymap calls codex.input.clear directly", function()
     with_stubbed_vim_api(function(_, keymap_set_calls)
       -- ========= [A]rrange =========
       package.loaded["snacks"] = {
@@ -425,9 +425,11 @@ describe("codex.providers.snacks", function()
       end)
       local clear_input_calls = 0
       package.loaded["codex"] = {
-        clear_input = function()
-          clear_input_calls = clear_input_calls + 1
-        end,
+        input = {
+          clear = function()
+            clear_input_calls = clear_input_calls + 1
+          end,
+        },
       }
       local provider = require("codex.providers.snacks")
       provider.open("codex", {}, {}, {
@@ -445,8 +447,8 @@ describe("codex.providers.snacks", function()
       clear_map.rhs()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, clear_input_calls)
-      assert.equals(0, #scheduled)
+      assert.equal(1, clear_input_calls)
+      assert.equal(0, #scheduled)
     end)
   end)
 
@@ -471,8 +473,8 @@ describe("codex.providers.snacks", function()
       )
 
       -- ========= [A]ssert  =========
-      assert.equals(0, #autocmds)
-      assert.equals(0, #keymap_set_calls)
+      assert.equal(0, #autocmds)
+      assert.equal(0, #keymap_set_calls)
     end)
   end)
 
@@ -497,7 +499,7 @@ describe("codex.providers.snacks", function()
       )
 
       -- ========= [A]ssert  =========
-      assert.equals(0, #keymap_set_calls)
+      assert.equal(0, #keymap_set_calls)
     end)
   end)
 
@@ -524,8 +526,8 @@ describe("codex.providers.snacks", function()
       -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
-      assert.equals(1, shown)
-      assert.equals(1, focused)
+      assert.equal(1, shown)
+      assert.equal(1, focused)
       assert.same({ "startinsert" }, cmd_calls)
     end)
   end)
@@ -547,8 +549,8 @@ describe("codex.providers.snacks", function()
 
       -- ========= [A]ssert  =========
       assert.is_false(ok)
-      assert.equals("terminal window not focused", err)
-      assert.equals(0, #cmd_calls)
+      assert.equal("terminal window not focused", err)
+      assert.equal(0, #cmd_calls)
     end)
   end)
 
@@ -587,7 +589,7 @@ describe("codex.providers.snacks", function()
       -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
-      assert.equals(1, #state.chansend_calls)
+      assert.equal(1, #state.chansend_calls)
       assert.same({ jobid = 77, text = "hello" }, state.chansend_calls[1])
     end)
   end)
@@ -605,7 +607,7 @@ describe("codex.providers.snacks", function()
       -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
-      assert.equals(1, #state.chansend_calls)
+      assert.equal(1, #state.chansend_calls)
       assert.same({ jobid = 88, text = "hello" }, state.chansend_calls[1])
     end)
   end)
@@ -623,7 +625,7 @@ describe("codex.providers.snacks", function()
       -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
-      assert.equals(1, #state.chansend_calls)
+      assert.equal(1, #state.chansend_calls)
       assert.same({ jobid = 99, text = "hello" }, state.chansend_calls[1])
     end)
   end)
@@ -669,8 +671,8 @@ describe("codex.providers.snacks", function()
 
       -- ========= [A]ssert  =========
       assert.is_false(ok)
-      assert.equals("terminal has no job", err)
-      assert.equals(0, #state.chansend_calls)
+      assert.equal("terminal has no job", err)
+      assert.equal(0, #state.chansend_calls)
     end)
   end)
 
@@ -701,7 +703,7 @@ describe("codex.providers.snacks", function()
       )
 
       -- ========= [A]ssert  =========
-      assert.equals(0, stale_toggle_calls)
+      assert.equal(0, stale_toggle_calls)
       assert.same(fresh_terminal, handle.terminal)
     end)
   end)
@@ -736,12 +738,12 @@ describe("codex.providers.snacks", function()
       }, false, nil)
 
       -- ========= [A]ssert  =========
-      assert.equals("codex --foo bar", captured_cmd)
-      assert.equals("/tmp/work", captured_opts.cwd)
-      assert.equals("1", captured_opts.env.CODEX_TEST)
+      assert.equal("codex --foo bar", captured_cmd)
+      assert.equal("/tmp/work", captured_opts.cwd)
+      assert.equal("1", captured_opts.env.CODEX_TEST)
       assert.is_true(captured_opts.interactive)
       assert.is_false(captured_opts.auto_close)
-      assert.equals("float", captured_opts.win.position)
+      assert.equal("float", captured_opts.win.position)
     end)
   end)
 
@@ -768,8 +770,8 @@ describe("codex.providers.snacks", function()
 
       -- ========= [A]ssert  =========
       assert.is_false(captured_opts.auto_close)
-      assert.equals(1, #autocmds)
-      assert.equals("TermClose", autocmds[1].event)
+      assert.equal(1, #autocmds)
+      assert.equal("TermClose", autocmds[1].event)
     end)
   end)
 
@@ -812,8 +814,8 @@ describe("codex.providers.snacks", function()
       autocmds[1].spec.callback()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, on_exit_calls)
-      assert.equals(1, #scheduled)
+      assert.equal(1, on_exit_calls)
+      assert.equal(1, #scheduled)
     end)
   end)
 
@@ -850,7 +852,7 @@ describe("codex.providers.snacks", function()
       scheduled[1]()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, close_calls)
+      assert.equal(1, close_calls)
       assert.same({ "checktime" }, cmd_calls)
     end)
   end)
@@ -883,8 +885,8 @@ describe("codex.providers.snacks", function()
       }, false, nil)
 
       -- ========= [A]ssert  =========
-      assert.equals("left", captured_opts.win.position)
-      assert.equals(0.4, captured_opts.win.width)
+      assert.equal("left", captured_opts.win.position)
+      assert.equal(0.4, captured_opts.win.width)
     end)
   end)
 
@@ -916,8 +918,8 @@ describe("codex.providers.snacks", function()
       }, false, nil)
 
       -- ========= [A]ssert  =========
-      assert.equals("bottom", captured_opts.win.position)
-      assert.equals(0.3, captured_opts.win.height)
+      assert.equal("bottom", captured_opts.win.position)
+      assert.equal(0.3, captured_opts.win.height)
     end)
   end)
 
@@ -949,8 +951,8 @@ describe("codex.providers.snacks", function()
       }, false, nil)
 
       -- ========= [A]ssert  =========
-      assert.equals("float", captured_opts.win.position)
-      assert.equals("rounded", captured_opts.win.border)
+      assert.equal("float", captured_opts.win.position)
+      assert.equal("rounded", captured_opts.win.border)
     end)
   end)
 
@@ -976,7 +978,7 @@ describe("codex.providers.snacks", function()
       assert.is_number(handle.ready_at_ms)
       local uv = vim.uv or vim.loop
       local expected = (uv and type(uv.now) == "function") and uv.now() or 0
-      assert.equals(expected, handle.ready_at_ms)
+      assert.equal(expected, handle.ready_at_ms)
     end)
   end)
 
@@ -1048,15 +1050,15 @@ describe("codex.providers.snacks", function()
       }, nil)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #restored)
-      assert.equals(42, restored[1].bufnr)
-      assert.equals(8, restored[1].winid)
-      assert.equals("codex --model o3", restored[1].cmd)
-      assert.equals("/tmp/snacks", restored[1].cwd)
-      assert.equals(42, provider.get_bufnr(restored[1].handle))
+      assert.equal(1, #restored)
+      assert.equal(42, restored[1].bufnr)
+      assert.equal(8, restored[1].winid)
+      assert.equal("codex --model o3", restored[1].cmd)
+      assert.equal("/tmp/snacks", restored[1].cwd)
+      assert.equal(42, provider.get_bufnr(restored[1].handle))
       assert.is_true(provider.is_alive(restored[1].handle))
-      assert.equals(0, #autocmds)
-      assert.equals(0, #keymap_set_calls)
+      assert.equal(0, #autocmds)
+      assert.equal(0, #keymap_set_calls)
     end)
   end)
 
@@ -1107,14 +1109,14 @@ describe("codex.providers.snacks", function()
       }, nil)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #restored)
-      assert.equals(42, restored[1].bufnr)
-      assert.equals(8, restored[1].winid)
-      assert.equals("codex --model o3", restored[1].cmd)
-      assert.equals(42, provider.get_bufnr(restored[1].handle))
+      assert.equal(1, #restored)
+      assert.equal(42, restored[1].bufnr)
+      assert.equal(8, restored[1].winid)
+      assert.equal("codex --model o3", restored[1].cmd)
+      assert.equal(42, provider.get_bufnr(restored[1].handle))
       assert.is_true(provider.is_alive(restored[1].handle))
-      assert.equals(0, #autocmds)
-      assert.equals(0, #keymap_set_calls)
+      assert.equal(0, #autocmds)
+      assert.equal(0, #keymap_set_calls)
     end)
   end)
 
@@ -1139,10 +1141,10 @@ describe("codex.providers.snacks", function()
       -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
-      assert.equals(1, #autocmds)
-      assert.equals("TermClose", autocmds[1].event)
-      assert.equals(42, autocmds[1].spec.buffer)
-      assert.equals(6, #keymap_set_calls)
+      assert.equal(1, #autocmds)
+      assert.equal("TermClose", autocmds[1].event)
+      assert.equal(42, autocmds[1].spec.buffer)
+      assert.equal(6, #keymap_set_calls)
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-c>"))
       assert.is_not_nil(find_keymap(keymap_set_calls, "<M-BS>"))
     end)

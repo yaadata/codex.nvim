@@ -31,7 +31,7 @@ describe("codex.providers registry", function()
 
       -- ========= [A]ssert  =========
       assert.is_not_nil(provider)
-      assert.equals("native", name)
+      assert.equal("native", name)
       assert.is_function(provider.open)
       assert.is_function(provider.close)
       assert.is_function(provider.send)
@@ -50,7 +50,7 @@ describe("codex.providers registry", function()
 
       -- ========= [A]ssert  =========
       assert.is_not_nil(provider)
-      assert.equals("native", name)
+      assert.equal("native", name)
     end)
 
     it("caches auto resolution after first detection", function()
@@ -81,9 +81,9 @@ describe("codex.providers registry", function()
         -- ========= [A]ssert  =========
         assert.same(native_provider, first_provider)
         assert.same(first_provider, second_provider)
-        assert.equals("native", first_name)
-        assert.equals(first_name, second_name)
-        assert.equals(1, snacks_checks)
+        assert.equal("native", first_name)
+        assert.equal(first_name, second_name)
+        assert.equal(1, snacks_checks)
       end)
     end)
 
@@ -114,9 +114,9 @@ describe("codex.providers registry", function()
         local _, second_name = registry.resolve("auto")
 
         -- ========= [A]ssert  =========
-        assert.equals("native", first_name)
-        assert.equals("native", second_name)
-        assert.equals(2, snacks_checks)
+        assert.equal("native", first_name)
+        assert.equal("native", second_name)
+        assert.equal(2, snacks_checks)
       end)
     end)
 

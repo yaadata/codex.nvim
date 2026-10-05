@@ -14,7 +14,7 @@ describe("codex.nvim lazy reload lifecycle", function()
   local provider
   local providers
 
-  local function setup(auto_start)
+  local function setup(auto_start, schedule)
     local codex = require("codex")
     codex.setup({
       launch = { auto_start = auto_start },
@@ -23,7 +23,10 @@ describe("codex.nvim lazy reload lifecycle", function()
           close_hooks = close_hooks + 1
         end,
       },
-      _deps = { providers = providers },
+      _deps = {
+        providers = providers,
+        vim = schedule and vim.tbl_extend("force", vim, { schedule = schedule }) or vim,
+      },
     })
     return codex
   end
@@ -85,59 +88,67 @@ describe("codex.nvim lazy reload lifecycle", function()
     vim.g.loaded_codex = nil
   end)
 
-  it("deactivate closes the active session and removes runtime registrations", function()
+  it("deactivate closes the session and removes commands and autocmds", function()
     -- ========= [A]rrange =========
+    ---@type codex.Api
     local codex = setup(false)
-    codex.open(false)
-    assert.is_true(codex.is_running())
+    codex.session.open(false)
     assert.is_not_nil(vim.api.nvim_get_commands({ builtin = false }).Codex)
+    assert.is_true(#vim.api.nvim_get_autocmds({ group = "codex_focus_tracking" }) > 0)
+    assert.is_true(#vim.api.nvim_get_autocmds({ group = "codex_session_restore" }) > 0)
 
     -- ========= [A]ct     =========
     codex.deactivate()
 
     -- ========= [A]ssert  =========
-    assert.equals(1, closes)
-    assert.equals(1, close_hooks)
+    assert.equal(1, closes)
+    assert.equal(1, close_hooks)
     assert.same(baseline_commands, vim.api.nvim_get_commands({ builtin = false }))
-    assert.is_true(pcall(vim.api.nvim_exec_autocmds, "WinEnter", {}))
-    assert.is_true(pcall(vim.api.nvim_exec_autocmds, "SessionLoadPost", {}))
+    for _, autocmd in ipairs(vim.api.nvim_get_autocmds({})) do
+      assert.is_not.equal("codex_focus_tracking", autocmd.group_name)
+      assert.is_not.equal("codex_session_restore", autocmd.group_name)
+    end
   end)
 
-  it("reload restores commands without running stale auto_start work", function()
+  it("reload restores commands and ignores stale auto_start work", function()
     -- ========= [A]rrange =========
-    local first = setup(true)
-    first.open(false)
+    local scheduled = {}
+    local first = setup(true, function(callback)
+      table.insert(scheduled, callback)
+    end)
+    first.session.open(false)
     first.deactivate()
+    assert.equal(1, #scheduled)
 
     -- ========= [A]ct     =========
-    local second = reload()
-    vim.wait(10)
+    reload()
+    scheduled[1]()
 
     -- ========= [A]ssert  =========
-    assert.equals(1, opens)
+    assert.equal(1, opens)
     assert.is_not_nil(vim.api.nvim_get_commands({ builtin = false }).Codex)
-    second.open(false)
-    assert.is_true(second.is_running())
+    assert.equal(2, #vim.api.nvim_get_autocmds({ group = "codex_focus_tracking" }))
+    assert.equal(2, #vim.api.nvim_get_autocmds({ group = "codex_session_restore" }))
   end)
 
-  it("supports consecutive reload cycles", function()
+  it("supports consecutive reload cycles without duplicate close hooks or registrations", function()
     -- ========= [A]rrange =========
     local first = setup(false)
-    first.open(false)
+    first.session.open(false)
     first.deactivate()
 
     -- ========= [A]ct     =========
     local second = reload()
-    second.open(false)
+    second.session.open(false)
     second.deactivate()
     local third = reload()
-    third.open(false)
+    third.session.open(false)
     third.deactivate()
 
     -- ========= [A]ssert  =========
-    assert.equals(3, opens)
-    assert.equals(3, closes)
-    assert.equals(3, close_hooks)
+    assert.equal(3, opens)
+    assert.equal(3, closes)
+    assert.equal(3, close_hooks)
     assert.same(baseline_commands, vim.api.nvim_get_commands({ builtin = false }))
   end)
 end)

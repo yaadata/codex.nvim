@@ -1,5 +1,5 @@
 local config = require("codex.config")
-local keymaps = require("codex.keymaps")
+local keymaps = require("codex.builtin").keymaps
 
 describe("codex.config", function()
   local function make_valid_config()
@@ -9,28 +9,28 @@ describe("codex.config", function()
   describe("defaults", function()
     it("has expected default values", function()
       -- ========= [A]ssert  =========
-      assert.equals("codex", config.defaults.launch.cmd)
+      assert.equal("codex", config.defaults.launch.cmd)
       assert.same({}, config.defaults.launch.args)
       assert.same({}, config.defaults.launch.env)
       assert.is_true(config.defaults.launch.auto_start)
       assert.is_nil(config.defaults.launch.cwd)
-      assert.equals("auto", config.defaults.terminal.provider)
+      assert.equal("auto", config.defaults.terminal.provider)
       assert.is_true(config.defaults.terminal.auto_close)
-      assert.equals("vsplit", config.defaults.terminal.provider_opts.native.window)
-      assert.equals("right", config.defaults.terminal.provider_opts.native.vsplit.side)
-      assert.equals(40, config.defaults.terminal.provider_opts.native.vsplit.size_pct)
-      assert.equals("bottom", config.defaults.terminal.provider_opts.native.hsplit.side)
-      assert.equals(30, config.defaults.terminal.provider_opts.native.hsplit.size_pct)
-      assert.equals(80, config.defaults.terminal.provider_opts.native.float.width_pct)
-      assert.equals(80, config.defaults.terminal.provider_opts.native.float.height_pct)
-      assert.equals("rounded", config.defaults.terminal.provider_opts.native.float.border)
-      assert.equals(" Codex ", config.defaults.terminal.provider_opts.native.float.title)
-      assert.equals("center", config.defaults.terminal.provider_opts.native.float.title_pos)
-      assert.equals(2000, config.defaults.terminal.startup.timeout_ms)
-      assert.equals(50, config.defaults.terminal.startup.retry_interval_ms)
-      assert.equals(800, config.defaults.terminal.startup.grace_ms)
+      assert.equal("vsplit", config.defaults.terminal.provider_opts.native.window)
+      assert.equal("right", config.defaults.terminal.provider_opts.native.vsplit.side)
+      assert.equal(40, config.defaults.terminal.provider_opts.native.vsplit.size_pct)
+      assert.equal("bottom", config.defaults.terminal.provider_opts.native.hsplit.side)
+      assert.equal(30, config.defaults.terminal.provider_opts.native.hsplit.size_pct)
+      assert.equal(80, config.defaults.terminal.provider_opts.native.float.width_pct)
+      assert.equal(80, config.defaults.terminal.provider_opts.native.float.height_pct)
+      assert.equal("rounded", config.defaults.terminal.provider_opts.native.float.border)
+      assert.equal(" Codex ", config.defaults.terminal.provider_opts.native.float.title)
+      assert.equal("center", config.defaults.terminal.provider_opts.native.float.title_pos)
+      assert.equal(2000, config.defaults.terminal.startup.timeout_ms)
+      assert.equal(50, config.defaults.terminal.startup.retry_interval_ms)
+      assert.equal(800, config.defaults.terminal.startup.grace_ms)
       assert.same({}, config.defaults.terminal.keymaps)
-      assert.equals("warn", config.defaults.log.level)
+      assert.equal("warn", config.defaults.log.level)
       assert.is_false(config.defaults.log.verbose)
       assert.same({}, config.defaults.hooks)
     end)
@@ -41,15 +41,15 @@ describe("codex.config", function()
       -- ========= [A]ct     =========
       local cfg = config.apply(nil)
       -- ========= [A]ssert  =========
-      assert.equals("codex", cfg.launch.cmd)
-      assert.equals("auto", cfg.terminal.provider)
+      assert.equal("codex", cfg.launch.cmd)
+      assert.equal("auto", cfg.terminal.provider)
     end)
 
     it("returns defaults when called with empty table", function()
       -- ========= [A]ct     =========
       local cfg = config.apply({})
       -- ========= [A]ssert  =========
-      assert.equals("codex", cfg.launch.cmd)
+      assert.equal("codex", cfg.launch.cmd)
     end)
 
     it("merges user overrides", function()
@@ -69,28 +69,28 @@ describe("codex.config", function()
           keymaps = {
             ["<C-d>"] = {
               mode = "t",
-              action = keymaps.builtins.close,
+              action = keymaps.close,
             },
           },
         },
       })
       -- ========= [A]ssert  =========
-      assert.equals("/usr/local/bin/codex", cfg.launch.cmd)
-      assert.equals("hsplit", cfg.terminal.provider_opts.native.window)
-      assert.equals("left", cfg.terminal.provider_opts.native.vsplit.side)
-      assert.equals(40, cfg.terminal.provider_opts.native.vsplit.size_pct)
-      assert.equals("bottom", cfg.terminal.provider_opts.native.hsplit.side)
-      assert.equals(50, cfg.terminal.provider_opts.native.hsplit.size_pct)
-      assert.equals("t", cfg.terminal.keymaps["<C-d>"].mode)
-      assert.equals(keymaps.builtins.close, cfg.terminal.keymaps["<C-d>"].action)
-      assert.equals("auto", cfg.terminal.provider) -- non-overridden values preserved
+      assert.equal("/usr/local/bin/codex", cfg.launch.cmd)
+      assert.equal("hsplit", cfg.terminal.provider_opts.native.window)
+      assert.equal("left", cfg.terminal.provider_opts.native.vsplit.side)
+      assert.equal(40, cfg.terminal.provider_opts.native.vsplit.size_pct)
+      assert.equal("bottom", cfg.terminal.provider_opts.native.hsplit.side)
+      assert.equal(50, cfg.terminal.provider_opts.native.hsplit.size_pct)
+      assert.equal("t", cfg.terminal.keymaps["<C-d>"].mode)
+      assert.equal(keymaps.close, cfg.terminal.keymaps["<C-d>"].action)
+      assert.equal("auto", cfg.terminal.provider) -- non-overridden values preserved
     end)
 
     it("accepts cwd override despite nil default", function()
       -- ========= [A]ct     =========
       local cfg = config.apply({ launch = { cwd = "/tmp/project" } })
       -- ========= [A]ssert  =========
-      assert.equals("/tmp/project", cfg.launch.cwd)
+      assert.equal("/tmp/project", cfg.launch.cwd)
     end)
 
     it("merges log overrides", function()
@@ -102,7 +102,7 @@ describe("codex.config", function()
         },
       })
       -- ========= [A]ssert  =========
-      assert.equals("info", cfg.log.level)
+      assert.equal("info", cfg.log.level)
       assert.is_true(cfg.log.verbose)
     end)
 
@@ -118,14 +118,14 @@ describe("codex.config", function()
       })
 
       -- ========= [A]ssert  =========
-      assert.equals(on_setup, cfg.hooks.on_setup)
+      assert.equal(on_setup, cfg.hooks.on_setup)
     end)
 
     it("does not mutate defaults", function()
       -- ========= [A]ct     =========
       config.apply({ launch = { cmd = "other" } })
       -- ========= [A]ssert  =========
-      assert.equals("codex", config.defaults.launch.cmd)
+      assert.equal("codex", config.defaults.launch.cmd)
     end)
   end)
 
@@ -460,7 +460,7 @@ describe("codex.config", function()
           keymaps = {
             ["<C-c>"] = {
               mode = "t",
-              action = keymaps.builtins.toggle,
+              action = keymaps.toggle,
             },
           },
         },
@@ -487,7 +487,7 @@ describe("codex.config", function()
       local cfg = make_valid_config()
       cfg.terminal.keymaps[1] = {
         mode = "t",
-        action = keymaps.builtins.toggle,
+        action = keymaps.toggle,
       }
       -- ========= [A]ct     =========
       local ok, err = pcall(config.validate, cfg)
@@ -517,7 +517,7 @@ describe("codex.config", function()
           keymaps = {
             ["<C-c>"] = {
               mode = "t",
-              action = keymaps.builtins.toggle,
+              action = keymaps.toggle,
               foo = true,
             },
           },
@@ -534,7 +534,7 @@ describe("codex.config", function()
         terminal = {
           keymaps = {
             ["<C-c>"] = {
-              action = keymaps.builtins.toggle,
+              action = keymaps.toggle,
             },
           },
         },
@@ -551,7 +551,7 @@ describe("codex.config", function()
           keymaps = {
             ["<C-c>"] = {
               mode = { "t", 1 },
-              action = keymaps.builtins.toggle,
+              action = keymaps.toggle,
             },
           },
         },

@@ -6,8 +6,8 @@ describe("codex.context.path", function()
     local fake_vim = {
       fn = {
         fnamemodify = function(filepath, modifier)
-          assert.equals("/repo/lua/codex/init.lua", filepath)
-          assert.equals(":.", modifier)
+          assert.equal("/repo/lua/codex/init.lua", filepath)
+          assert.equal(":.", modifier)
           return "lua/codex/init.lua"
         end,
       },
@@ -17,7 +17,7 @@ describe("codex.context.path", function()
     local relative_path = path.to_relative(fake_vim, "/repo/lua/codex/init.lua")
 
     -- ========= [A]ssert  =========
-    assert.equals("lua/codex/init.lua", relative_path)
+    assert.equal("lua/codex/init.lua", relative_path)
   end)
 
   it("falls back to original path when fnamemodify errors", function()
@@ -34,7 +34,7 @@ describe("codex.context.path", function()
     local relative_path = path.to_relative(fake_vim, "/repo/file.lua")
 
     -- ========= [A]ssert  =========
-    assert.equals("/repo/file.lua", relative_path)
+    assert.equal("/repo/file.lua", relative_path)
   end)
 
   it("keeps empty path unchanged", function()
@@ -45,7 +45,7 @@ describe("codex.context.path", function()
     local relative_path = path.to_relative(fake_vim, "")
 
     -- ========= [A]ssert  =========
-    assert.equals("", relative_path)
+    assert.equal("", relative_path)
   end)
 
   describe("ensure_dir_trailing_separator", function()
@@ -56,7 +56,7 @@ describe("codex.context.path", function()
       local normalized_path = path.ensure_dir_trailing_separator(nil, "..")
 
       -- ========= [A]ssert  =========
-      assert.equals("../", normalized_path)
+      assert.equal("../", normalized_path)
     end)
 
     it("keeps existing unix trailing slash", function()
@@ -66,7 +66,7 @@ describe("codex.context.path", function()
       local normalized_path = path.ensure_dir_trailing_separator(nil, "../../tmp/")
 
       -- ========= [A]ssert  =========
-      assert.equals("../../tmp/", normalized_path)
+      assert.equal("../../tmp/", normalized_path)
     end)
 
     it("adds backslash for windows-style paths", function()
@@ -76,7 +76,7 @@ describe("codex.context.path", function()
       local normalized_path = path.ensure_dir_trailing_separator(nil, "C:\\work\\repo")
 
       -- ========= [A]ssert  =========
-      assert.equals("C:\\work\\repo\\", normalized_path)
+      assert.equal("C:\\work\\repo\\", normalized_path)
     end)
 
     it("falls back to host OS separator when style is ambiguous", function()
@@ -93,7 +93,7 @@ describe("codex.context.path", function()
       local normalized_path = path.ensure_dir_trailing_separator(fake_vim, ".")
 
       -- ========= [A]ssert  =========
-      assert.equals(".\\", normalized_path)
+      assert.equal(".\\", normalized_path)
     end)
   end)
 end)

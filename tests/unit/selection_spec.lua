@@ -54,7 +54,7 @@ local function make_fake_vim_api(overrides)
     },
     fn = {
       fnamemodify = function(_, modifier)
-        assert.equals(":.", modifier)
+        assert.equal(":.", modifier)
         return relative_path
       end,
       visualmode = function()
@@ -81,7 +81,7 @@ describe("codex.context.selection", function()
     local filepath = selection.get_current_buffer_filepath(vim_api)
 
     -- ========= [A]ssert  =========
-    assert.equals("lua/codex/init.lua", filepath)
+    assert.equal("lua/codex/init.lua", filepath)
   end)
 
   it("returns error when target buffer is invalid", function()
@@ -93,7 +93,7 @@ describe("codex.context.selection", function()
 
     -- ========= [A]ssert  =========
     assert.is_nil(filepath)
-    assert.equals("buffer does not exist", err)
+    assert.equal("buffer does not exist", err)
   end)
 
   it("returns explicit filepath as relative ACP path", function()
@@ -109,7 +109,7 @@ describe("codex.context.selection", function()
     local filepath = selection.get_current_buffer_filepath(vim_api, opts)
 
     -- ========= [A]ssert  =========
-    assert.equals("../../tmp/example.lua", filepath)
+    assert.equal("../../tmp/example.lua", filepath)
   end)
 
   it("returns error when explicit path is empty", function()
@@ -124,7 +124,7 @@ describe("codex.context.selection", function()
 
     -- ========= [A]ssert  =========
     assert.is_nil(filepath)
-    assert.equals("current buffer has no file path", err)
+    assert.equal("current buffer has no file path", err)
   end)
 
   it("returns error when explicit path is not a regular file", function()
@@ -146,7 +146,7 @@ describe("codex.context.selection", function()
 
     -- ========= [A]ssert  =========
     assert.is_nil(filepath)
-    assert.equals("current buffer path is not a regular file", err)
+    assert.equal("current buffer path is not a regular file", err)
   end)
 
   it("prefers explicit path over bufnr lookup when both are provided", function()
@@ -164,7 +164,7 @@ describe("codex.context.selection", function()
     local filepath = selection.get_current_buffer_filepath(vim_api, opts)
 
     -- ========= [A]ssert  =========
-    assert.equals("src/new.lua", filepath)
+    assert.equal("src/new.lua", filepath)
   end)
 
   it("extracts multi-line selection from visual marks", function()
@@ -175,10 +175,10 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api)
 
     -- ========= [A]ssert  =========
-    assert.equals("lua/codex/init.lua", spec.filepath)
-    assert.equals(2, spec.start_line)
-    assert.equals(4, spec.end_line)
-    assert.equals("lua", spec.filetype)
+    assert.equal("lua/codex/init.lua", spec.filepath)
+    assert.equal(2, spec.start_line)
+    assert.equal(4, spec.end_line)
+    assert.equal("lua", spec.filetype)
     assert.same({ "line 2", "line 3", "line 4" }, spec.lines)
   end)
 
@@ -192,8 +192,8 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api)
 
     -- ========= [A]ssert  =========
-    assert.equals(3, spec.start_line)
-    assert.equals(3, spec.end_line)
+    assert.equal(3, spec.start_line)
+    assert.equal(3, spec.end_line)
     assert.same({ "line 3" }, spec.lines)
   end)
 
@@ -210,8 +210,8 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api, opts)
 
     -- ========= [A]ssert  =========
-    assert.equals(2, spec.start_line)
-    assert.equals(4, spec.end_line)
+    assert.equal(2, spec.start_line)
+    assert.equal(4, spec.end_line)
     assert.same({ "ine 2", "line 3", "li" }, spec.lines)
   end)
 
@@ -228,8 +228,8 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api, opts)
 
     -- ========= [A]ssert  =========
-    assert.equals(2, spec.start_line)
-    assert.equals(4, spec.end_line)
+    assert.equal(2, spec.start_line)
+    assert.equal(4, spec.end_line)
     assert.same({ "ine", "ine", "ine" }, spec.lines)
   end)
 
@@ -244,7 +244,7 @@ describe("codex.context.selection", function()
 
     -- ========= [A]ssert  =========
     assert.is_nil(spec)
-    assert.equals("no visual selection range found", err)
+    assert.equal("no visual selection range found", err)
   end)
 
   it("returns relative path", function()
@@ -258,7 +258,7 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api)
 
     -- ========= [A]ssert  =========
-    assert.equals("relative/path.lua", spec.filepath)
+    assert.equal("relative/path.lua", spec.filepath)
   end)
 
   it("returns error for unnamed buffers", function()
@@ -270,7 +270,7 @@ describe("codex.context.selection", function()
 
     -- ========= [A]ssert  =========
     assert.is_nil(spec)
-    assert.equals("current buffer has no file path", err)
+    assert.equal("current buffer has no file path", err)
   end)
 
   it("returns error when buffer path is not a regular file", function()
@@ -287,7 +287,7 @@ describe("codex.context.selection", function()
 
     -- ========= [A]ssert  =========
     assert.is_nil(spec)
-    assert.equals("current buffer path is not a regular file", err)
+    assert.equal("current buffer path is not a regular file", err)
   end)
 
   it("uses explicit range when provided", function()
@@ -304,8 +304,8 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api, opts)
 
     -- ========= [A]ssert  =========
-    assert.equals(1, spec.start_line)
-    assert.equals(2, spec.end_line)
+    assert.equal(1, spec.start_line)
+    assert.equal(2, spec.end_line)
     assert.same({ "line 1", "line 2" }, spec.lines)
   end)
 
@@ -321,8 +321,8 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api, opts)
 
     -- ========= [A]ssert  =========
-    assert.equals(2, spec.start_line)
-    assert.equals(4, spec.end_line)
+    assert.equal(2, spec.start_line)
+    assert.equal(4, spec.end_line)
     assert.same({ "line 2", "line 3", "line 4" }, spec.lines)
   end)
 
@@ -336,8 +336,8 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api)
 
     -- ========= [A]ssert  =========
-    assert.equals(3, spec.start_line)
-    assert.equals(5, spec.end_line)
+    assert.equal(3, spec.start_line)
+    assert.equal(5, spec.end_line)
     assert.same({ "line 3", "line 4", "line 5" }, spec.lines)
   end)
 
@@ -355,8 +355,8 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api, opts)
 
     -- ========= [A]ssert  =========
-    assert.equals(2, spec.start_line)
-    assert.equals(3, spec.end_line)
+    assert.equal(2, spec.start_line)
+    assert.equal(3, spec.end_line)
     assert.same({ "line 2", "line 3" }, spec.lines)
   end)
 
@@ -377,8 +377,8 @@ describe("codex.context.selection", function()
     local spec = selection.get_visual_selection(vim_api, opts)
 
     -- ========= [A]ssert  =========
-    assert.equals(2, spec.start_line)
-    assert.equals(4, spec.end_line)
+    assert.equal(2, spec.start_line)
+    assert.equal(4, spec.end_line)
     assert.same({ "ine 2", "line 3", "li" }, spec.lines)
   end)
 end)

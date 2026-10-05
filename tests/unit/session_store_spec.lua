@@ -28,7 +28,7 @@ describe("codex.state.session_store", function()
       -- ========= [A]ssert  =========
       local active = store.get_active()
       assert.is_not_nil(active)
-      assert.equals(id, active.id)
+      assert.equal(id, active.id)
     end)
 
     it("stores session fields", function()
@@ -46,10 +46,10 @@ describe("codex.state.session_store", function()
 
       -- ========= [A]ssert  =========
       local stored_session = store.get(id)
-      assert.equals(handle, stored_session.handle)
-      assert.equals("codex", stored_session.cmd)
-      assert.equals("/home", stored_session.cwd)
-      assert.equals("snacks", stored_session.provider_name)
+      assert.equal(handle, stored_session.handle)
+      assert.equal("codex", stored_session.cmd)
+      assert.equal("/home", stored_session.cwd)
+      assert.equal("snacks", stored_session.provider_name)
       assert.is_true(stored_session.alive)
     end)
   end)
@@ -120,7 +120,7 @@ describe("codex.state.session_store", function()
       store.set_active(id1)
 
       -- ========= [A]ssert  =========
-      assert.equals(id1, store.get_active().id)
+      assert.equal(id1, store.get_active().id)
     end)
   end)
 
@@ -144,7 +144,7 @@ describe("codex.state.session_store", function()
       local sessions = store.list()
 
       -- ========= [A]ssert  =========
-      assert.equals(2, #sessions)
+      assert.equal(2, #sessions)
     end)
   end)
 end)

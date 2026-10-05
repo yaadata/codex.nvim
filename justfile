@@ -9,6 +9,9 @@ bootstrap-test-deps:
 
 test: bootstrap-test-deps test-unit test-contract
 
+test-one file filter:
+  CODEX_TEST_FILE="{{file}}" CODEX_TEST_FILTER="{{filter}}" CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'lua require("plenary.busted").run("tests/test_filter.lua")' -c 'qa'
+
 test-unit jobs="4":
 	find tests/unit -name '*_spec.lua' -print0 | \
 	xargs -0 -n1 -P "{{jobs}}" bash -cu \
@@ -18,7 +21,10 @@ test-contract:
 	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'PlenaryBustedFile tests/contract/provider_contract_spec.lua' -c 'qa'
 
 test-file file:
-	CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c "PlenaryBustedFile {{file}}" -c 'qa'
+	CODEX_TEST_FILE={{file}} CODEX_PLENARY_PATH="{{plenary_dir}}" nvim --headless -u "{{test_init}}" -c 'lua require("plenary.busted").run(vim.env.CODEX_TEST_FILE)' -c 'qa'
+
+helptags:
+	nvim --headless -u NONE -i NONE -c 'helptags doc' -c 'qa'
 
 fmt:
 	stylua lua plugin tests

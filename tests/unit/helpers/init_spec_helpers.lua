@@ -1,8 +1,10 @@
+---@return tests.InitSpecSessionStore
 local function make_session_store()
   local sessions = {}
   local active_id = nil
   local counter = 0
 
+  ---@class tests.InitSpecSessionStore: codex.SessionStore
   local store = {}
 
   function store.create(spec)
@@ -68,7 +70,9 @@ local function make_session_store()
   return store
 end
 
+---@return tests.InitSpecProvider
 local function make_provider()
+  ---@class tests.InitSpecProvider: codex.Provider
   local provider = {
     open_calls = {},
     close_calls = {},
@@ -223,7 +227,9 @@ local function make_provider()
   return provider
 end
 
+---@return tests.InitSpecLogger
 local function make_logger()
+  ---@class tests.InitSpecLogger: codex.Logger
   local logger = {
     set_levels = {},
     set_verboses = {},
@@ -295,7 +301,9 @@ local function make_logger()
   return logger
 end
 
+---@return tests.InitSpecFormatter
 local function make_formatter()
+  ---@class tests.InitSpecFormatter: codex.Formatter
   local formatter = {
     selection_specs = {},
     mention_paths = {},
@@ -322,7 +330,9 @@ local function make_formatter()
   return formatter
 end
 
+---@return tests.InitSpecSelection
 local function make_selection()
+  ---@class tests.InitSpecSelection: codex.Selection
   local selection = {
     calls = {},
     buffer_calls = {},
@@ -369,6 +379,7 @@ local function make_selection()
   return selection
 end
 
+---@return tests.InitSpecVim
 local function make_fake_vim()
   local augroups = {}
   local autocmds = {}
@@ -428,7 +439,8 @@ local function make_fake_vim()
     return runs
   end
 
-  return {
+  ---@class tests.InitSpecVim
+  local fake_vim = {
     api = {
       nvim_create_augroup = function(name, opts)
         table.insert(augroups, { name = name, opts = opts })
@@ -464,7 +476,7 @@ local function make_fake_vim()
         local lines = buf_lines[bufnr] or {}
         return #lines
       end,
-      nvim_buf_get_lines = function(bufnr, start_idx, end_idx, _strict)
+      nvim_buf_get_lines = function(bufnr, start_idx, end_idx, _)
         local lines = buf_lines[bufnr] or {}
         local out = {}
         for idx = start_idx + 1, math.min(end_idx, #lines) do
@@ -529,7 +541,7 @@ local function make_fake_vim()
         return ""
       end,
       fnamemodify = function(filepath, modifier)
-        assert.equals(":.", modifier)
+        assert.equal(":.", modifier)
         if filepath == "/tmp/example.lua" then
           return "../../tmp/example.lua"
         end
@@ -623,8 +635,22 @@ local function make_fake_vim()
       return win_bufs[current_win] or -1
     end,
   }
+
+  return fake_vim
 end
 
+---@class tests.InitSpecEnv
+---@field codex codex.Api
+---@field provider tests.InitSpecProvider
+---@field store tests.InitSpecSessionStore
+---@field logger tests.InitSpecLogger
+---@field fake_vim tests.InitSpecVim
+---@field formatter tests.InitSpecFormatter
+---@field selection tests.InitSpecSelection
+---@field commands tests.InitSpecCommands
+---@field call_order string[]
+---@field providers tests.InitSpecProviders
+---@return tests.InitSpecEnv
 local function setup_with_deps(overrides)
   package.loaded["codex"] = nil
 
@@ -642,18 +668,21 @@ local function setup_with_deps(overrides)
     overrides._provider(provider, fake_vim, store, logger)
   end
 
+  ---@class tests.InitSpecCommands: codex.Commands
   local commands = { register_calls = 0 }
   function commands.register()
     commands.register_calls = commands.register_calls + 1
     table.insert(call_order, "commands")
   end
 
+  ---@class tests.InitSpecProviders: codex.Providers
   local providers = { resolve_calls = {} }
   function providers.resolve(name)
     table.insert(providers.resolve_calls, name)
     return provider, "native"
   end
 
+  ---@type codex.Api
   local codex = require("codex")
   local setup_overrides = vim.deepcopy(overrides)
   setup_overrides._provider = nil

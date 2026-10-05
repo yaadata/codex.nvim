@@ -1,5 +1,5 @@
 local log = require("codex.logger")
-local keymaps = require("codex.keymaps")
+local keymaps = require("codex.nvim.keymaps")
 local terminal_utils = require("codex.providers.terminal_utils")
 
 local M = {}
@@ -226,6 +226,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
     ready_at_ms = now_ms() + (startup.grace_ms or 0),
   }
   local termopen_opts = {
+    term = true,
     cwd = cwd,
     on_exit = function(_, exit_code)
       handle.jobid = nil
@@ -242,7 +243,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
     termopen_opts.env = env
   end
 
-  local jobid = vim.fn.termopen(full_cmd, termopen_opts)
+  local jobid = vim.fn.jobstart(full_cmd, termopen_opts)
   handle.jobid = jobid
   terminal_utils.set_codex_terminal_marker(bufnr, "native", full_cmd, cwd)
 

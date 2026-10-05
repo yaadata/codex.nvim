@@ -16,8 +16,8 @@ describe("codex.nvim.visual", function()
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
-    assert.equals(1, #fake_vim._input_calls)
-    assert.equals("<termcoded:<Esc>>", fake_vim._input_calls[1].keys)
+    assert.equal(1, #fake_vim._input_calls)
+    assert.equal("<termcoded:<Esc>>", fake_vim._input_calls[1].keys)
   end)
 
   it("sends escape when mode is linewise visual", function()
@@ -32,8 +32,8 @@ describe("codex.nvim.visual", function()
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
-    assert.equals(1, #fake_vim._input_calls)
-    assert.equals("<termcoded:<Esc>>", fake_vim._input_calls[1].keys)
+    assert.equal(1, #fake_vim._input_calls)
+    assert.equal("<termcoded:<Esc>>", fake_vim._input_calls[1].keys)
   end)
 
   it("sends escape when mode is blockwise visual", function()
@@ -48,8 +48,8 @@ describe("codex.nvim.visual", function()
 
     -- ========= [A]ssert  =========
     assert.is_true(ok)
-    assert.equals(1, #fake_vim._input_calls)
-    assert.equals("<termcoded:<Esc>>", fake_vim._input_calls[1].keys)
+    assert.equal(1, #fake_vim._input_calls)
+    assert.equal("<termcoded:<Esc>>", fake_vim._input_calls[1].keys)
   end)
 
   it("does nothing when mode is not visual", function()
@@ -64,7 +64,7 @@ describe("codex.nvim.visual", function()
 
     -- ========= [A]ssert  =========
     assert.is_false(ok)
-    assert.equals(0, #fake_vim._input_calls)
+    assert.equal(0, #fake_vim._input_calls)
   end)
 
   it("does nothing when mode probe fails", function()
@@ -79,6 +79,6 @@ describe("codex.nvim.visual", function()
 
     -- ========= [A]ssert  =========
     assert.is_false(ok)
-    assert.equals(0, #fake_vim._input_calls)
+    assert.equal(0, #fake_vim._input_calls)
   end)
 end)

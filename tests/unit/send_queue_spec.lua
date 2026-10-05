@@ -84,8 +84,8 @@ describe("codex.runtime.send_queue", function()
     -- ========= [A]ssert  =========
     assert.is_true(ok)
     assert.is_nil(err)
-    assert.equals(1, calls)
-    assert.equals(0, #fake_vim._deferred)
+    assert.equal(1, calls)
+    assert.equal(0, #fake_vim._deferred)
   end)
 
   it("returns false with error when process drops immediately", function()
@@ -105,8 +105,8 @@ describe("codex.runtime.send_queue", function()
 
     -- ========= [A]ssert  =========
     assert.is_false(ok)
-    assert.equals("boom", err)
-    assert.equals(0, #fake_vim._deferred)
+    assert.equal("boom", err)
+    assert.equal(0, #fake_vim._deferred)
   end)
 
   it("schedules a single timer while retrying", function()
@@ -126,8 +126,8 @@ describe("codex.runtime.send_queue", function()
     queue:submit({ text = "second" })
 
     -- ========= [A]ssert  =========
-    assert.equals(1, #fake_vim._deferred)
-    assert.equals(25, fake_vim._deferred[1].delay_ms)
+    assert.equal(1, #fake_vim._deferred)
+    assert.equal(25, fake_vim._deferred[1].delay_ms)
   end)
 
   it("flushes queued items in FIFO order", function()
@@ -172,7 +172,7 @@ describe("codex.runtime.send_queue", function()
     -- ========= [A]ssert  =========
     assert.is_true(did_run)
     assert.same({ "first" }, sent)
-    assert.equals(1, #fake_vim._deferred)
+    assert.equal(1, #fake_vim._deferred)
   end)
 
   it("flushes nested submit on a later retry", function()
@@ -209,7 +209,7 @@ describe("codex.runtime.send_queue", function()
     queue:reset()
 
     -- ========= [A]ssert  =========
-    assert.equals(0, #queue._items)
+    assert.equal(0, #queue._items)
     assert.is_false(queue._flush_active)
     assert.is_false(queue._flush_scheduled)
   end)
@@ -233,7 +233,7 @@ describe("codex.runtime.send_queue", function()
 
     -- ========= [A]ssert  =========
     assert.is_true(did_run)
-    assert.equals(0, #queue._items)
-    assert.equals(0, #fake_vim._deferred)
+    assert.equal(0, #queue._items)
+    assert.equal(0, #fake_vim._deferred)
   end)
 end)

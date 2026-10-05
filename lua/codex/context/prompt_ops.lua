@@ -1,3 +1,5 @@
+local outcome = require("codex.enums.outcome")
+local capture_input_prompt = require("codex.enums.input_prompt")
 local terminal_io = require("codex.runtime.terminal_io")
 local session_lifecycle = require("codex.state.session_lifecycle")
 
@@ -35,7 +37,7 @@ end
 ---@param get_deps fun(): table
 ---@param get_config fun(): table
 ---@return string|nil input
----@return "captured"|"no_input"|"uncertain"|"unavailable_session"|"unavailable_buffer" status
+---@return codex.CaptureInputPromptResult result
 ---@return integer clear_line_count
 function M.capture_prompt_input(get_deps, get_config)
   local deps = get_deps()
@@ -49,29 +51,29 @@ function M.capture_prompt_input(get_deps, get_config)
     session_lifecycle.get_or_restore_active_session_and_provider(deps, config)
   if not session_lifecycle.session_is_alive(session, provider) then
     vdebug("capture_prompt_input unavailable session")
-    return nil, "unavailable_session", 1
+    return nil, capture_input_prompt.UNAVAILABLE_SESSION, 1
   end
   if type(provider.get_bufnr) ~= "function" then
     vdebug("capture_prompt_input provider missing get_bufnr")
-    return nil, "unavailable_buffer", 1
+    return nil, capture_input_prompt.UNAVAILABLE_BUFFER, 1
   end
 
   local bufnr = provider.get_bufnr(session.handle)
   local api = deps.vim.api
   if type(bufnr) ~= "number" then
     vdebug("capture_prompt_input unavailable buffer (bufnr missing)")
-    return nil, "unavailable_buffer", 1
+    return nil, capture_input_prompt.UNAVAILABLE_BUFFER, 1
   end
   local ok_valid, is_valid = pcall(api.nvim_buf_is_valid, bufnr)
   if not ok_valid or not is_valid then
     vdebug("capture_prompt_input unavailable buffer (invalid bufnr=%s)", tostring(bufnr))
-    return nil, "unavailable_buffer", 1
+    return nil, capture_input_prompt.UNAVAILABLE_BUFFER, 1
   end
 
   local ok_count, line_count = pcall(api.nvim_buf_line_count, bufnr)
   if not ok_count or type(line_count) ~= "number" or line_count < 1 then
     vdebug("capture_prompt_input unavailable buffer (line_count invalid)")
-    return nil, "unavailable_buffer", 1
+    return nil, capture_input_prompt.UNAVAILABLE_BUFFER, 1
   end
 
   local candidates = {}
@@ -168,7 +170,7 @@ function M.capture_prompt_input(get_deps, get_config)
             end
           end
           vdebug("capture_prompt_input captured len=%d line=%d", #captured_input, line_number)
-          return captured_input, "captured", clear_line_count
+          return captured_input, capture_input_prompt.CAPTURED, clear_line_count
         end
       elseif
         (line_number == cursor_line or line_number == line_count)
@@ -199,17 +201,17 @@ function M.capture_prompt_input(get_deps, get_config)
 
   if uncertain then
     vdebug("capture_prompt_input uncertain")
-    return nil, "uncertain", 1
+    return nil, capture_input_prompt.UNCERTAIN, 1
   end
   vdebug("capture_prompt_input no_input")
-  return nil, "no_input", 1
+  return nil, capture_input_prompt.NO_INPUT, 1
 end
 
 ---Focuses the active session when available, then captures prompt input.
 ---@param get_deps fun(): table
 ---@param get_config fun(): table
 ---@return string|nil input
----@return "captured"|"no_input"|"uncertain"|"unavailable_session"|"unavailable_buffer" status
+---@return codex.CaptureInputPromptResult result
 ---@return integer clear_line_count
 function M.capture_active_prompt_input(get_deps, get_config)
   local deps = get_deps()
@@ -234,8 +236,8 @@ end
 ---Captures current prompt input and copies it to the unnamed register.
 ---@param get_deps fun(): table
 ---@param get_config fun(): table
----@return boolean ok
----@return string|nil err
+---@return codex.Outcome ok
+---@return codex.Error err
 function M.copy_prompt_input(get_deps, get_config)
   local deps = get_deps()
   local function vdebug(msg, ...)
@@ -272,8 +274,8 @@ end
 ---@param get_deps fun(): table
 ---@param get_config fun(): table
 ---@param target string
----@return boolean ok
----@return string|nil err
+---@return codex.Outcome ok
+---@return codex.Error err
 function M.submit_with_enter_key(get_deps, get_config, target)
   local deps = get_deps()
   local config = get_config()
@@ -286,40 +288,38 @@ function M.submit_with_enter_key(get_deps, get_config, target)
     session_lifecycle.get_or_restore_active_session_and_provider(deps, config)
   if not session_lifecycle.session_is_alive(session, provider) then
     vdebug("submit_with_enter_key no active session target=%s", target)
-    return false, "no active Codex session"
+    return outcome.FAILURE, "no active Codex session"
   end
 
   session_lifecycle.remember_previous_focus(deps, config, session, provider)
   provider.focus(session.handle)
   local enter_termcode = terminal_io.encode_termcode(deps, "<CR>")
   local feedkeys = deps.vim.api.nvim_feedkeys
-  if type(feedkeys) == "function" then
-    terminal_io.append_send_debug_entry(
-      deps,
-      string.format("%s[feedkeys_submit]", target),
-      enter_termcode
-    )
-    local ok, feedkeys_err = pcall(feedkeys, enter_termcode, "nt", false)
-    if ok then
-      vdebug("submit_with_enter_key feedkeys success target=%s", target)
-      return true
-    end
-    vdebug("submit_with_enter_key feedkeys failed target=%s err=%s", target, feedkeys_err)
-    deps.logger.warn("feedkeys submit failed, falling back to channel send: %s", feedkeys_err)
+  terminal_io.append_send_debug_entry(
+    deps,
+    string.format("%s[feedkeys_submit]", target),
+    enter_termcode
+  )
+  local ok, feedkeys_err = pcall(feedkeys, enter_termcode, "nt", false)
+  if ok then
+    vdebug("submit_with_enter_key feedkeys success target=%s", target)
+    return outcome.SUCCESS
   end
+  vdebug("submit_with_enter_key feedkeys failed target=%s err=%s", target, feedkeys_err)
+  deps.logger.warn("feedkeys submit failed, falling back to channel send: %s", feedkeys_err)
 
   terminal_io.append_send_debug_entry(
     deps,
     string.format("%s[channel_submit]", target),
     terminal_io.CODEX_ENTER_SEQUENCE
   )
-  local ok, err = provider.send(session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
-  if ok then
+  local send_ok, err = provider.send(session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
+  if send_ok then
     vdebug("submit_with_enter_key channel send success target=%s", target)
   else
     vdebug("submit_with_enter_key channel send failed target=%s err=%s", target, err or "unknown")
   end
-  return ok, err
+  return send_ok, err
 end
 
 return M

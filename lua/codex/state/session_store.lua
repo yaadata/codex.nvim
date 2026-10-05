@@ -1,3 +1,12 @@
+---@class codex.SessionStore
+---@field create fun(spec: codex.SessionSpec): string
+---@field get fun(id: string): codex.Session?
+---@field get_active fun(): codex.Session?
+---@field set_active fun(id: string)
+---@field mark_dead fun(id: string)
+---@field remove fun(id: string)
+---@field list fun(): codex.Session[]
+---@field reset fun()
 local M = {}
 
 ---@type table<string, codex.Session>

@@ -1,5 +1,8 @@
 local log = require("codex.logger")
 
+---@class codex.Providers
+---@field resolve fun(provider_name: codex.ProviderName): codex.Provider, string
+---@field reset fun()
 local M = {}
 
 local provider_modules = {

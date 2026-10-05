@@ -10,18 +10,6 @@ M.errors = {
   NO_SELECTION = "no visual selection range found",
 }
 
----@class codex.SelectionOpts
----@field line1? integer
----@field line2? integer
----@field start_col? integer
----@field end_col? integer
----@field bufnr? integer
----@field visual_mode? string
-
----@class codex.BufferPathOpts
----@field bufnr? integer
----@field path? string
-
 --- Resolve the target buffer number from opts or current buffer.
 ---@param vim_api table
 ---@param opts codex.SelectionOpts|nil

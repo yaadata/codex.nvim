@@ -1,19 +1,20 @@
 local M = {}
 
+local DEFAULT_SUBMIT_INPUT_DELAY_MS = 90
 M.BRACKETED_PASTE_START = "\27[200~"
 M.BRACKETED_PASTE_END = "\27[201~"
 M.CODEX_ENTER_SEQUENCE = "\r"
-M.SUBMIT_INPUT_DELAY_MS = 40
 M.PROMPT_CAPTURE_LOOKBACK_LINES = 900
 -- Allow Codex CLI enough time to process submit and render a fresh prompt
 -- before re-applying captured prompt input.
-M.RESTORE_INPUT_DELAY_MS = 200
+M.RESTORE_INPUT_DELAY_MS = 400
 
 local COMPACT_PROMPT_MARKERS = {
   [">"] = true,
   ["›"] = true,
   ["❯"] = true,
   ["»"] = true,
+  ["› "] = true,
 }
 
 local DISALLOWED_SPACED_PROMPT_MARKERS = {
@@ -22,6 +23,21 @@ local DISALLOWED_SPACED_PROMPT_MARKERS = {
   ["*"] = true,
   ["+"] = true,
 }
+
+--- Fetches the SUBMIT_INPUT_DELAY_MS that is by dispatch_send
+--- This is to enable multiple writes to the terminal buffer to be delayed
+--- so they are accurately utilized within the terminal.
+---@return integer delay
+function M.get_submit_input_delay_ms()
+  local delay = DEFAULT_SUBMIT_INPUT_DELAY_MS
+  if vim.g.CODEX_SUBMIT_INPUT_DELAY_MS ~= nil then
+    if type(vim.g.CODEX_SUBMIT_INPUT_DELAY_MS) ~= "number" then
+      error("vim.g.CODEX_SUBMIT_INPUT_DELAY_MS must be a number")
+    end
+    delay = vim.g.CODEX_SUBMIT_INPUT_DELAY_MS
+  end
+  return delay
+end
 
 ---Checks whether a token can represent a supported prompt marker.
 ---@param token string
@@ -88,7 +104,7 @@ end
 ---@param deps table
 ---@param clear_line_count? integer
 ---@return string
-function M.encode_clear_line_for_mention(deps, clear_line_count)
+function M.encode_clear_line(deps, clear_line_count)
   local line_count = tonumber(clear_line_count) or 1
   if line_count < 1 then
     line_count = 1

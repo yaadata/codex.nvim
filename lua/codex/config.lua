@@ -1,5 +1,5 @@
 local M = {}
-local keymaps = require("codex.keymaps")
+local keymaps = require("codex.nvim.keymaps")
 local hooks = require("codex.hooks")
 
 ---@type codex.Config

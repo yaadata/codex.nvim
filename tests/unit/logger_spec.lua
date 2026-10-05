@@ -30,14 +30,14 @@ describe("codex.logger", function()
     logger.warn("warn %s", "message")
 
     -- ========= [A]ssert  =========
-    assert.equals(1, #notify_calls)
-    assert.equals("[codex] warn message", notify_calls[1].msg)
+    assert.equal(1, #notify_calls)
+    assert.equal("[codex] warn message", notify_calls[1].msg)
 
     local logs = logger.get_logs()
-    assert.equals(1, #logs)
+    assert.equal(1, #logs)
     assert.is_true(logs[1].seq > 0)
-    assert.equals("warn", logs[1].level)
-    assert.equals("warn message", logs[1].message)
+    assert.equal("warn", logs[1].level)
+    assert.equal("warn message", logs[1].message)
     assert.is_false(logs[1].verbose)
   end)
 
@@ -50,12 +50,12 @@ describe("codex.logger", function()
     logger.vdebug("detail %d", 7)
 
     -- ========= [A]ssert  =========
-    assert.equals(0, #notify_calls)
+    assert.equal(0, #notify_calls)
     local logs = logger.get_logs()
-    assert.equals(1, #logs)
+    assert.equal(1, #logs)
     assert.is_true(logs[1].seq > 0)
-    assert.equals("debug", logs[1].level)
-    assert.equals("detail 7", logs[1].message)
+    assert.equal("debug", logs[1].level)
+    assert.equal("detail 7", logs[1].message)
     assert.is_true(logs[1].verbose)
   end)
 
@@ -70,9 +70,9 @@ describe("codex.logger", function()
 
     -- ========= [A]ssert  =========
     local logs = logger.get_logs()
-    assert.equals(2, #logs)
-    assert.equals("first", logs[1].message)
-    assert.equals("second", logs[2].message)
+    assert.equal(2, #logs)
+    assert.equal("first", logs[1].message)
+    assert.equal("second", logs[2].message)
     assert.is_true(logs[1].seq < logs[2].seq)
   end)
 
@@ -85,8 +85,8 @@ describe("codex.logger", function()
     logger.vdebug("detail")
 
     -- ========= [A]ssert  =========
-    assert.equals(0, #notify_calls)
-    assert.equals(0, #logger.get_logs())
+    assert.equal(0, #notify_calls)
+    assert.equal(0, #logger.get_logs())
   end)
 
   it("keeps only the latest 1000 captured log entries", function()
@@ -103,9 +103,9 @@ describe("codex.logger", function()
 
     -- ========= [A]ssert  =========
     local logs = logger.get_logs()
-    assert.equals(1000, #logs)
-    assert.equals("entry 6", logs[1].message)
-    assert.equals("entry 1005", logs[#logs].message)
+    assert.equal(1000, #logs)
+    assert.equal("entry 6", logs[1].message)
+    assert.equal("entry 1005", logs[#logs].message)
   end)
 
   it("clears captured logs", function()
@@ -116,7 +116,7 @@ describe("codex.logger", function()
     logger.clear_logs()
 
     -- ========= [A]ssert  =========
-    assert.equals(0, #logger.get_logs())
+    assert.equal(0, #logger.get_logs())
   end)
 
   it("clears deferred non-critical logs", function()
@@ -128,6 +128,6 @@ describe("codex.logger", function()
     logger.clear_logs()
 
     -- ========= [A]ssert  =========
-    assert.equals(0, #logger.get_logs())
+    assert.equal(0, #logger.get_logs())
   end)
 end)

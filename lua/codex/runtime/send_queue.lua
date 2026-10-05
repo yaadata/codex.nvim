@@ -1,18 +1,11 @@
-local Queue = {}
-Queue.__index = Queue
+---@class codex.SendQueue
+local M = {}
 
----@class codex.SendQueueOpts
----@field vim table
----@field retry_interval_ms integer
----@field process fun(item: table): "sent"|"retry"|"drop", string|nil
+local result = require("codex.enums.send_result")
 
 ---@class codex.SendQueue
----@field _vim table
----@field _retry_interval_ms integer
----@field _process fun(item: table): "sent"|"retry"|"drop", string|nil
----@field _items table[]
----@field _flush_scheduled boolean
----@field _flush_active boolean
+local Queue = {}
+Queue.__index = Queue
 
 --- Schedule a deferred flush of the queue if one is not already pending.
 ---@param self codex.SendQueue
@@ -70,11 +63,11 @@ end
 ---@return string|nil err
 function Queue:submit(item)
   local outcome, err = self._process(item)
-  if outcome == "sent" then
+  if outcome == result.SENT then
     return true
   end
 
-  if outcome == "drop" then
+  if outcome == result.DROP then
     return false, err
   end
 
@@ -90,8 +83,6 @@ function Queue:reset()
   self._flush_scheduled = false
   self._flush_active = false
 end
-
-local M = {}
 
 --- Create a new send queue with the given options.
 ---@param opts codex.SendQueueOpts

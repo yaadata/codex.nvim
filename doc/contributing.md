@@ -1,424 +1,104 @@
 # Contributing
 
-## Prerequisites
+## Setup
 
-- **Neovim >= 0.11.0** -- the plugin uses APIs introduced in this version.
-- **[mise](https://mise.jdx.dev/)** -- manages tool versions for the project.
-- **Git** -- for version control and pre-commit hooks.
-
-mise pins the following tools (see `mise.toml`):
-
-| Tool       | Version |
-| ---------- | ------- |
-| stylua     | v2.3.1  |
-| selene     | 0.30.0  |
-| mdformat   | 1.0.0   |
-| pre-commit | 4.2.0   |
-
-## Getting Started
+You need Neovim >= 0.12.0, Git, and `just`. Project tool versions are defined in
+[`mise.toml`](../mise.toml); use Mise if those tools are not already available.
 
 ```sh
-# Clone the repository
-git clone https://github.com/yaadata/codex.nvim.git
+git clone https://codeberg.org/yaadata/codex.nvim.git
 cd codex.nvim
-
-# Install mise-managed tools (stylua, selene, mdformat, pre-commit)
 mise install
-
-# Clone plenary.nvim into .deps/ (required for running tests)
 just bootstrap-test-deps
-
-# Install git pre-commit hooks
 just pre-commit-install
 ```
 
-What each step does:
+Run commands through `mise exec --` when you need the pinned tools.
 
-- `mise install` reads `mise.toml` and installs the pinned versions of stylua,
-  selene, mdformat, and pre-commit.
-- `just bootstrap-test-deps` clones (or pulls) `plenary.nvim` into
-  `.deps/plenary.nvim`. This is the only test dependency.
-- `just pre-commit-install` installs pre-commit hooks into `.git/hooks/` so that
-  formatting, linting, and unit tests run automatically before each commit.
+## Checks
 
-## Running Commands with Mise (Recommended)
+| Command                                                            | Purpose                                                                |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `just test`                                                        | Bootstrap Plenary, then run unit and provider-contract tests           |
+| `just test-unit`                                                   | Run each unit spec in an isolated Neovim process; four jobs by default |
+| `just test-unit 1`                                                 | Run unit specs sequentially                                            |
+| `just test-contract`                                               | Check the provider contract                                            |
+| `just test-file tests/unit/config_spec.lua`                        | Run one spec                                                           |
+| `just test-one tests/unit/config_spec.lua "merges user overrides"` | Run tests whose names contain the literal filter                       |
+| `just fmt`                                                         | Format Lua and Markdown                                                |
+| `just fmt-check`                                                   | Check formatting                                                       |
+| `just lint`                                                        | Run Selene                                                             |
+| `just pre-commit-run`                                              | Run all pre-commit checks                                              |
 
-To avoid "command not found" errors for tools like `selene`, `stylua`, and
-`mdformat`, run project commands through mise:
+Recipes live in [`Justfile`](../Justfile). The test environment is defined in
+[`tests/minimal_init.lua`](../tests/minimal_init.lua), and the name filter in
+[`tests/test_filter.lua`](../tests/test_filter.lua). Vim help is formatted
+manually; Markdown formatting does not cover it.
 
-```sh
-mise exec -- just test-unit
-mise exec -- just fmt-check
-mise exec -- just lint
-```
+## Code and Tests
 
-This ensures commands use the tool versions pinned in `mise.toml`, even when
-those tools are not globally installed on your system.
+- Use LuaDoc annotations for public functions and shared types. Put a concise
+  summary before the parameter and return tags. See
+  [`types.lua`](../lua/codex/types.lua) for API contracts.
+- Follow the existing module's structure. Consider deduplication at three
+  occurrences, and only when they represent the same behavior.
+- Preserve the owning API's return contract: core operations commonly return
+  `ok, err`; builtin workflows return an error string or `nil`. Deferred
+  failures cannot reach a caller through a synchronous return.
+- Keep tests focused on observable behavior owned by the module. Command tests
+  check dispatch; builtin tests check workflow choices. Avoid repeating terminal
+  capture and delivery cases in every caller's spec.
 
-## Running Tests
-
-### Full Suite
-
-```sh
-mise exec -- just test
-```
-
-Runs `bootstrap-test-deps`, then `test-unit`, then `test-contract` in sequence.
-
-### Unit Tests
-
-```sh
-mise exec -- just test-unit
-```
-
-Loops over every `tests/unit/*_spec.lua` file and runs each one individually via
-`PlenaryBustedFile` in a headless Neovim instance. This isolation ensures one
-failing spec file does not prevent others from running.
-
-### Contract Tests
-
-```sh
-mise exec -- just test-contract
-```
-
-Runs `tests/contract/provider_contract_spec.lua` which verifies that every
-registered provider exports all 9 required methods and handles nil handles
-correctly.
-
-### Test Environment
-
-Tests run in headless Neovim with `tests/minimal_init.lua` as the init file.
-This minimal config:
-
-1. Prepends the plugin root to `rtp`.
-2. Resolves plenary.nvim from `CODEX_PLENARY_PATH`, `.deps/plenary.nvim`, or the
-   lazy.nvim default location.
-3. Disables swap files and shada.
-4. Loads `plugin/plenary.vim` to register the `PlenaryBustedFile` command.
-
-## Formatting and Linting
-
-### Formatting (stylua)
-
-```sh
-mise exec -- just fmt         # format in place
-mise exec -- just fmt-check   # check only (used in CI and pre-commit)
-```
-
-Stylua configuration (`.stylua.toml`):
-
-| Setting            | Value            |
-| ------------------ | ---------------- |
-| `column_width`     | 100              |
-| `indent_type`      | Spaces           |
-| `indent_width`     | 2                |
-| `line_endings`     | Unix             |
-| `quote_style`      | AutoPreferDouble |
-| `call_parentheses` | Always           |
-
-### Markdown Formatting (mdformat)
-
-```sh
-mise exec -- just fmt         # format in place (includes Lua and Markdown)
-mise exec -- just fmt-check   # check only (used in CI and pre-commit)
-```
-
-mdformat is installed via the `pipx` backend with the
-[mdformat-gfm](https://github.com/hukkin/mdformat-gfm) plugin for GitHub
-Flavored Markdown support (tables, task lists, etc.). The `--number` flag is
-used to apply consecutive numbering to ordered lists.
-
-Targets: Markdown files under `doc/` and `README.md`.
-
-`doc/codex.nvim.txt` is a Vim helpfile, not Markdown. Keep it wrapped and tagged
-manually; `mdformat` does not manage it.
-
-### Linting (selene)
-
-```sh
-mise exec -- just lint
-```
-
-Selene configuration (`selene.toml` + `selene_std.yml`):
-
-- Uses a custom standard for selene lints.
-- Base standard: `lua51`.
-
-## Pre-Commit Hooks
-
-The following hooks run before every commit (`.pre-commit-config.yaml`):
-
-**Pre-commit stage** (runs on file content):
-
-1. **codex-fmt-check** -- `mise exec -- just fmt-check`
-2. **codex-lint** -- `mise exec -- just lint`
-3. **codex-md-fmt-check** --
-   `mise exec -- mdformat --number --check doc/ README.md`
-4. **codex-test-unit** -- `mise exec -- just test-unit`
-5. **codex-test-contract** -- `mise exec -- just test-contract`
-
-**Commit-msg stage** (validates the commit message):
-
-6. **conventional-pre-commit** -- enforces the conventional commit format
-   described in the Git Workflow section. Requires a scope from the allowed list
-   and one of the allowed types. Uses `--strict` mode.
-
-Run all hooks manually against the full repo:
-
-```sh
-mise exec -- just pre-commit-run
-```
-
-Do not bypass hooks with `--no-verify`. If a hook fails, fix the issue and
-commit again.
-
-## Code Style Guide
-
-### Module Structure
-
-Stateless modules use the standard pattern:
+Use explicit Arrange, Act, and Assert sections. Keep the operation under test
+visible in Act; helpers may prepare fixtures, but should not hide that call.
+Each test should have one action under test. Omit Arrange when unnecessary.
 
 ```lua
-local M = {}
-
--- Private helpers (local functions, not on M)
-local function helper() end
-
--- Public API (functions on M)
-function M.public_method() end
-
-return M
-```
-
-Modules that need runtime accessors use a `create(opts)` constructor:
-
-```lua
-local M = {}
-
-function M.create(opts)
-  local get_deps = opts.get_deps
-  local function bound_method() ... end
-  return { bound_method = bound_method }
-end
-
-return M
-```
-
-### Type Annotations
-
-Use EmmyLua annotations for all public functions and types:
-
-```lua
----@param name string
----@param count integer
----@return boolean ok
----@return string|nil err
-function M.example(name, count) end
-```
-
-Document every function (public and private) with a one-line summary placed
-before `---@param`/`---@return` tags:
-
-```lua
----Returns whether the active session is alive.
----@param session codex.Session|nil
----@param provider codex.Provider
----@return boolean
-local function session_is_alive(session, provider) end
-```
-
-Define shared types with `---@class` and `---@alias` in `lua/codex/types.lua`.
-Module-local types (like `codex.SelectionSpec`) can be defined in the module
-that owns them.
-
-### Error Handling
-
-- Use `(ok, err)` two-value returns for operational failures (network errors,
-  missing selections, provider failures).
-- Use `error()` only for programmer errors (calling API before setup, invalid
-  arguments that indicate bugs).
-
-### Naming
-
-| Element   | Convention         | Example                |
-| --------- | ------------------ | ---------------------- |
-| Files     | `snake_case.lua`   | `session_store.lua`    |
-| Functions | `snake_case`       | `get_visual_selection` |
-| Constants | `UPPER_SNAKE_CASE` | `ERR_NO_FILEPATH`      |
-| Types     | `codex.PascalCase` | `codex.ProviderHandle` |
-| Commands  | `CodexPascalCase`  | `CodexSendSelection`   |
-
-### Comments
-
-Prefer self-documenting code over inline comments. Use EmmyLua annotations as
-the primary form of documentation. Add comments only where the logic is not
-self-evident.
-
-## Testing Patterns
-
-### Framework
-
-Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) which
-provides busted-style test primitives: `describe`, `it`, `before_each`,
-`after_each`, and `assert`.
-
-Plenary also bundles luassert. Use `luassert.stub` when a test needs to replace
-real global APIs such as `vim.api.nvim_create_user_command`, `vim.notify`, or
-`vim.schedule`. Prefer `assert:snapshot()` in `before_each` and
-`snapshot:revert()` in `after_each` for luassert-managed stubs instead of
-hand-written save/restore blocks.
-
-Direct non-stub global assignments, such as replacing option tables or scalar
-values, still need explicit restore handling.
-
-Do not replace dependency-injected `fake_vim` functions with luassert stubs when
-the production code checks `type(api_fn) == "function"`. Luassert stubs are
-callable test doubles, but they do not behave like plain Lua functions for those
-type checks. Keep those fake-vim overrides as real functions.
-
-### Test Structure
-
-Every test should use explicit `Arrange / Act / Assert` section comments:
-
-```lua
-it("does something", function()
+it("returns the resolved config", function()
   -- ========= [A]rrange =========
-  local subject = make_subject()
+  local env = helpers.setup_with_deps()
 
   -- ========= [A]ct     =========
-  local ok = subject.run()
+  local config = env.codex.get_config()
 
   -- ========= [A]ssert  =========
-  assert.is_true(ok)
+  assert.equal("codex-test", config.launch.cmd)
 end)
 ```
 
-- There MUST be only one action under test PER test
-- It is possible that some tests do NOT require an Arrange step.
+Use [`init_spec_helpers.lua`](../tests/unit/helpers/init_spec_helpers.lua) for
+mock factories and setup. Clear the relevant `package.loaded` entries when a
+fresh module instance is needed.
 
-### Module Isolation
+Restore global overrides in `after_each`, including when assertions fail.
+Luassert-managed stubs can use `assert:snapshot()` and `snapshot:revert()`. Keep
+fake functions as plain Lua functions when production code checks their type.
+`_deps.vim` does not replace global `vim` calls; redirect those explicitly when
+testing builtin timers, register writes, or notifications.
 
-Clear `package.loaded` in `before_each` to ensure each test starts with a fresh
-module state:
+## Adding Behavior
 
-```lua
-before_each(function()
-  package.loaded["codex"] = nil
-end)
-```
+1. Choose the owner using the [architecture boundaries](architecture.md).
+   Agent-specific commands and launch arguments belong in `codex.builtin`.
+2. Add focused tests with the call under test visible. For user commands, test
+   argument forwarding by stubbing the API the callback actually calls.
+3. Update shared types and user-facing help when signatures or behavior change.
+   Keep README examples brief; link to code for implementation details.
+4. Run the relevant specs, lint, and formatting checks. Run the full suite
+   before committing. See the provider guidance in
+   [architecture.md](architecture.md) when adding a provider.
 
-### Dependency Injection
+## Commits and Releases
 
-The `_deps` pattern allows full isolation in unit tests. Create mock factories
-for each collaborator and inject them via `setup()`:
+Use focused branches and Conventional Commits:
 
-```lua
-local function make_provider()
-  local provider = { open_calls = {}, send_calls = {} }
-  function provider.is_available()
-    return true
-  end
-  function provider.open(cmd, args, env, config, focus, on_exit)
-    table.insert(provider.open_calls, { cmd = cmd, focus = focus })
-    return { id = "handle_" .. #provider.open_calls, alive = true }
-  end
-  -- ... implement remaining methods ...
-  return provider
-end
-
--- In test setup:
-codex.setup({
-  _deps = {
-    providers = providers_mock,
-    session_store = make_session_store(),
-    logger = make_logger(),
-    vim = make_fake_vim(),
-    -- ...
-  },
-})
-```
-
-See `tests/unit/helpers/init_spec_helpers.lua` for the canonical examples of all
-mock factories: `make_provider`, `make_session_store`, `make_logger`,
-`make_formatter`, `make_selection`, `make_fake_vim`, and the `setup_with_deps`
-helper.
-
-### Contract Tests
-
-Contract tests (`tests/contract/provider_contract_spec.lua`) verify structural
-compliance: every provider module exports all 9 required methods as functions,
-`is_available` returns a boolean, and nil-handle methods behave correctly. The
-currently registered providers are `native` and `snacks`.
-
-When adding a new provider, add an entry to the `provider_modules` table in the
-contract test file.
-
-## Git Workflow
-
-### Branching
-
-Feature branches off `main`. Keep branches focused on a single change.
-
-### Commit Messages
-
-Use [conventional commits](https://www.conventionalcommits.org/):
-
-```
+```text
 <type>(<scope>): <subject>
 ```
 
-**Types:** `chore`, `docs`, `enhance`, `feat`, `fix`, `refactor`, `release`,
-`test`
+Allowed types, scopes, and checks are defined in
+[`.pre-commit-config.yaml`](../.pre-commit-config.yaml). Fix failing hooks
+rather than bypassing them with `--no-verify`.
 
-**Scopes:** `ci`, `codex`, `config`, `context`, `core`, `nvim`, `project`,
-`providers`, `state`
-
-These conventions are enforced by a `commit-msg` hook via
-[conventional-pre-commit](https://github.com/compilerla/conventional-pre-commit).
-Allowed commit types and scopes are enforced by `--strict` with explicit
-`--scopes`.
-
-**Examples:**
-
-```
-feat(codex): register CodexReview and CodexDiff commands
-feat(core): add review and diff slash command wrappers
-fix(nvim): wire on_exit callback to terminal lifecycle
-chore(project): update .gitignore
-docs(project): add LICENSE file
-test(core): add resume dual-mode behavior tests
-```
-
-### Release Docs Checklist
-
-When cutting a new release tag:
-
-1. Update the warning banner in `README.md` to state the new latest tag.
-2. Verify the release reference points to
-   `https://codeberg.org/yaadata/codex.nvim/releases`.
-
-## Adding a New Command
-
-1. **API function** -- Add the public method in `lua/codex/init.lua` as a thin
-   delegate with a one-line LuaDoc summary (description first),
-   `---@param`/`---@return` annotations, and an `ensure_setup()` guard. Place
-   the implementation logic in the appropriate extracted module
-   (`session_lifecycle`, `send_dispatch`, or `mention`) if it fits an existing
-   concern; otherwise keep it in `init.lua`.
-2. **User command** -- Register the `:Codex*` command in
-   `lua/codex/nvim/commands.lua`, delegating to the API function.
-3. **Unit tests** -- Add test cases in the command-focused
-   `tests/unit/init_*_spec.lua` files (happy path, error path, auto-open
-   behaviour), use `tests/unit/helpers/init_spec_helpers.lua` for shared mocks
-   and setup helpers, and include the required `Arrange / Act / Assert` comments
-   in each test.
-4. **Command dispatch tests** -- If the command exercises a new code path beyond
-   existing patterns, add targeted tests.
-5. **User docs** -- Update `doc/codex.nvim.txt` when the public user-facing
-   behavior, configuration, commands, or Lua API surface changes. Keep
-   `README.md` aligned at the overview/install level.
-6. **Types** -- If the command introduces new option types or result types, add
-   them to `lua/codex/types.lua`.
-7. **Architecture docs** -- Update `doc/architecture.md` when internal command
-   wiring, provider interactions, or component behavior changes in ways that are
-   relevant to contributors.
+For a release, update the README tag reference and keep the release link pointed
+at [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).

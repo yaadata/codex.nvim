@@ -17,23 +17,12 @@
 
 ## ✨ Features
 
-- 🧩 Composable by default. Session control, send helpers, mention helpers,
-  slash commands, and resume flows are available as both `:Codex*` commands and
-  a public Lua API.
-- 🔌 API-first instead of UI-first. Build your own workflows on top of
-  `require("codex")` with primitives for opening, sending, mentioning, resuming,
-  clearing input, and more.
-- 🌱 Fits into the Neovim ecosystem. Lazy-load on commands, use the built-in
-  terminal provider or `snacks`, and attach your own terminal-local keymaps
-  without fighting rigid plugin assumptions.
-- 🔄 Built to evolve with Codex. The plugin wraps real Codex flows like
-  `/mention`, slash commands, ACP file references, and `codex resume` instead of
-  inventing a separate abstraction that drifts from the CLI.
-- 🎯 Comfortable for interactive use, but scriptable when you need more. Open,
-  focus, toggle, send selections, send files, or keep editor focus while
-  composing larger integrations.
-- 📚 Documented for users and plugin authors. `:help codex.nvim` covers
-  commands, config, behavior notes, examples, and the public API in one place.
+- 🧩 Compose workflows with session, input, prompt-builder, and log APIs.
+- 🔌 Use `codex.builtin` for agent-specific mentions, slash commands, skills,
+  and resume flows.
+- 🌱 Use the native terminal provider or `snacks`, lazy-load on commands, and
+  configure terminal-local keymaps.
+- 📚 Use `:help codex.nvim` for configuration, commands, and keymap examples.
 
 ## Requirements
 
@@ -43,8 +32,8 @@
 > [!CAUTION]
 > You are reading the `main` branch README. Install details may differ from
 > tagged releases. The current latest release tag is
-> [`v1.1.0`](https://codeberg.org/yaadata/codex.nvim/src/tag/v1.1.0). For
-> version-accurate instructions, read the README for your target tag from
+> [`v2.0.0-alpha.1`](https://codeberg.org/yaadata/codex.nvim/src/tag/v2.0.0-alpha.1).
+> For version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
 ## Install
@@ -52,7 +41,8 @@
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "1.1.0",
+  version = "v2.0.0-alpha.1",
+  lazy = false,
   cmd = {
     "Codex",
     "CodexFocus",
@@ -60,10 +50,8 @@
     "CodexClearInput",
     "CodexSendSelection",
     "CodexSendFile",
-    "CodexSendSkill",
     "CodexMentionFile",
     "CodexMentionDirectory",
-    "CodexResume",
   },
   opts = {},
   config = function(_, opts)
@@ -91,7 +79,7 @@ require("codex").setup({
     cmd = "codex", -- executable to launch
     args = {}, -- extra CLI args
     env = {}, -- extra environment variables
-    auto_start = true, -- auto-open for send-like flows
+    auto_start = true, -- open a session after setup
     cwd = nil, -- nil = current Neovim working directory
   },
 
@@ -160,30 +148,34 @@ require("codex").setup({
 
 ## Usage
 
-After installation, use the quick-reference config above and open
-`:help codex.nvim` inside Neovim for the full user-facing reference, including:
-
-- setup and the full default options table via `:help codex-nvim-config`
-- command reference and behavior notes
-- public Lua API
-- lifecycle hooks via `:help codex-nvim-hooks`
-- keymap examples via `:help codex-nvim-keymaps`
-- slash-command examples
-
 Common entry points:
 
-- `:Codex` toggles the Codex terminal
-- `:CodexSendSelection` sends the active visual selection
-- `:CodexSendFile` sends the current buffer as an ACP file reference
-- `:CodexSendSkill code:comment` inserts the `comment` skill from the `code`
-  plugin
-- `:CodexMentionFile [path]` and `:CodexMentionDirectory [path]` send `/mention`
-- `:CodexResume[!]` resumes in-process or launches `codex resume`
+- `:Codex` toggles the terminal; `:Codex!` opens and focuses it.
+- `:CodexSendSelection` sends the active visual selection.
+- `:CodexSendFile` sends the current buffer as an ACP file reference.
+- `:CodexMentionFile [path]` and `:CodexMentionDirectory [path]` send
+  `/mention`.
 
-If `:help codex.nvim` is missing after a local/raw install, generate help tags
-for the plugin's `doc/` directory, for example
-`:helptags {path-to-codex.nvim}/doc`. Plugin managers usually do this for you;
-`:helptags ALL` is the broad fallback.
+For Lua workflows, use [`require("codex")`](lua/codex/init.lua) for `session`,
+`input`, `prompt_builder`, and `logs`. Use
+[`require("codex.builtin")`](lua/codex/builtin/init.lua) for agent-specific
+workflows.
+
+```lua
+local prompt = require("codex").prompt_builder
+prompt.clear()
+prompt.add("Review this file: ")
+local ok, err = prompt.add_file()
+if not ok then
+  vim.notify(err, vim.log.levels.ERROR)
+  return
+end
+prompt.send() -- paste the draft without pressing Enter
+```
+
+Open `:help codex.nvim` for configuration, commands, and keymaps. If help is
+missing after a raw install, run `:helptags {path-to-codex.nvim}/doc`. Plugin
+managers usually generate tags automatically.
 
 ## Developer Docs
 

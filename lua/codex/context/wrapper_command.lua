@@ -7,14 +7,9 @@ local M = {}
 local SAVED_PROMPT_NOTIFY_MSG = "Saved current prompt to unnamed register"
 local COULD_NOT_SAVE_PROMPT_NOTIFY_MSG = "Could not save existing prompt before clearing"
 
----@class codex.WrapperCommandCreateOpts
----@field get_deps fun(): table
----@field get_config fun(): table
----@field dispatch_send fun(text: string, opts: codex.DispatchSendOpts): codex.SendResult, string|nil
-
 ---Creates a wrapper-command dispatcher.
 ---@param opts codex.WrapperCommandCreateOpts
----@return { execute_slash_command: fun(command_opts: codex.ExecuteSlashCommandOpts): codex.SendResult, string|nil }
+---@return { execute_slash_command: fun(command_opts: codex.ExecuteSlashCommandOpts): codex.Outcome, string|nil }
 function M.create(opts)
   local get_deps = opts.get_deps
   local get_config = opts.get_config
@@ -94,14 +89,13 @@ function M.create(opts)
     end
 
     local submit_via_channel = clear_line_count > 1
-    local payload = terminal_io.encode_clear_line_for_mention(deps, clear_line_count)
-      .. payload_text
+    local payload = terminal_io.encode_clear_line(deps, clear_line_count) .. payload_text
     return payload, command_path, submit_via_channel
   end
 
   ---Dispatches wrapper slash commands with prompt capture/copy/clear before submit.
   ---@param command_opts codex.ExecuteSlashCommandOpts
-  ---@return codex.SendResult ok True when command payload is sent.
+  ---@return codex.Outcome ok True when command payload is sent.
   ---@return string|nil err
   local function execute_slash_command(command_opts)
     local command_name, command_text, err = normalize_command(command_opts)

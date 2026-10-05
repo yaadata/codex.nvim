@@ -2,17 +2,12 @@ local terminal_io = require("codex.runtime.terminal_io")
 local session_lifecycle = require("codex.state.session_lifecycle")
 local prompt_ops = require("codex.context.prompt_ops")
 
----@class codex.MentionOpts
----@field get_deps fun(): table
----@field get_config fun(): table
----@field dispatch_send fun(text: string, opts?: codex.DispatchSendOpts): codex.SendResult, string|nil
-
 local M = {}
 local MENTION_COMMAND_PATH = "/mention"
 
 ---Creates a mention orchestration instance with the given accessors.
 ---@param opts codex.MentionOpts
----@return { mention_file: fun(path?: string): codex.SendResult, string|nil, mention_directory: fun(path?: string): codex.SendResult, string|nil, dispatch: fun(resolved_path: string): codex.SendResult, string|nil }
+---@return codex.Mention
 function M.create(opts)
   local get_deps = opts.get_deps
   local get_config = opts.get_config
@@ -31,7 +26,7 @@ function M.create(opts)
 
   ---Sends `/mention` for an already-resolved relative path, auto-submits, and restores prompt input.
   ---@param resolved_path string Relative path to mention.
-  ---@return codex.SendResult ok True when mention payload is sent.
+  ---@return codex.Outcome ok True when mention payload is sent.
   ---@return string|nil err
   local function dispatch_mention(resolved_path)
     local deps = get_deps()
@@ -46,8 +41,8 @@ function M.create(opts)
     else
       vdebug("dispatch_mention no existing prompt input captured")
     end
-    local mention_payload = terminal_io.encode_clear_line_for_mention(deps, clear_line_count)
-      .. mention
+    local mention_payload = terminal_io.encode_clear_line(deps, clear_line_count) .. mention
+    local delay = terminal_io.get_submit_input_delay_ms()
     local ok, err = dispatch_send(mention_payload, {
       open_focus = true,
       pre_focus = true,
@@ -105,7 +100,7 @@ function M.create(opts)
             end
             vdebug("dispatch_mention restore succeeded")
           end, terminal_io.RESTORE_INPUT_DELAY_MS)
-        end, terminal_io.SUBMIT_INPUT_DELAY_MS)
+        end, delay)
       end,
     })
     if not ok then
@@ -116,7 +111,7 @@ function M.create(opts)
 
   ---Sends `/mention` for a file, auto-submits it, then restores previously captured prompt input.
   ---@param path? string Explicit file path to mention. When nil, uses current buffer path.
-  ---@return codex.SendResult ok True when mention payload is sent.
+  ---@return codex.Outcome ok True when mention payload is sent.
   ---@return string|nil err
   local function mention_file(path)
     local deps = get_deps()
@@ -138,7 +133,7 @@ function M.create(opts)
 
   ---Sends `/mention` for a directory, auto-submits it, then restores previously captured prompt input.
   ---@param path? string Explicit directory path to mention. When nil, uses current buffer's directory.
-  ---@return codex.SendResult ok True when mention payload is sent.
+  ---@return codex.Outcome ok True when mention payload is sent.
   ---@return string|nil err
   local function mention_directory(path)
     local deps = get_deps()
@@ -168,7 +163,6 @@ function M.create(opts)
   return {
     mention_file = mention_file,
     mention_directory = mention_directory,
-    dispatch = dispatch_mention,
   }
 end
 

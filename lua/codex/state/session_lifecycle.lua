@@ -1,4 +1,5 @@
 local M = {}
+local outcome = require("codex.enums.outcome")
 local hooks = require("codex.hooks")
 
 ---Return the shared focus-state table, creating one when missing.
@@ -590,7 +591,7 @@ function M.focus_session(deps, config)
   return false
 end
 
----Returns whether an active Codex session is currently alive.
+---Returns whether an active session is currently alive.
 ---@param deps table
 ---@param config table
 ---@return boolean
@@ -638,17 +639,17 @@ end
 ---Return to the last tracked non-Codex location when Codex currently has focus.
 ---@param deps table
 ---@param config table
----@return boolean ok
----@return string|nil err
+---@return codex.Outcome ok
+---@return codex.Error err
 function M.unfocus_session(deps, config)
   local session, provider = M.get_active_session_and_provider(deps, config)
   if not M.is_session_focused(deps, config, session, provider) then
-    return false, "Codex is not focused"
+    return outcome.FAILURE, "Codex is not focused"
   end
 
   local previous = get_focus_state(deps).last_non_codex or get_focus_state(deps).previous
   if type(previous) ~= "table" then
-    return false, "no previous non-Codex location"
+    return outcome.FAILURE, "no previous non-Codex location"
   end
 
   local api = deps.vim.api or {}
@@ -658,7 +659,7 @@ function M.unfocus_session(deps, config)
     or type(api.nvim_win_get_buf) ~= "function"
     or type(api.nvim_list_wins) ~= "function"
   then
-    return false, "editor focus restoration is unavailable"
+    return outcome.FAILURE, "editor focus restoration is unavailable"
   end
 
   local term_bufnr = get_session_bufnr(session, provider)
@@ -666,9 +667,9 @@ function M.unfocus_session(deps, config)
   local function focus_window(winid)
     local ok_focus, focus_err = pcall(api.nvim_set_current_win, winid)
     if not ok_focus then
-      return false, tostring(focus_err)
+      return outcome.FAILURE, tostring(focus_err)
     end
-    return true
+    return outcome.SUCCESS
   end
 
   local ok_valid, is_valid = pcall(api.nvim_win_is_valid, previous.winid)
@@ -692,7 +693,7 @@ function M.unfocus_session(deps, config)
     end
   end
 
-  return false, "tracked non-Codex location is no longer available"
+  return outcome.FAILURE, "tracked non-Codex location is no longer available"
 end
 
 return M

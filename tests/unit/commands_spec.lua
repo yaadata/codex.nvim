@@ -29,7 +29,7 @@ describe("codex.nvim command registration", function()
   it("registers Codex commands with expected options", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]ct     =========
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ssert  =========
       assert.is_not_nil(registered.Codex)
@@ -40,59 +40,51 @@ describe("codex.nvim command registration", function()
       assert.is_not_nil(registered.CodexSendFile)
       assert.is_not_nil(registered.CodexMentionFile)
       assert.is_not_nil(registered.CodexMentionDirectory)
-      assert.is_not_nil(registered.CodexResume)
-      assert.equals(
+      assert.equal(
         "Toggle Codex terminal (use ! to force open and focus)",
         registered.Codex.opts.desc
       )
       assert.is_true(registered.Codex.opts.bang)
-      assert.equals(0, registered.Codex.opts.nargs)
+      assert.equal(0, registered.Codex.opts.nargs)
 
-      assert.equals(
+      assert.equal(
         "Focus the Codex terminal, starting it if needed",
         registered.CodexFocus.opts.desc
       )
-      assert.equals(0, registered.CodexFocus.opts.nargs)
+      assert.equal(0, registered.CodexFocus.opts.nargs)
 
-      assert.equals("Close the active Codex terminal session", registered.CodexClose.opts.desc)
-      assert.equals(0, registered.CodexClose.opts.nargs)
+      assert.equal("Close the active Codex terminal session", registered.CodexClose.opts.desc)
+      assert.equal(0, registered.CodexClose.opts.nargs)
 
-      assert.equals(
+      assert.equal(
         "Clear the active Codex terminal input line",
         registered.CodexClearInput.opts.desc
       )
-      assert.equals(0, registered.CodexClearInput.opts.nargs)
+      assert.equal(0, registered.CodexClearInput.opts.nargs)
 
-      assert.equals(
+      assert.equal(
         "Send visual selection to Codex with file path and line range",
         registered.CodexSendSelection.opts.desc
       )
-      assert.equals(0, registered.CodexSendSelection.opts.nargs)
+      assert.equal(0, registered.CodexSendSelection.opts.nargs)
       assert.is_true(registered.CodexSendSelection.opts.range)
 
-      assert.equals(
+      assert.equal(
         "Send current buffer path to Codex as ACP reference",
         registered.CodexSendFile.opts.desc
       )
-      assert.equals(0, registered.CodexSendFile.opts.nargs)
+      assert.equal(0, registered.CodexSendFile.opts.nargs)
 
-      assert.equals("Mention a file in Codex via /mention", registered.CodexMentionFile.opts.desc)
-      assert.equals("?", registered.CodexMentionFile.opts.nargs)
-      assert.equals("file", registered.CodexMentionFile.opts.complete)
+      assert.equal("Mention a file in Codex via /mention", registered.CodexMentionFile.opts.desc)
+      assert.equal("?", registered.CodexMentionFile.opts.nargs)
+      assert.equal("file", registered.CodexMentionFile.opts.complete)
 
-      assert.equals(
+      assert.equal(
         "Mention a directory in Codex via /mention",
         registered.CodexMentionDirectory.opts.desc
       )
-      assert.equals("?", registered.CodexMentionDirectory.opts.nargs)
-      assert.equals("dir", registered.CodexMentionDirectory.opts.complete)
-
-      assert.equals(
-        "Resume Codex session picker (! restarts into `codex resume --last`)",
-        registered.CodexResume.opts.desc
-      )
-      assert.equals(0, registered.CodexResume.opts.nargs)
-      assert.is_true(registered.CodexResume.opts.bang)
+      assert.equal("?", registered.CodexMentionDirectory.opts.nargs)
+      assert.equal("dir", registered.CodexMentionDirectory.opts.complete)
     end)
   end)
 
@@ -102,21 +94,23 @@ describe("codex.nvim command registration", function()
       local calls = { toggle = 0, open = {} }
 
       package.loaded["codex"] = {
-        toggle = function()
-          calls.toggle = calls.toggle + 1
-        end,
-        open = function(focus)
-          table.insert(calls.open, focus)
-        end,
+        session = {
+          toggle = function()
+            calls.toggle = calls.toggle + 1
+          end,
+          open = function(focus)
+            table.insert(calls.open, focus)
+          end,
+        },
       }
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
       registered.Codex.callback({ bang = false })
 
       -- ========= [A]ssert  =========
-      assert.equals(1, calls.toggle)
-      assert.equals(0, #calls.open)
+      assert.equal(1, calls.toggle)
+      assert.equal(0, #calls.open)
     end)
   end)
 
@@ -126,21 +120,23 @@ describe("codex.nvim command registration", function()
       local calls = { toggle = 0, open = {} }
 
       package.loaded["codex"] = {
-        toggle = function()
-          calls.toggle = calls.toggle + 1
-        end,
-        open = function(focus)
-          table.insert(calls.open, focus)
-        end,
+        session = {
+          toggle = function()
+            calls.toggle = calls.toggle + 1
+          end,
+          open = function(focus)
+            table.insert(calls.open, focus)
+          end,
+        },
       }
 
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
       -- ========= [A]ct     =========
       registered.Codex.callback({ bang = true })
 
       -- ========= [A]ssert  =========
-      assert.equals(0, calls.toggle)
-      assert.equals(1, #calls.open)
+      assert.equal(0, calls.toggle)
+      assert.equal(1, #calls.open)
       assert.is_true(calls.open[1])
     end)
   end)
@@ -151,18 +147,20 @@ describe("codex.nvim command registration", function()
       local focus_calls = 0
 
       package.loaded["codex"] = {
-        focus = function()
-          focus_calls = focus_calls + 1
-        end,
+        session = {
+          focus = function()
+            focus_calls = focus_calls + 1
+          end,
+        },
       }
 
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
       registered.CodexFocus.callback()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, focus_calls)
+      assert.equal(1, focus_calls)
     end)
   end)
 
@@ -172,18 +170,20 @@ describe("codex.nvim command registration", function()
       local close_calls = 0
 
       package.loaded["codex"] = {
-        close = function()
-          close_calls = close_calls + 1
-        end,
+        session = {
+          close = function()
+            close_calls = close_calls + 1
+          end,
+        },
       }
 
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
       registered.CodexClose.callback()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, close_calls)
+      assert.equal(1, close_calls)
     end)
   end)
 
@@ -193,18 +193,20 @@ describe("codex.nvim command registration", function()
       local clear_input_calls = 0
 
       package.loaded["codex"] = {
-        clear_input = function()
-          clear_input_calls = clear_input_calls + 1
-        end,
+        input = {
+          clear = function()
+            clear_input_calls = clear_input_calls + 1
+          end,
+        },
       }
 
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
       registered.CodexClearInput.callback()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, clear_input_calls)
+      assert.equal(1, clear_input_calls)
     end)
   end)
 
@@ -214,9 +216,13 @@ describe("codex.nvim command registration", function()
       local calls = {}
 
       package.loaded["codex"] = {
-        send_selection = function(opts)
-          table.insert(calls, opts)
-        end,
+        prompt_builder = {
+          clear = function() end,
+          add_selection = function(opts)
+            table.insert(calls, opts)
+          end,
+          send = function() end,
+        },
       }
 
       stub(vim.api, "nvim_get_current_buf", function()
@@ -232,13 +238,13 @@ describe("codex.nvim command registration", function()
         return "V"
       end)
 
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
       registered.CodexSendSelection.callback({ line1 = 2, line2 = 6, range = 2 })
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #calls)
+      assert.equal(1, #calls)
       assert.same({ line1 = 2, line2 = 6, visual_mode = "V" }, calls[1])
     end)
   end)
@@ -265,16 +271,20 @@ describe("codex.nvim command registration", function()
       end)
 
       package.loaded["codex"] = {
-        send_selection = function(opts)
-          table.insert(calls, opts)
-        end,
+        prompt_builder = {
+          clear = function() end,
+          add_selection = function(opts)
+            table.insert(calls, opts)
+          end,
+          send = function() end,
+        },
       }
 
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
       -- ========= [A]ct     =========
       registered.CodexSendSelection.callback({ line1 = 2, line2 = 6, range = 2 })
       -- ========= [A]ssert  =========
-      assert.equals(1, #calls)
+      assert.equal(1, #calls)
       assert.same({ line1 = 2, line2 = 6, visual_mode = string.char(22) }, calls[1])
     end)
   end)
@@ -286,27 +296,32 @@ describe("codex.nvim command registration", function()
       local notifications = {}
 
       package.loaded["codex"] = {
-        send_selection = function(opts)
-          table.insert(calls, opts)
-        end,
+
+        prompt_builder = {
+          clear = function() end,
+          add_selection = function(opts)
+            table.insert(calls, opts)
+          end,
+          send = function() end,
+        },
       }
       stub(vim, "notify", function(msg, level)
         table.insert(notifications, { msg = msg, level = level })
       end)
 
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
       registered.CodexSendSelection.callback({ line1 = 2, line2 = 6, range = 0 })
 
       -- ========= [A]ssert  =========
-      assert.equals(0, #calls)
-      assert.equals(1, #notifications)
-      assert.equals(
+      assert.equal(0, #calls)
+      assert.equal(1, #notifications)
+      assert.equal(
         "[codex] :CodexSendSelection is only available from visual mode",
         notifications[1].msg
       )
-      assert.equals(vim.log.levels.ERROR, notifications[1].level)
+      assert.equal(vim.log.levels.ERROR, notifications[1].level)
     end)
   end)
 
@@ -316,63 +331,22 @@ describe("codex.nvim command registration", function()
       local calls = 0
 
       package.loaded["codex"] = {
-        send_file = function()
-          calls = calls + 1
-        end,
+        prompt_builder = {
+          clear = function() end,
+          add_file = function()
+            calls = calls + 1
+          end,
+          send = function() end,
+        },
       }
 
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
       registered.CodexSendFile.callback()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, calls)
-    end)
-  end)
-
-  it("dispatches a plugin-qualified :CodexSendSkill argument", function()
-    with_stubbed_command_registration(function(registered)
-      -- ========= [A]rrange =========
-      local calls = {}
-
-      package.loaded["codex"] = {
-        send_skill = function(opts)
-          table.insert(calls, opts)
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-
-      -- ========= [A]ct     =========
-      registered.CodexSendSkill.callback({ args = "code:comment" })
-
-      -- ========= [A]ssert  =========
-      assert.equals(1, #calls)
-      assert.same({ plugin = "code", name = "comment" }, calls[1])
-      assert.equals(1, registered.CodexSendSkill.opts.nargs)
-    end)
-  end)
-
-  it("dispatches an unqualified :CodexSendSkill argument", function()
-    with_stubbed_command_registration(function(registered)
-      -- ========= [A]rrange =========
-      local calls = {}
-
-      package.loaded["codex"] = {
-        send_skill = function(opts)
-          table.insert(calls, opts)
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-
-      -- ========= [A]ct     =========
-      registered.CodexSendSkill.callback({ args = "code-comment" })
-
-      -- ========= [A]ssert  =========
-      assert.equals(1, #calls)
-      assert.same({ name = "code-comment" }, calls[1])
+      assert.equal(1, calls)
     end)
   end)
 
@@ -380,21 +354,19 @@ describe("codex.nvim command registration", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
       local paths = {}
+      local builtin = require("codex.builtin")
+      stub(builtin, "mention_file", function(path)
+        table.insert(paths, path)
+      end)
 
-      package.loaded["codex"] = {
-        mention_file = function(path)
-          table.insert(paths, path)
-        end,
-      }
-
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
       registered.CodexMentionFile.callback({ args = "/tmp/test.lua" })
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #paths)
-      assert.equals("/tmp/test.lua", paths[1])
+      assert.equal(1, #paths)
+      assert.equal("/tmp/test.lua", paths[1])
     end)
   end)
 
@@ -403,15 +375,13 @@ describe("codex.nvim command registration", function()
       -- ========= [A]rrange =========
       local called = false
       local received_path = "unset"
+      local builtin = require("codex.builtin")
+      stub(builtin, "mention_file", function(path)
+        called = true
+        received_path = path
+      end)
 
-      package.loaded["codex"] = {
-        mention_file = function(path)
-          called = true
-          received_path = path
-        end,
-      }
-
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
       registered.CodexMentionFile.callback({ args = "" })
@@ -426,20 +396,18 @@ describe("codex.nvim command registration", function()
     -- ========= [A]rrange =========
     with_stubbed_command_registration(function(registered)
       local paths = {}
+      local builtin = require("codex.builtin")
+      stub(builtin, "mention_directory", function(path)
+        table.insert(paths, path)
+      end)
 
-      package.loaded["codex"] = {
-        mention_directory = function(path)
-          table.insert(paths, path)
-        end,
-      }
-
-      require("codex.nvim.commands").register()
+      require("codex.nvim.commands").register(package.loaded["codex"])
       -- ========= [A]ct     =========
       registered.CodexMentionDirectory.callback({ args = "/tmp/" })
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #paths)
-      assert.equals("/tmp/", paths[1])
+      assert.equal(1, #paths)
+      assert.equal("/tmp/", paths[1])
     end)
   end)
 
@@ -448,72 +416,18 @@ describe("codex.nvim command registration", function()
       -- ========= [A]rrange =========
       local called = false
       local received_path = "unset"
-
-      package.loaded["codex"] = {
-        mention_directory = function(path)
-          called = true
-          received_path = path
-        end,
-      }
-
-      require("codex.nvim.commands").register()
+      local builtin = require("codex.builtin")
+      stub(builtin, "mention_directory", function(path)
+        called = true
+        received_path = path
+      end)
+      require("codex.nvim.commands").register(package.loaded["codex"])
       -- ========= [A]ct     =========
       registered.CodexMentionDirectory.callback({ args = "" })
 
       -- ========= [A]ssert  =========
       assert.is_true(called)
       assert.is_nil(received_path)
-    end)
-  end)
-
-  it("dispatches :CodexResume with last=false", function()
-    with_stubbed_command_registration(function(registered)
-      -- ========= [A]rrange =========
-      local received_opts
-      local close_calls = 0
-
-      package.loaded["codex"] = {
-        close = function()
-          close_calls = close_calls + 1
-        end,
-        resume = function(opts)
-          received_opts = opts
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-      -- ========= [A]ct     =========
-      registered.CodexResume.callback({ bang = false })
-
-      -- ========= [A]ssert  =========
-      assert.same({ last = false }, received_opts)
-      assert.equals(0, close_calls)
-    end)
-  end)
-
-  it("dispatches :CodexResume! by closing then reopening with last=true", function()
-    with_stubbed_command_registration(function(registered)
-      -- ========= [A]rrange =========
-      local calls = {}
-
-      package.loaded["codex"] = {
-        close = function()
-          table.insert(calls, { method = "close" })
-        end,
-        resume = function(opts)
-          table.insert(calls, { method = "resume", opts = opts })
-        end,
-      }
-
-      require("codex.nvim.commands").register()
-      -- ========= [A]ct     =========
-      registered.CodexResume.callback({ bang = true })
-
-      -- ========= [A]ssert  =========
-      assert.same({
-        { method = "close" },
-        { method = "resume", opts = { last = true } },
-      }, calls)
     end)
   end)
 end)

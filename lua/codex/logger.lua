@@ -3,6 +3,23 @@
 ---
 --- The default level is `warn`, so only `warn` and `error` messages are
 --- shown unless explicitly lowered via `set_level`.
+---@class codex.Logger
+---@field _level integer
+---@field _verbose boolean
+---@field _max_entries integer
+---@field _entries codex.LogEntry[]
+---@field _pending_entries codex.LogEntry[]
+---@field _flush_scheduled boolean
+---@field _next_seq integer
+---@field set_level fun(name: codex.LogLevel)
+---@field set_verbose fun(enabled: boolean)
+---@field debug fun(msg: string, ...: any)
+---@field info fun(msg: string, ...: any)
+---@field warn fun(msg: string, ...: any)
+---@field error fun(msg: string, ...: any)
+---@field vdebug fun(msg: string, ...: any)
+---@field get_logs fun(): codex.LogEntry[]
+---@field clear_logs fun()
 local M = {}
 
 local levels = { debug = 0, info = 1, warn = 2, error = 3 }

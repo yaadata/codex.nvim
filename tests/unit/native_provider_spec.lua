@@ -1,5 +1,5 @@
 local stub = require("luassert.stub")
-local builtins = require("codex.keymaps").builtins
+local builtins = require("codex.builtin").keymaps
 
 -- Register luassert cleanup, then keep a plain function for type checks.
 local function stub_real_function(target, key, replacement)
@@ -89,7 +89,7 @@ local function with_stubbed_native_env(run)
     open_win_calls = {},
     win_close_calls = {},
     set_current_win_calls = {},
-    termopen_calls = {},
+    jobstart_calls = {},
     chansend_calls = {},
     jobstop_calls = {},
     keymap_set_calls = {},
@@ -238,8 +238,8 @@ local function with_stubbed_native_env(run)
     return "/test/cwd"
   end
 
-  local function termopen(cmd, opts)
-    table.insert(state.termopen_calls, { cmd = cmd, opts = opts })
+  local function jobstart(cmd, opts)
+    table.insert(state.jobstart_calls, { cmd = cmd, opts = opts })
     local jobid = state.next_jobid
     state.next_jobid = state.next_jobid + 1
     return jobid
@@ -308,7 +308,7 @@ local function with_stubbed_native_env(run)
   stub_real_function(vim.api, "nvim_get_option_value", nvim_get_option_value)
   stub_real_function(vim.api, "nvim_create_autocmd", nvim_create_autocmd)
   stub(vim.fn, "getcwd", getcwd)
-  stub(vim.fn, "termopen", termopen)
+  stub(vim.fn, "jobstart", jobstart)
   stub(vim.fn, "chansend", chansend)
   stub(vim.fn, "jobstop", jobstop)
   stub(vim, "cmd", fake_cmd)
@@ -361,12 +361,12 @@ describe("codex.providers.native", function()
       local handle = provider.open("codex", {}, {}, cfg, false)
 
       -- ========= [A]ssert  =========
-      assert.equals(2, handle.bufnr)
-      assert.equals(2, handle.winid)
-      assert.equals(1, state.current_win)
-      assert.equals(48, state.win_width_calls[1].width)
-      assert.equals(1, state.set_current_win_calls[1])
-      assert.equals(0, state.startinsert_calls)
+      assert.equal(2, handle.bufnr)
+      assert.equal(2, handle.winid)
+      assert.equal(1, state.current_win)
+      assert.equal(48, state.win_width_calls[1].width)
+      assert.equal(1, state.set_current_win_calls[1])
+      assert.equal(0, state.startinsert_calls)
     end)
   end)
 
@@ -380,7 +380,8 @@ describe("codex.providers.native", function()
       provider.open("codex", {}, {}, cfg, false)
 
       -- ========= [A]ssert  =========
-      assert.is_nil(state.termopen_calls[1].opts.env)
+      assert.is_nil(state.jobstart_calls[1].opts.env)
+      assert.is_true(state.jobstart_calls[1].opts.term)
     end)
   end)
 
@@ -395,7 +396,8 @@ describe("codex.providers.native", function()
       provider.open("codex", {}, env, cfg, false)
 
       -- ========= [A]ssert  =========
-      assert.same(env, state.termopen_calls[1].opts.env)
+      assert.same(env, state.jobstart_calls[1].opts.env)
+      assert.is_true(state.jobstart_calls[1].opts.term)
     end)
   end)
 
@@ -408,7 +410,7 @@ describe("codex.providers.native", function()
       provider.open("codex", {}, {}, make_config(), false)
 
       -- ========= [A]ssert  =========
-      assert.equals(0, #state.keymap_set_calls)
+      assert.equal(0, #state.keymap_set_calls)
     end)
   end)
 
@@ -426,23 +428,23 @@ describe("codex.providers.native", function()
       provider.open("codex", {}, {}, cfg, false)
 
       -- ========= [A]ssert  =========
-      assert.equals(6, #state.keymap_set_calls)
+      assert.equal(6, #state.keymap_set_calls)
       local toggle_map = find_keymap(state.keymap_set_calls, "<C-c>")
       local clear_map = find_keymap(state.keymap_set_calls, "<M-BS>")
       local nav_left = find_keymap(state.keymap_set_calls, "<C-h>")
 
       assert.is_not_nil(toggle_map)
-      assert.equals("t", toggle_map.mode)
+      assert.equal("t", toggle_map.mode)
       assert.is_function(toggle_map.rhs)
-      assert.equals(2, toggle_map.opts.buffer)
+      assert.equal(2, toggle_map.opts.buffer)
       assert.is_true(toggle_map.opts.silent)
       assert.is_true(toggle_map.opts.nowait)
-      assert.equals("Codex: Toggle terminal", toggle_map.opts.desc)
+      assert.equal("Codex: Toggle terminal", toggle_map.opts.desc)
 
       assert.is_not_nil(clear_map)
-      assert.equals("Codex: Clear input", clear_map.opts.desc)
+      assert.equal("Codex: Clear input", clear_map.opts.desc)
       assert.is_not_nil(nav_left)
-      assert.equals("Codex: Move to left window", nav_left.opts.desc)
+      assert.equal("Codex: Move to left window", nav_left.opts.desc)
     end)
   end)
 
@@ -464,7 +466,7 @@ describe("codex.providers.native", function()
       provider.open("codex", {}, {}, cfg, false)
 
       -- ========= [A]ssert  =========
-      assert.equals(3, #state.keymap_set_calls)
+      assert.equal(3, #state.keymap_set_calls)
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-t>"))
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-x>"))
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<M-BS>"))
@@ -493,12 +495,12 @@ describe("codex.providers.native", function()
       close_map.rhs()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #scheduled)
+      assert.equal(1, #scheduled)
       assert.is_function(scheduled[1])
     end)
   end)
 
-  it("clear input keymap calls codex.clear_input directly", function()
+  it("clear input keymap calls codex.input.clear directly", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
       local scheduled = {}
@@ -507,9 +509,11 @@ describe("codex.providers.native", function()
       end)
       local clear_input_calls = 0
       package.loaded["codex"] = {
-        clear_input = function()
-          clear_input_calls = clear_input_calls + 1
-        end,
+        input = {
+          clear = function()
+            clear_input_calls = clear_input_calls + 1
+          end,
+        },
       }
       local provider = require("codex.providers.native")
       provider.open(
@@ -531,8 +535,8 @@ describe("codex.providers.native", function()
       clear_map.rhs()
 
       -- ========= [A]ssert  =========
-      assert.equals(1, clear_input_calls)
-      assert.equals(0, #scheduled)
+      assert.equal(1, clear_input_calls)
+      assert.equal(0, #scheduled)
     end)
   end)
 
@@ -560,7 +564,7 @@ describe("codex.providers.native", function()
       provider.open("codex", {}, {}, cfg, false)
 
       -- ========= [A]ssert  =========
-      assert.equals(4, #state.keymap_set_calls)
+      assert.equal(4, #state.keymap_set_calls)
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-h>"))
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-j>"))
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-k>"))
@@ -587,10 +591,10 @@ describe("codex.providers.native", function()
       local handle = provider.open("codex", {}, {}, cfg, true)
 
       -- ========= [A]ssert  =========
-      assert.equals(2, handle.winid)
-      assert.equals(15, state.win_height_calls[1].height)
-      assert.equals(2, state.current_win)
-      assert.equals(1, state.startinsert_calls)
+      assert.equal(2, handle.winid)
+      assert.equal(15, state.win_height_calls[1].height)
+      assert.equal(2, state.current_win)
+      assert.equal(1, state.startinsert_calls)
     end)
   end)
 
@@ -619,19 +623,19 @@ describe("codex.providers.native", function()
       local handle = provider.open("codex", {}, {}, cfg, true)
 
       -- ========= [A]ssert  =========
-      assert.equals(2, handle.winid)
-      assert.equals(1, #state.open_win_calls)
+      assert.equal(2, handle.winid)
+      assert.equal(1, #state.open_win_calls)
 
       local open_call = state.open_win_calls[1]
-      assert.equals(2, open_call.bufnr)
-      assert.equals(96, open_call.opts.width)
-      assert.equals(30, open_call.opts.height)
-      assert.equals(10, open_call.opts.row)
-      assert.equals(12, open_call.opts.col)
-      assert.equals("single", open_call.opts.border)
-      assert.equals(" Codex Test ", open_call.opts.title)
-      assert.equals("left", open_call.opts.title_pos)
-      assert.equals("minimal", open_call.opts.style)
+      assert.equal(2, open_call.bufnr)
+      assert.equal(96, open_call.opts.width)
+      assert.equal(30, open_call.opts.height)
+      assert.equal(10, open_call.opts.row)
+      assert.equal(12, open_call.opts.col)
+      assert.equal("single", open_call.opts.border)
+      assert.equal(" Codex Test ", open_call.opts.title)
+      assert.equal("left", open_call.opts.title_pos)
+      assert.equal("minimal", open_call.opts.style)
     end)
   end)
 
@@ -654,7 +658,7 @@ describe("codex.providers.native", function()
       provider.open("codex", {}, {}, cfg, true)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, state.win_width_calls[1].width)
+      assert.equal(1, state.win_width_calls[1].width)
     end)
   end)
 
@@ -684,8 +688,8 @@ describe("codex.providers.native", function()
 
       -- ========= [A]ssert  =========
       local open_call = state.open_win_calls[1]
-      assert.equals(1, open_call.opts.width)
-      assert.equals(1, open_call.opts.height)
+      assert.equal(1, open_call.opts.width)
+      assert.equal(1, open_call.opts.height)
     end)
   end)
 
@@ -702,10 +706,10 @@ describe("codex.providers.native", function()
       local bufnr = handle.bufnr
 
       -- ========= [A]ct     =========
-      state.termopen_calls[1].opts.on_exit(nil, 0)
+      state.jobstart_calls[1].opts.on_exit(nil, 0)
 
       -- ========= [A]ssert  =========
-      assert.equals(0, #state.win_close_calls)
+      assert.equal(0, #state.win_close_calls)
       assert.is_true(state.buf_valid[bufnr])
       assert.is_nil(handle.jobid)
     end)
@@ -725,11 +729,11 @@ describe("codex.providers.native", function()
       local bufnr = handle.bufnr
 
       -- ========= [A]ct     =========
-      state.termopen_calls[1].opts.on_exit(nil, 0)
+      state.jobstart_calls[1].opts.on_exit(nil, 0)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #state.win_close_calls)
-      assert.equals(winid, state.win_close_calls[1].winid)
+      assert.equal(1, #state.win_close_calls)
+      assert.equal(winid, state.win_close_calls[1].winid)
       assert.is_false(state.buf_valid[bufnr])
       assert.is_nil(handle.jobid)
       assert.is_nil(handle.winid)
@@ -757,13 +761,13 @@ describe("codex.providers.native", function()
       local winid = handle.winid
 
       -- ========= [A]ct     =========
-      state.termopen_calls[1].opts.on_exit(nil, -1)
+      state.jobstart_calls[1].opts.on_exit(nil, -1)
 
       -- ========= [A]ssert  =========
       assert.same(handle, exited_handle)
-      assert.equals(1, #state.win_close_calls)
-      assert.equals(winid, state.win_close_calls[1].winid)
-      assert.equals(0, notify_calls)
+      assert.equal(1, #state.win_close_calls)
+      assert.equal(winid, state.win_close_calls[1].winid)
+      assert.equal(0, notify_calls)
     end)
   end)
 
@@ -782,8 +786,8 @@ describe("codex.providers.native", function()
       -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
-      assert.equals(handle.winid, state.current_win)
-      assert.equals(1, state.startinsert_calls)
+      assert.equal(handle.winid, state.current_win)
+      assert.equal(1, state.startinsert_calls)
     end)
   end)
 
@@ -804,9 +808,9 @@ describe("codex.providers.native", function()
       -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
-      assert.equals(expected_winid, handle.winid)
-      assert.equals(expected_winid, state.current_win)
-      assert.equals(1, state.startinsert_calls)
+      assert.equal(expected_winid, handle.winid)
+      assert.equal(expected_winid, state.current_win)
+      assert.equal(1, state.startinsert_calls)
     end)
   end)
 
@@ -825,8 +829,8 @@ describe("codex.providers.native", function()
 
       -- ========= [A]ssert  =========
       assert.is_false(ok)
-      assert.equals("terminal window mismatch", err)
-      assert.equals(0, state.startinsert_calls)
+      assert.equal("terminal window mismatch", err)
+      assert.equal(0, state.startinsert_calls)
     end)
   end)
 
@@ -845,7 +849,7 @@ describe("codex.providers.native", function()
       -- ========= [A]ssert  =========
       assert.is_false(ok)
       assert.matches("^failed to focus terminal window:", err)
-      assert.equals(0, state.startinsert_calls)
+      assert.equal(0, state.startinsert_calls)
     end)
   end)
 
@@ -864,8 +868,8 @@ describe("codex.providers.native", function()
 
       -- ========= [A]ssert  =========
       assert.is_false(ok)
-      assert.equals("terminal window not found", err)
-      assert.equals(0, state.startinsert_calls)
+      assert.equal("terminal window not found", err)
+      assert.equal(0, state.startinsert_calls)
     end)
   end)
 
@@ -881,11 +885,11 @@ describe("codex.providers.native", function()
       provider.toggle(handle, "codex", {}, {}, cfg)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #state.win_close_calls)
-      assert.equals(2, state.win_close_calls[1].winid)
+      assert.equal(1, #state.win_close_calls)
+      assert.equal(2, state.win_close_calls[1].winid)
       assert.is_false(state.win_close_calls[1].force)
       assert.is_nil(handle.winid)
-      assert.equals(0, state.startinsert_calls)
+      assert.equal(0, state.startinsert_calls)
     end)
   end)
 
@@ -902,12 +906,12 @@ describe("codex.providers.native", function()
       provider.toggle(handle, "codex", {}, {}, cfg)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, state.current_win)
-      assert.equals(1, #state.win_close_calls)
-      assert.equals(2, state.win_close_calls[1].winid)
+      assert.equal(1, state.current_win)
+      assert.equal(1, #state.win_close_calls)
+      assert.equal(2, state.win_close_calls[1].winid)
       assert.is_false(state.win_close_calls[1].force)
       assert.is_nil(handle.winid)
-      assert.equals(0, state.startinsert_calls)
+      assert.equal(0, state.startinsert_calls)
     end)
   end)
 
@@ -926,12 +930,12 @@ describe("codex.providers.native", function()
       provider.toggle(handle, "codex", {}, {}, cfg)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, state.current_win)
-      assert.equals(1, #state.win_close_calls)
-      assert.equals(live_winid, state.win_close_calls[1].winid)
+      assert.equal(1, state.current_win)
+      assert.equal(1, #state.win_close_calls)
+      assert.equal(live_winid, state.win_close_calls[1].winid)
       assert.is_false(state.win_close_calls[1].force)
       assert.is_nil(handle.winid)
-      assert.equals(0, state.startinsert_calls)
+      assert.equal(0, state.startinsert_calls)
     end)
   end)
 
@@ -975,14 +979,14 @@ describe("codex.providers.native", function()
       provider.toggle(handle, "codex", {}, {}, float_cfg)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #state.open_win_calls)
-      assert.equals(handle.bufnr, state.open_win_calls[1].bufnr)
-      assert.equals("double", state.open_win_calls[1].opts.border)
-      assert.equals(" Reopen ", state.open_win_calls[1].opts.title)
-      assert.equals("right", state.open_win_calls[1].opts.title_pos)
-      assert.equals(state.open_win_calls[1].winid, handle.winid)
-      assert.equals(handle.winid, state.current_win)
-      assert.equals(1, state.startinsert_calls)
+      assert.equal(1, #state.open_win_calls)
+      assert.equal(handle.bufnr, state.open_win_calls[1].bufnr)
+      assert.equal("double", state.open_win_calls[1].opts.border)
+      assert.equal(" Reopen ", state.open_win_calls[1].opts.title)
+      assert.equal("right", state.open_win_calls[1].opts.title_pos)
+      assert.equal(state.open_win_calls[1].winid, handle.winid)
+      assert.equal(handle.winid, state.current_win)
+      assert.equal(1, state.startinsert_calls)
     end)
   end)
 
@@ -1001,7 +1005,7 @@ describe("codex.providers.native", function()
       assert.is_number(handle.ready_at_ms)
       local uv = vim.uv or vim.loop
       local expected = (uv and type(uv.now) == "function") and uv.now() or 0
-      assert.equals(expected, handle.ready_at_ms)
+      assert.equal(expected, handle.ready_at_ms)
     end)
   end)
 
@@ -1025,10 +1029,10 @@ describe("codex.providers.native", function()
       local handle = provider.open("codex", {}, {}, cfg, false)
 
       -- ========= [A]ssert  =========
-      assert.equals(2, handle.bufnr)
-      assert.equals(2, handle.winid)
-      assert.equals("botright vsplit", state.cmd_calls[1])
-      assert.equals(48, state.win_width_calls[1].width)
+      assert.equal(2, handle.bufnr)
+      assert.equal(2, handle.winid)
+      assert.equal("botright vsplit", state.cmd_calls[1])
+      assert.equal(48, state.win_width_calls[1].width)
     end)
   end)
 
@@ -1052,10 +1056,10 @@ describe("codex.providers.native", function()
       local handle = provider.open("codex", {}, {}, cfg, false)
 
       -- ========= [A]ssert  =========
-      assert.equals(2, handle.bufnr)
-      assert.equals(2, handle.winid)
-      assert.equals("botright split", state.cmd_calls[1])
-      assert.equals(15, state.win_height_calls[1].height)
+      assert.equal(2, handle.bufnr)
+      assert.equal(2, handle.winid)
+      assert.equal("botright split", state.cmd_calls[1])
+      assert.equal(15, state.win_height_calls[1].height)
     end)
   end)
 
@@ -1079,13 +1083,13 @@ describe("codex.providers.native", function()
       provider.open("codex", {}, {}, cfg, true)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #state.open_win_calls)
+      assert.equal(1, #state.open_win_calls)
       local open_call = state.open_win_calls[1]
-      assert.equals(96, open_call.opts.width)
-      assert.equals(40, open_call.opts.height)
-      assert.equals("rounded", open_call.opts.border)
-      assert.equals(" Codex ", open_call.opts.title)
-      assert.equals("center", open_call.opts.title_pos)
+      assert.equal(96, open_call.opts.width)
+      assert.equal(40, open_call.opts.height)
+      assert.equal("rounded", open_call.opts.border)
+      assert.equal(" Codex ", open_call.opts.title)
+      assert.equal("center", open_call.opts.title_pos)
     end)
   end)
 
@@ -1104,14 +1108,14 @@ describe("codex.providers.native", function()
       local restored = provider.discover_restorable(cfg)
 
       -- ========= [A]ssert  =========
-      assert.equals(1, #restored)
-      assert.equals(21, restored[1].bufnr)
-      assert.equals(9, restored[1].winid)
-      assert.equals("codex --model o3", restored[1].cmd)
-      assert.equals("/tmp/project", restored[1].cwd)
-      assert.equals(91, restored[1].handle.jobid)
-      assert.equals(0, #state.autocmds)
-      assert.equals(0, #state.keymap_set_calls)
+      assert.equal(1, #restored)
+      assert.equal(21, restored[1].bufnr)
+      assert.equal(9, restored[1].winid)
+      assert.equal("codex --model o3", restored[1].cmd)
+      assert.equal("/tmp/project", restored[1].cwd)
+      assert.equal(91, restored[1].handle.jobid)
+      assert.equal(0, #state.autocmds)
+      assert.equal(0, #state.keymap_set_calls)
     end)
   end)
 
@@ -1137,10 +1141,10 @@ describe("codex.providers.native", function()
       -- ========= [A]ssert  =========
       assert.is_true(ok)
       assert.is_nil(err)
-      assert.equals(1, #state.autocmds)
-      assert.equals("TermClose", state.autocmds[1].event)
-      assert.equals(21, state.autocmds[1].spec.buffer)
-      assert.equals(6, #state.keymap_set_calls)
+      assert.equal(1, #state.autocmds)
+      assert.equal("TermClose", state.autocmds[1].event)
+      assert.equal(21, state.autocmds[1].spec.buffer)
+      assert.equal(6, #state.keymap_set_calls)
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<C-c>"))
       assert.is_not_nil(find_keymap(state.keymap_set_calls, "<M-BS>"))
     end)
@@ -1175,14 +1179,14 @@ describe("codex.providers.native", function()
 
       -- ========= [A]ssert  =========
       assert.is_nil(handle.jobid)
-      assert.equals(1, #scheduled)
-      assert.equals(0, #state.win_close_calls)
+      assert.equal(1, #scheduled)
+      assert.equal(0, #state.win_close_calls)
       assert.is_true(state.buf_valid[21])
 
       scheduled[1]()
 
-      assert.equals(1, #state.win_close_calls)
-      assert.equals(9, state.win_close_calls[1].winid)
+      assert.equal(1, #state.win_close_calls)
+      assert.equal(9, state.win_close_calls[1].winid)
       assert.is_false(state.buf_valid[21])
       assert.is_nil(handle.winid)
       assert.is_nil(handle.bufnr)

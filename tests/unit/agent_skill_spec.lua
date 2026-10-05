@@ -1,9 +1,11 @@
-local send_skill = require("codex.context.skill_send")
+local agent_skill = require("codex.context.agent_skill")
+local send_buffer = require("codex.runtime.prompt_buffer")
 
 local function make_env(opts)
   opts = opts or {}
   local dispatch_calls = {}
-  local sender = send_skill.create({
+  local buffer = send_buffer.new()
+  local mod = agent_skill.create({
     dispatch_send = function(text, send_opts)
       table.insert(dispatch_calls, {
         text = text,
@@ -15,47 +17,49 @@ local function make_env(opts)
       end
       return true
     end,
+    send_buffer = buffer,
   })
 
   return {
+    send_buffer = buffer,
     dispatch_calls = dispatch_calls,
-    sender = sender,
+    module = mod,
   }
 end
 
-describe("codex.context.send_skill", function()
+describe("codex.context.agent_skill", function()
   it("sends a non-plugin skill", function()
     -- ========= [A]rrange =========
     local env = make_env()
     -- ========= [A]ct     =========
-    local ok = env.sender.send_skill({
+    local ok = env.module.send({
       name = "code-comment",
     })
     -- ========= [A]ssert  =========
     assert.is_true(ok)
-    assert.equals(1, #env.dispatch_calls)
-    assert.equals("\27[200~$code-comment \27[201~", env.dispatch_calls[1].text)
+    assert.equal(1, #env.dispatch_calls)
+    assert.equal("\27[200~$code-comment\27[201~", env.dispatch_calls[1].text)
   end)
 
   it("sends a plugin skill", function()
     -- ========= [A]rrange =========
     local env = make_env()
     -- ========= [A]ct     =========
-    local ok = env.sender.send_skill({
+    local ok = env.module.send({
       plugin = "code",
       name = "comment",
     })
     -- ========= [A]ssert  =========
     assert.is_true(ok)
-    assert.equals(1, #env.dispatch_calls)
-    assert.equals("\27[200~$code:comment \27[201~", env.dispatch_calls[1].text)
+    assert.equal(1, #env.dispatch_calls)
+    assert.equal("\27[200~$code:comment\27[201~", env.dispatch_calls[1].text)
   end)
 
   it("rejects invalid skill name", function()
     -- ========= [A]rrange =========
     local env = make_env()
     -- ========= [A]ct     =========
-    local ok, err = env.sender.send_skill({
+    local ok, err = env.module.send({
       plugin = "code",
       name = "!!!",
     })
@@ -68,7 +72,7 @@ describe("codex.context.send_skill", function()
     -- ========= [A]rrange =========
     local env = make_env()
     -- ========= [A]ct     =========
-    local ok, err = env.sender.send_skill({
+    local ok, err = env.module.send({
       plugin = "%%%",
       name = "comment",
     })
