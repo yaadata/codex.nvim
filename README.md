@@ -32,7 +32,7 @@
 > [!CAUTION]
 > You are reading the `main` branch README. Install details may differ from
 > tagged releases. The current latest release tag is
-> [`v2.0.0-alpha.1`](https://codeberg.org/yaadata/codex.nvim/src/tag/v2.0.0-alpha.1).
+> [`2.0.0-alpha.1`](https://codeberg.org/yaadata/codex.nvim/src/tag/v2.0.0-alpha.1).
 > For version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -41,7 +41,7 @@
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "v2.0.0-alpha.1",
+  version = "2.0.0-alpha.1",
   lazy = false,
   cmd = {
     "Codex",
@@ -161,6 +161,8 @@ For Lua workflows, use [`require("codex")`](lua/codex/init.lua) for `session`,
 [`require("codex.builtin")`](lua/codex/builtin/init.lua) for agent-specific
 workflows.
 
+Example:
+
 ```lua
 local prompt = require("codex").prompt_builder
 prompt.clear()
@@ -178,9 +180,6 @@ missing after a raw install, run `:helptags {path-to-codex.nvim}/doc`. Plugin
 managers usually generate tags automatically.
 
 ## Developer Docs
-
-The main runtime docs are in [doc/codex.nvim.txt](doc/codex.nvim.txt).
-Developer-oriented docs remain in:
 
 - [doc/architecture.md](doc/architecture.md)
 - [doc/contributing.md](doc/contributing.md)
