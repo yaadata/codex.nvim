@@ -31,7 +31,7 @@
 
 > [!CAUTION]
 > You are reading the `main` branch README. Install details may differ from
-> tagged releases. The current latest release tag is
+> tagged releases. The current v2 alpha release tag is
 > [`2.0.0-alpha.3`](https://codeberg.org/yaadata/codex.nvim/src/tag/v2.0.0-alpha.2).
 > For version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
