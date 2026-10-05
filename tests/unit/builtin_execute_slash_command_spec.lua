@@ -65,22 +65,28 @@ describe("codex.builtin execute_slash_command", function()
     return env
   end
 
-  local function assert_dispatch(env, command)
-    assert.equal(1, #env.provider.send_calls)
-    assert.equal("<termcoded:<C-c>>", env.provider.send_calls[1].text)
+  local function assert_dispatch(env, command, has_draft)
+    assert.equal(0, #env.provider.send_calls)
     assert.equal(1, #env.fake_vim._deferred)
     run_deferred(env.fake_vim, 1)
-    assert.equal(2, #env.provider.send_calls)
-    assert.equal("\27[200~/" .. command .. "\27[201~", env.provider.send_calls[2].text)
+    local clear_count = has_draft and 1 or 0
+    assert.equal(clear_count, #env.provider.send_calls)
+    if has_draft then
+      assert.equal("<termcoded:<C-c>>", env.provider.send_calls[1].text)
+    end
+    assert.equal(1, #env.fake_vim._deferred)
+    run_deferred(env.fake_vim, 1)
+    assert.equal(clear_count + 1, #env.provider.send_calls)
+    assert.equal(
+      "\27[200~/" .. command .. "\27[201~",
+      env.provider.send_calls[clear_count + 1].text
+    )
     assert.equal(0, #env.fake_vim._feedkeys_calls)
-  end
-
-  local function assert_draft_restored(env, draft)
-    assert.equal(1, #env.fake_vim._deferred)
     run_deferred(env.fake_vim, 1)
-    assert.equal(3, #env.provider.send_calls)
-    assert.equal("\27[200~" .. draft .. "\27[201~", env.provider.send_calls[3].text)
+    assert.equal(1, #env.fake_vim._feedkeys_calls)
+    assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
     assert.equal(0, #env.fake_vim._deferred)
+    assert.equal(clear_count + 1, #env.provider.send_calls)
   end
 
   local function assert_saved_draft(env, draft)
@@ -172,9 +178,8 @@ describe("codex.builtin execute_slash_command", function()
     local err = builtin.execute_slash_command({ command = "compact" })
 
     assert.is_nil(err)
-    assert_dispatch(env, "compact")
+    assert_dispatch(env, "compact", true)
     assert_saved_draft(env, expected_input)
-    assert_draft_restored(env, expected_input)
   end)
 
   it("captures and clears full draft with code-fence-like lines near cursor", function()
@@ -201,9 +206,8 @@ describe("codex.builtin execute_slash_command", function()
     local err = builtin.execute_slash_command({ command = "compact" })
 
     assert.is_nil(err)
-    assert_dispatch(env, "compact")
+    assert_dispatch(env, "compact", true)
     assert_saved_draft(env, expected_input)
-    assert_draft_restored(env, expected_input)
   end)
 
   it("stops before clearing input when saving the draft throws", function()
@@ -228,9 +232,12 @@ describe("codex.builtin execute_slash_command", function()
 
     local err = builtin.execute_slash_command({ command = "review" })
 
-    assert.matches("clear failed", err, 1, true)
+    assert.is_nil(err)
+    run_deferred(env.fake_vim, 1)
+    assert.equal(1, #env.fake_vim._notify_calls)
+    assert.matches("clear failed", env.fake_vim._notify_calls[1].msg, 1, true)
     assert_saved_draft(env, "draft")
-    assert.same({ "queued draft" }, env.codex.prompt_builder.peak())
+    assert.same({ "/review", "queued draft" }, env.codex.prompt_builder.peak())
     assert.equal(1, #env.provider.send_calls)
     assert.equal("<termcoded:<C-c>>", env.provider.send_calls[1].text)
     assert.equal(0, #env.fake_vim._deferred)
@@ -243,8 +250,7 @@ describe("codex.builtin execute_slash_command", function()
     local err = builtin.execute_slash_command({ command = "resume" })
 
     assert.is_nil(err)
-    assert.equal(1, #env.fake_vim._deferred)
-    assert.equal(0, #env.provider.send_calls)
+    assert_dispatch(env, "resume")
     assert.equal(0, #env.fake_vim._setreg_calls)
   end)
 
@@ -288,7 +294,7 @@ describe("codex.builtin execute_slash_command", function()
     assert.equal(0, #env.fake_vim._setreg_calls)
   end)
 
-  it("saves the terminal draft and restores it before the queued builder", function()
+  it("saves the terminal draft without restoring it and restores the queued builder", function()
     local env = setup_terminal({ "> draft instructions" })
     assert.is_true(env.codex.prompt_builder.add("queued draft"))
 
@@ -297,9 +303,7 @@ describe("codex.builtin execute_slash_command", function()
     assert.is_nil(err)
     assert_saved_draft(env, "draft instructions")
     assert.same({ "/review" }, env.codex.prompt_builder.peak())
-    assert_dispatch(env, "review")
-    assert.same({}, env.codex.prompt_builder.peak())
-    assert_draft_restored(env, "draft instructions")
+    assert_dispatch(env, "review", true)
     assert.same({ "queued draft" }, env.codex.prompt_builder.peak())
     assert.equal(0, #env.logger.warns)
   end)
@@ -308,12 +312,12 @@ describe("codex.builtin execute_slash_command", function()
     function()
       local env = setup_terminal({ "> draft" })
       env.codex.prompt_builder.add("queued draft")
-      env.codex.prompt_builder.send = function()
+      env.codex.prompt_builder.submit = function()
         return false, "command send failed"
       end
 
       assert.is_nil(builtin.execute_slash_command({ command = "review" }))
-      run_deferred(env.fake_vim, 1)
+      run_deferred(env.fake_vim, 2)
 
       assert.equal(1, #env.fake_vim._notify_calls)
       assert.equal(vim.log.levels.ERROR, env.fake_vim._notify_calls[1].level)
@@ -323,21 +327,20 @@ describe("codex.builtin execute_slash_command", function()
     end
   )
 
-  it("reports a failed draft send and restores the queued builder", function()
-    local env = setup_terminal({ "> draft" })
+  it("reports a failed command delivery and restores the queued builder", function()
+    local env = setup_terminal()
     env.codex.prompt_builder.add("queued draft")
-    assert.is_nil(builtin.execute_slash_command({ command = "review" }))
-    assert_dispatch(env, "review")
-    env.codex.prompt_builder.send = function()
-      return false, "draft send failed"
-    end
+    env.provider.send_ok = false
+    env.provider.send_err = "command delivery failed"
 
-    run_deferred(env.fake_vim, 1)
+    assert.is_nil(builtin.execute_slash_command({ command = "review" }))
+    run_deferred(env.fake_vim, 2)
 
     assert.equal(1, #env.fake_vim._notify_calls)
     assert.equal(vim.log.levels.ERROR, env.fake_vim._notify_calls[1].level)
-    assert.matches("draft send failed", env.fake_vim._notify_calls[1].msg, 1, true)
+    assert.matches("command delivery failed", env.fake_vim._notify_calls[1].msg, 1, true)
     assert.equal(0, #env.fake_vim._deferred)
-    assert.same({ "draft", "queued draft" }, env.codex.prompt_builder.peak())
+    assert.equal(0, #env.fake_vim._feedkeys_calls)
+    assert.same({ "queued draft" }, env.codex.prompt_builder.peak())
   end)
 end)

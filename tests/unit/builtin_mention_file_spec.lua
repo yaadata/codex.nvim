@@ -58,13 +58,15 @@ describe("codex.builtin mention_file", function()
 
     -- ========= [A]ct     =========
     local err = builtin.mention_file("/tmp/example.lua")
-    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 3)
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
-    assert.equal(2, #env.provider.send_calls)
-    assert.equal("<termcoded:<C-c>>", env.provider.send_calls[1].text)
-    assert.equal("\27[200~/mention ../../tmp/example.lua\27[201~", env.provider.send_calls[2].text)
+    assert.equal(1, #env.provider.send_calls)
+    assert.equal("\27[200~/mention ../../tmp/example.lua\27[201~", env.provider.send_calls[1].text)
+    assert.equal(1, #env.fake_vim._feedkeys_calls)
+    assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
+    assert.equal(0, #env.fake_vim._deferred)
     assert.equal(0, #env.fake_vim._deferred)
   end)
 
@@ -74,13 +76,15 @@ describe("codex.builtin mention_file", function()
 
     -- ========= [A]ct     =========
     local err = builtin.mention_file(nil)
-    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 3)
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
-    assert.equal(2, #env.provider.send_calls)
-    assert.equal("<termcoded:<C-c>>", env.provider.send_calls[1].text)
-    assert.equal("\27[200~/mention ../current-buffer.lua\27[201~", env.provider.send_calls[2].text)
+    assert.equal(1, #env.provider.send_calls)
+    assert.equal("\27[200~/mention ../current-buffer.lua\27[201~", env.provider.send_calls[1].text)
+    assert.equal(1, #env.fake_vim._feedkeys_calls)
+    assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
+    assert.equal(0, #env.fake_vim._deferred)
     assert.equal(0, #env.fake_vim._deferred)
   end)
 

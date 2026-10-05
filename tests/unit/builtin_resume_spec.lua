@@ -61,13 +61,16 @@ describe("codex.builtin.resume", function()
 
     -- ========= [A]ct     =========
     local err = builtin.resume()
-    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 3)
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
     assert.equal(1, #env.provider.open_calls)
-    assert.equal(2, #env.provider.send_calls)
-    assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[2].text)
+    assert.equal(1, #env.provider.send_calls)
+    assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[1].text)
+    assert.equal(1, #env.fake_vim._feedkeys_calls)
+    assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
+    assert.equal(0, #env.fake_vim._deferred)
   end)
 
   it("ignores last when sending /resume to an active session", function()
@@ -76,12 +79,15 @@ describe("codex.builtin.resume", function()
 
     -- ========= [A]ct     =========
     local err = builtin.resume({ last = true })
-    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 3)
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
     assert.equal(1, #env.provider.open_calls)
-    assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[2].text)
+    assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[1].text)
+    assert.equal(1, #env.fake_vim._feedkeys_calls)
+    assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
+    assert.equal(0, #env.fake_vim._deferred)
   end)
 
   it("reattaches a restored session before sending /resume", function()
@@ -112,13 +118,22 @@ describe("codex.builtin.resume", function()
 
     -- ========= [A]ct     =========
     local err = builtin.resume()
-    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 3)
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
     assert.equal(2, discover_calls)
     assert.equal(0, #env.provider.open_calls)
     assert.equal("restored", env.store.get_active().handle.id)
+    assert.equal(0, #env.provider.send_calls)
+
+    assert.is_nil(builtin.resume())
+    run_deferred(env.fake_vim, 3)
+
+    assert.equal(1, #env.provider.send_calls)
+    assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[1].text)
+    assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
+    assert.equal(0, #env.fake_vim._deferred)
   end)
 
   it("launches CLAUDE with --resume", function()
@@ -183,12 +198,15 @@ describe("codex.builtin.resume", function()
 
     -- ========= [A]ct     =========
     local err = builtin.resume({ harness = harness.CLAUDE })
-    run_deferred(env.fake_vim, 1)
+    run_deferred(env.fake_vim, 3)
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
     assert.equal(1, #env.provider.open_calls)
-    assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[2].text)
+    assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[1].text)
+    assert.equal(1, #env.fake_vim._feedkeys_calls)
+    assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
+    assert.equal(0, #env.fake_vim._deferred)
   end)
 
   it("closes a stale session before launching a resume process", function()
