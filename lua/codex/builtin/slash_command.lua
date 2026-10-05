@@ -60,10 +60,6 @@ function M.execute(opts)
   end
 
   local current_buffer = codex.prompt_builder.peak()
-  local clear_ok, clear_err = codex.input.clear()
-  if not clear_ok then
-    return fallback(clear_err)
-  end
   codex.prompt_builder.clear()
 
   local added, add_err = codex.prompt_builder.add("/" .. command)
@@ -73,27 +69,26 @@ function M.execute(opts)
   ---@type integer
   local delay = terminal_io.get_submit_input_delay_ms()
   vim.defer_fn(function()
-    local sent, send_err = codex.prompt_builder.send()
-    if not sent then
-      codex.prompt_builder.join(current_buffer)
-      vim.notify(fallback(send_err), vim.log.levels.ERROR)
-      return
-    end
-    if current_input == "" then
-      codex.prompt_builder.join(current_buffer)
-    else
-      vim.defer_fn(function()
-        codex.prompt_builder.add(current_input)
-        local restore_sent, restore_err = codex.prompt_builder.send()
-        if not restore_sent then
-          vim.notify(fallback(restore_err), vim.log.levels.ERROR)
-        end
+    if current_input ~= "" then
+      local clear_ok, clear_err = codex.input.clear()
+      if not clear_ok then
         codex.prompt_builder.join(current_buffer)
-      end, delay)
+        vim.notify(fallback(clear_err), vim.log.levels.ERROR)
+        return
+      end
     end
+
+    vim.defer_fn(function()
+      local sent, send_err = codex.prompt_builder.submit()
+      if not sent then
+        codex.prompt_builder.join(current_buffer)
+        vim.notify(fallback(send_err), vim.log.levels.ERROR)
+        return
+      end
+      codex.prompt_builder.join(current_buffer)
+    end, delay)
   end, delay)
 
   return add_err
 end
-
 return M

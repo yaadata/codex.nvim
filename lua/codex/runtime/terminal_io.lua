@@ -17,6 +17,17 @@ local COMPACT_PROMPT_MARKERS = {
   ["› "] = true,
 }
 
+local PROMPT_PLACEHOLDERS = {
+  ["ask codex to do anything"] = true,
+}
+
+---Checks whether input matches a known prompt placeholder, ignoring case.
+---@param input string
+---@return boolean
+function M.is_prompt_placeholder(input)
+  return PROMPT_PLACEHOLDERS[input:lower()] == true
+end
+
 local DISALLOWED_SPACED_PROMPT_MARKERS = {
   ["."] = true,
   ["-"] = true,

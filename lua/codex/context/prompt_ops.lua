@@ -108,8 +108,11 @@ function M.capture_prompt_input(get_deps, get_config)
           and type(cursor_col) == "number"
           and cursor_col <= parsed.input_start_col
         then
-          -- Cursor is parked at input start; this may be ghost text, but could also be
-          -- real input in some terminal states.
+          -- Known placeholders at the input-start cursor represent empty input.
+          if terminal_io.is_prompt_placeholder(parsed.input) then
+            return nil, capture_input_prompt.NO_INPUT, 1
+          end
+          -- Other visible text at input start could be real input.
           uncertain = true
           break
         elseif parsed.input ~= "" then

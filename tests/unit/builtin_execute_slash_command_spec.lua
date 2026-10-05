@@ -236,6 +236,18 @@ describe("codex.builtin execute_slash_command", function()
     assert.equal(0, #env.fake_vim._deferred)
   end)
 
+  it("treats the Codex placeholder at input start as empty input", function()
+    local env = setup_terminal({ "› Ask Codex to do anything" })
+    env.fake_vim._set_buf_cursor(77, 1702, 1, 3)
+
+    local err = builtin.execute_slash_command({ command = "resume" })
+
+    assert.is_nil(err)
+    assert.equal(1, #env.fake_vim._deferred)
+    assert.equal(0, #env.provider.send_calls)
+    assert.equal(0, #env.fake_vim._setreg_calls)
+  end)
+
   it("returns an error when prompt input is uncertain", function()
     local env = setup_terminal({ "> draft instructions" })
     env.fake_vim._set_buf_cursor(77, 1702, 1, 0)
