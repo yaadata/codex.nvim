@@ -64,10 +64,7 @@ function M.create(opts)
     if type(fn.getpos) ~= "function" then
       return resolved
     end
-    local api = deps.vim.api or {}
-    if type(api.nvim_win_get_cursor) ~= "function" then
-      return resolved
-    end
+    local api = deps.vim.api
 
     local ok_anchor, anchor = pcall(fn.getpos, "v")
     local ok_cursor, cursor = pcall(api.nvim_win_get_cursor, 0)

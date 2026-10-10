@@ -99,6 +99,17 @@ describe("codex.init public api lifecycle", function()
     assert.is_nil(cfg._deps)
   end)
 
+  it("deactivate removes registered augroups and autocmds with injected dependencies", function()
+    local env = setup_with_deps()
+    assert.equal(2, #env.fake_vim._augroups)
+    assert.equal(2, #env.fake_vim._autocmds)
+
+    env.codex.deactivate()
+
+    assert.same({}, env.fake_vim._augroups)
+    assert.same({}, env.fake_vim._autocmds)
+  end)
+
   it("fires on_setup after setup internals are ready and before restore or auto-start", function()
     -- ========= [A]rrange =========
     local seen = nil

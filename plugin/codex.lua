@@ -1,5 +1,5 @@
-if vim.fn.has("nvim-0.11.0") ~= 1 then
-  vim.notify("codex.nvim requires Neovim >= 0.11.0", vim.log.levels.ERROR)
+if vim.fn.has("nvim-0.12.0") ~= 1 then
+  vim.notify("codex.nvim requires Neovim >= 0.12.0", vim.log.levels.ERROR)
   return
 end
 

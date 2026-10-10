@@ -212,8 +212,7 @@ function M.get_current_buffer_filepath(vim_api, opts)
   end
 
   local bufnr = resolve_bufnr(vim_api, opts)
-  local is_valid_buf = vim_api.api.nvim_buf_is_valid
-  if type(is_valid_buf) == "function" and not is_valid_buf(bufnr) then
+  if not vim_api.api.nvim_buf_is_valid(bufnr) then
     return nil, M.errors.BUFFER_NOT_FOUND
   end
 

@@ -37,13 +37,7 @@ end
 ---@return integer|nil
 ---@return integer|nil
 local function get_current_focus(deps)
-  local api = deps.vim.api or {}
-  if
-    type(api.nvim_get_current_win) ~= "function" or type(api.nvim_get_current_buf) ~= "function"
-  then
-    return nil, nil
-  end
-
+  local api = deps.vim.api
   local ok_win, winid = pcall(api.nvim_get_current_win)
   local ok_buf, bufnr = pcall(api.nvim_get_current_buf)
   if not ok_win or not ok_buf then
@@ -208,10 +202,7 @@ end
 ---@param spec codex.RestoredSessionSpec
 ---@return boolean
 local function restored_session_is_visible(deps, spec)
-  local api = deps.vim.api or {}
-  if type(api.nvim_win_is_valid) ~= "function" then
-    return false
-  end
+  local api = deps.vim.api
   return type(spec.winid) == "number" and api.nvim_win_is_valid(spec.winid)
 end
 
@@ -652,15 +643,7 @@ function M.unfocus_session(deps, config)
     return outcome.FAILURE, "no previous non-Codex location"
   end
 
-  local api = deps.vim.api or {}
-  if
-    type(api.nvim_win_is_valid) ~= "function"
-    or type(api.nvim_set_current_win) ~= "function"
-    or type(api.nvim_win_get_buf) ~= "function"
-    or type(api.nvim_list_wins) ~= "function"
-  then
-    return outcome.FAILURE, "editor focus restoration is unavailable"
-  end
+  local api = deps.vim.api
 
   local term_bufnr = get_session_bufnr(session, provider)
 

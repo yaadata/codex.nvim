@@ -36,12 +36,10 @@ end
 ---@param bufnr integer
 ---@return integer|nil
 local function resolve_terminal_jobid(bufnr)
-  local api = vim.api or {}
-  if type(api.nvim_get_option_value) == "function" then
-    local ok_channel, channel = pcall(api.nvim_get_option_value, "channel", { buf = bufnr })
-    if ok_channel and type(channel) == "number" and channel > 0 then
-      return channel
-    end
+  local api = vim.api
+  local ok_channel, channel = pcall(api.nvim_get_option_value, "channel", { buf = bufnr })
+  if ok_channel and type(channel) == "number" and channel > 0 then
+    return channel
   end
 
   local jobid = terminal_utils.get_buffer_var(bufnr, "terminal_job_id")
@@ -178,8 +176,8 @@ end
 ---@param on_exit? fun(handle: codex.ProviderHandle): nil
 ---@return nil
 local function register_restored_exit_autocmd(handle, term_config, on_exit)
-  local api = vim.api or {}
-  if type(api.nvim_create_autocmd) ~= "function" or type(handle.bufnr) ~= "number" then
+  local api = vim.api
+  if type(handle.bufnr) ~= "number" then
     return
   end
 
@@ -264,10 +262,7 @@ end
 ---@param config codex.Config
 ---@return codex.RestoredSessionSpec[]
 function M.discover_restorable(config)
-  local api = vim.api or {}
-  if type(api.nvim_list_bufs) ~= "function" then
-    return {}
-  end
+  local api = vim.api
 
   local launch = config.launch or {}
   local cwd_fallback = launch.cwd or vim.fn.getcwd()
@@ -275,12 +270,11 @@ function M.discover_restorable(config)
   local restored = {}
 
   for _, bufnr in ipairs(api.nvim_list_bufs()) do
-    if type(api.nvim_buf_is_valid) ~= "function" or api.nvim_buf_is_valid(bufnr) then
+    if api.nvim_buf_is_valid(bufnr) then
       local jobid = resolve_terminal_jobid(bufnr)
       if jobid then
         local marker = terminal_utils.get_buffer_var(bufnr, "codex_terminal")
-        local name = type(api.nvim_buf_get_name) == "function" and api.nvim_buf_get_name(bufnr)
-          or nil
+        local name = api.nvim_buf_get_name(bufnr)
         local cmd = nil
         local cwd = cwd_fallback
 

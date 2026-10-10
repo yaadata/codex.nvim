@@ -226,11 +226,9 @@ local function deactivate()
       deps.commands.unregister()
     end
 
-    local api = deps.vim and deps.vim.api or {}
-    if type(api.nvim_del_augroup_by_name) == "function" then
-      for _, name in ipairs(AUGROUP_NAMES) do
-        pcall(api.nvim_del_augroup_by_name, name)
-      end
+    local api = deps.vim.api
+    for _, name in ipairs(AUGROUP_NAMES) do
+      pcall(api.nvim_del_augroup_by_name, name)
     end
 
     if deps.session_store and type(deps.session_store.reset) == "function" then

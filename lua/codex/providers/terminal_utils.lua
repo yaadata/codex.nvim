@@ -23,10 +23,7 @@ end
 ---@param name string
 ---@return any
 function M.get_buffer_var(bufnr, name)
-  local api = vim.api or {}
-  if type(api.nvim_buf_get_var) ~= "function" then
-    return nil
-  end
+  local api = vim.api
   local ok, value = pcall(api.nvim_buf_get_var, bufnr, name)
   if ok then
     return value
@@ -41,10 +38,7 @@ end
 ---@param cwd string
 ---@return nil
 function M.set_codex_terminal_marker(bufnr, provider_name, full_cmd, cwd)
-  local api = vim.api or {}
-  if type(api.nvim_buf_set_var) ~= "function" then
-    return
-  end
+  local api = vim.api
   pcall(api.nvim_buf_set_var, bufnr, "codex_terminal", {
     provider = provider_name,
     cmd = full_cmd,
@@ -76,10 +70,7 @@ end
 ---@param bufnr integer
 ---@return integer|nil winid
 function M.find_win_for_buf(bufnr)
-  local api = vim.api or {}
-  if type(api.nvim_list_wins) ~= "function" or type(api.nvim_win_get_buf) ~= "function" then
-    return nil
-  end
+  local api = vim.api
   for _, winid in ipairs(api.nvim_list_wins()) do
     if api.nvim_win_get_buf(winid) == bufnr then
       return winid

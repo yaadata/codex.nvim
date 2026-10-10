@@ -382,6 +382,7 @@ end
 ---@return tests.InitSpecVim
 local function make_fake_vim()
   local augroups = {}
+  local next_augroup_id = 0
   local autocmds = {}
   local replace_termcodes_calls = {}
   local input_calls = {}
@@ -443,8 +444,23 @@ local function make_fake_vim()
   local fake_vim = {
     api = {
       nvim_create_augroup = function(name, opts)
-        table.insert(augroups, { name = name, opts = opts })
-        return #augroups
+        next_augroup_id = next_augroup_id + 1
+        table.insert(augroups, { id = next_augroup_id, name = name, opts = opts })
+        return next_augroup_id
+      end,
+      nvim_del_augroup_by_name = function(name)
+        for index, group in ipairs(augroups) do
+          if group.name == name then
+            for autocmd_index = #autocmds, 1, -1 do
+              if autocmds[autocmd_index].spec.group == group.id then
+                table.remove(autocmds, autocmd_index)
+              end
+            end
+            table.remove(augroups, index)
+            return
+          end
+        end
+        error("Invalid augroup: " .. name)
       end,
       nvim_create_autocmd = function(event, spec)
         table.insert(autocmds, { event = event, spec = spec })

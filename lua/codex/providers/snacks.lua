@@ -92,13 +92,10 @@ local function create_attached_terminal(snacks, config, bufnr)
   }
 
   local function sync_win()
-    local api = vim.api or {}
     if
-      type(terminal.win) == "number"
-      and type(api.nvim_win_is_valid) == "function"
-      and api.nvim_win_is_valid(terminal.win)
-      and type(api.nvim_win_get_buf) == "function"
-      and api.nvim_win_get_buf(terminal.win) == terminal.buf
+      terminal.win
+      and vim.api.nvim_win_is_valid(terminal.win)
+      and vim.api.nvim_win_get_buf(terminal.win) == terminal.buf
     then
       return terminal.win
     end
@@ -176,13 +173,9 @@ end
 ---@param on_exit? fun(handle: codex.ProviderHandle): nil
 ---@return nil
 local function register_restored_exit_autocmd(handle, auto_close, on_exit)
-  local api = vim.api or {}
+  local api = vim.api
   local term = handle.terminal
-  if
-    type(api.nvim_create_autocmd) ~= "function"
-    or type(term) ~= "table"
-    or type(term.buf) ~= "number"
-  then
+  if type(term) ~= "table" or type(term.buf) ~= "number" then
     return
   end
 
@@ -294,10 +287,7 @@ function M.discover_restorable(config)
     return {}
   end
 
-  local api = vim.api or {}
-  if type(api.nvim_list_bufs) ~= "function" then
-    return {}
-  end
+  local api = vim.api
 
   local snacks = require("snacks")
   local launch = config.launch or {}
@@ -306,13 +296,12 @@ function M.discover_restorable(config)
   local restored = {}
 
   for _, bufnr in ipairs(api.nvim_list_bufs()) do
-    if type(api.nvim_buf_is_valid) ~= "function" or api.nvim_buf_is_valid(bufnr) then
+    if api.nvim_buf_is_valid(bufnr) then
       local jobid = resolve_jobid({ buf = bufnr })
       if jobid then
         local marker = terminal_utils.get_buffer_var(bufnr, "codex_terminal")
         local snacks_term = terminal_utils.get_buffer_var(bufnr, "snacks_terminal")
-        local name = type(api.nvim_buf_get_name) == "function" and api.nvim_buf_get_name(bufnr)
-          or nil
+        local name = api.nvim_buf_get_name(bufnr)
         local cmd = nil
         local cwd = cwd_fallback
 

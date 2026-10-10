@@ -9,7 +9,7 @@ local CTRL_V = string.char(22)
 function M.exit_visual_mode_if_active(vim_api)
   vim_api = vim_api or vim
   local fn = vim_api.fn or {}
-  local api = vim_api.api or {}
+  local api = vim_api.api
   local ok_mode, mode = pcall(fn.mode, 1)
   if not ok_mode then
     return false

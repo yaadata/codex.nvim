@@ -1,12 +1,6 @@
 local stub = require("luassert.stub")
 local builtins = require("codex.builtin").keymaps
 
--- Register luassert cleanup, then keep a plain function for type checks.
-local function stub_real_function(target, key, replacement)
-  stub(target, key)
-  target[key] = replacement
-end
-
 local function default_terminal_keymaps()
   return {
     ["<C-c>"] = { mode = "t", action = builtins.toggle },
@@ -45,14 +39,14 @@ local function with_stubbed_vim_api(run)
     set_current_win_calls = {},
   }
 
-  stub_real_function(vim.api, "nvim_create_autocmd", function(event, spec)
+  stub(vim.api, "nvim_create_autocmd", function(event, spec)
     table.insert(autocmds, { event = event, spec = spec })
     return #autocmds
   end)
   stub(vim.api, "nvim_get_current_buf", function()
     return state.current_buf
   end)
-  stub_real_function(vim.api, "nvim_list_bufs", function()
+  stub(vim.api, "nvim_list_bufs", function()
     local bufs = {}
     for bufnr, valid in pairs(state.buf_valid) do
       if valid then
@@ -62,7 +56,7 @@ local function with_stubbed_vim_api(run)
     table.sort(bufs)
     return bufs
   end)
-  stub_real_function(vim.api, "nvim_list_wins", function()
+  stub(vim.api, "nvim_list_wins", function()
     local wins = {}
     for winid, valid in pairs(state.win_valid) do
       if valid then
@@ -72,7 +66,7 @@ local function with_stubbed_vim_api(run)
     table.sort(wins)
     return wins
   end)
-  stub_real_function(vim.api, "nvim_win_get_buf", function(winid)
+  stub(vim.api, "nvim_win_get_buf", function(winid)
     return state.win_buf[winid]
   end)
   stub(vim.api, "nvim_set_current_win", function(winid)
@@ -88,16 +82,16 @@ local function with_stubbed_vim_api(run)
   stub(vim.api, "nvim_win_close", function(winid)
     state.win_valid[winid] = false
   end)
-  stub_real_function(vim.api, "nvim_buf_is_valid", function(bufnr)
+  stub(vim.api, "nvim_buf_is_valid", function(bufnr)
     return state.buf_valid[bufnr] == true
   end)
   stub(vim.api, "nvim_buf_delete", function(bufnr)
     state.buf_valid[bufnr] = false
   end)
-  stub_real_function(vim.api, "nvim_buf_get_name", function(bufnr)
+  stub(vim.api, "nvim_buf_get_name", function(bufnr)
     return state.buf_names[bufnr] or ""
   end)
-  stub_real_function(vim.api, "nvim_buf_get_var", function(bufnr, name)
+  stub(vim.api, "nvim_buf_get_var", function(bufnr, name)
     local vars = state.buf_vars[bufnr] or {}
     local value = vars[name]
     if value == nil then
@@ -105,16 +99,13 @@ local function with_stubbed_vim_api(run)
     end
     return value
   end)
-  stub_real_function(vim.api, "nvim_buf_set_var", function(bufnr, name, value)
+  stub(vim.api, "nvim_buf_set_var", function(bufnr, name, value)
     state.buf_vars[bufnr] = state.buf_vars[bufnr] or {}
     state.buf_vars[bufnr][name] = value
   end)
   stub(vim.api, "nvim_get_option_value", function(name, opts)
     if name ~= "channel" then
-      if type(original_get_option_value) == "function" then
-        return original_get_option_value(name, opts)
-      end
-      return 0
+      return original_get_option_value(name, opts)
     end
     return state.buf_channels[opts.buf] or 0
   end)
@@ -142,10 +133,10 @@ local function with_stubbed_send_env(run)
   local buf_vars = {}
   local buf_channels = {}
 
-  stub_real_function(vim.api, "nvim_buf_is_valid", function(bufnr)
+  stub(vim.api, "nvim_buf_is_valid", function(bufnr)
     return buf_valid[bufnr] == true
   end)
-  stub_real_function(vim.api, "nvim_buf_get_var", function(bufnr, name)
+  stub(vim.api, "nvim_buf_get_var", function(bufnr, name)
     local vars = buf_vars[bufnr] or {}
     local value = vars[name]
     if value == nil then

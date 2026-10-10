@@ -1,12 +1,6 @@
 local stub = require("luassert.stub")
 local builtins = require("codex.builtin").keymaps
 
--- Register luassert cleanup, then keep a plain function for type checks.
-local function stub_real_function(target, key, replacement)
-  stub(target, key)
-  target[key] = replacement
-end
-
 local function default_terminal_keymaps()
   return {
     ["<C-c>"] = { mode = "t", action = builtins.toggle },
@@ -221,10 +215,7 @@ local function with_stubbed_native_env(run)
 
   local function nvim_get_option_value(name, opts)
     if name ~= "channel" then
-      if type(original_get_option_value) == "function" then
-        return original_get_option_value(name, opts)
-      end
-      return 0
+      return original_get_option_value(name, opts)
     end
     return state.buf_channels[opts.buf] or 0
   end
@@ -287,9 +278,9 @@ local function with_stubbed_native_env(run)
     })
   end
 
-  stub_real_function(vim.api, "nvim_list_wins", nvim_list_wins)
-  stub_real_function(vim.api, "nvim_list_bufs", nvim_list_bufs)
-  stub_real_function(vim.api, "nvim_win_get_buf", nvim_win_get_buf)
+  stub(vim.api, "nvim_list_wins", nvim_list_wins)
+  stub(vim.api, "nvim_list_bufs", nvim_list_bufs)
+  stub(vim.api, "nvim_win_get_buf", nvim_win_get_buf)
   stub(vim.api, "nvim_get_current_win", nvim_get_current_win)
   stub(vim.api, "nvim_get_current_buf", nvim_get_current_buf)
   stub(vim.api, "nvim_create_buf", nvim_create_buf)
@@ -300,13 +291,13 @@ local function with_stubbed_native_env(run)
   stub(vim.api, "nvim_win_is_valid", nvim_win_is_valid)
   stub(vim.api, "nvim_set_current_win", nvim_set_current_win)
   stub(vim.api, "nvim_win_close", nvim_win_close)
-  stub_real_function(vim.api, "nvim_buf_is_valid", nvim_buf_is_valid)
+  stub(vim.api, "nvim_buf_is_valid", nvim_buf_is_valid)
   stub(vim.api, "nvim_buf_delete", nvim_buf_delete)
-  stub_real_function(vim.api, "nvim_buf_get_name", nvim_buf_get_name)
-  stub_real_function(vim.api, "nvim_buf_get_var", nvim_buf_get_var)
-  stub_real_function(vim.api, "nvim_buf_set_var", nvim_buf_set_var)
-  stub_real_function(vim.api, "nvim_get_option_value", nvim_get_option_value)
-  stub_real_function(vim.api, "nvim_create_autocmd", nvim_create_autocmd)
+  stub(vim.api, "nvim_buf_get_name", nvim_buf_get_name)
+  stub(vim.api, "nvim_buf_get_var", nvim_buf_get_var)
+  stub(vim.api, "nvim_buf_set_var", nvim_buf_set_var)
+  stub(vim.api, "nvim_get_option_value", nvim_get_option_value)
+  stub(vim.api, "nvim_create_autocmd", nvim_create_autocmd)
   stub(vim.fn, "getcwd", getcwd)
   stub(vim.fn, "jobstart", jobstart)
   stub(vim.fn, "chansend", chansend)
