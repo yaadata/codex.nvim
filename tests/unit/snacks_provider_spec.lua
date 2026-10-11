@@ -391,10 +391,10 @@ describe("codex.providers.snacks", function()
           provider_opts = {},
         },
       }, true, nil)
-      local close_map = find_keymap(keymap_set_calls, "<C-x>")
+      local teardown_map = find_keymap(keymap_set_calls, "<C-x>")
 
       -- ========= [A]ct     =========
-      close_map.rhs()
+      teardown_map.rhs()
 
       -- ========= [A]ssert  =========
       assert.equal(1, #scheduled)
