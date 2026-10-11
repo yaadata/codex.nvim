@@ -63,7 +63,7 @@ jobs:
               ;;
           esac
 
-          JUST_VERSION="1.43.0"
+          JUST_VERSION="1.58.0"
           JUST_TARBALL="just-${JUST_VERSION}-${JUST_ARCH}.tar.gz"
           JUST_URL="https://github.com/casey/just/releases/download/${JUST_VERSION}/${JUST_TARBALL}"
 
@@ -113,7 +113,7 @@ jobs:
               ;;
           esac
 
-          NVIM_VERSION="v0.11.0"
+          NVIM_VERSION="v0.12.0"
           NVIM_TARBALL="nvim-linux-${NVIM_ARCH}.tar.gz"
           NVIM_URL="https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/${NVIM_TARBALL}"
 
@@ -134,7 +134,7 @@ jobs:
               ;;
           esac
 
-          JUST_VERSION="1.43.0"
+          JUST_VERSION="1.58.0"
           JUST_TARBALL="just-${JUST_VERSION}-${JUST_ARCH}.tar.gz"
           JUST_URL="https://github.com/casey/just/releases/download/${JUST_VERSION}/${JUST_TARBALL}"
 
