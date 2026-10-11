@@ -34,7 +34,7 @@ describe("codex.nvim command registration", function()
       -- ========= [A]ssert  =========
       assert.is_not_nil(registered.Codex)
       assert.is_not_nil(registered.CodexFocus)
-      assert.is_not_nil(registered.CodexClose)
+      assert.is_not_nil(registered.CodexTeardown)
       assert.is_not_nil(registered.CodexClearInput)
       assert.is_not_nil(registered.CodexSendSelection)
       assert.is_not_nil(registered.CodexSendFile)
@@ -53,8 +53,8 @@ describe("codex.nvim command registration", function()
       )
       assert.equal(0, registered.CodexFocus.opts.nargs)
 
-      assert.equal("Close the active Codex terminal session", registered.CodexClose.opts.desc)
-      assert.equal(0, registered.CodexClose.opts.nargs)
+      assert.equal("Teardown the active Codex terminal session", registered.CodexTeardown.opts.desc)
+      assert.equal(0, registered.CodexTeardown.opts.nargs)
 
       assert.equal(
         "Clear the active Codex terminal input line",
@@ -164,7 +164,7 @@ describe("codex.nvim command registration", function()
     end)
   end)
 
-  it("dispatches :CodexTeardown to close", function()
+  it("dispatches :CodexTeardown to teardown the session", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
       local teardown_calls = 0
@@ -180,7 +180,7 @@ describe("codex.nvim command registration", function()
       require("codex.nvim.commands").register(package.loaded["codex"])
 
       -- ========= [A]ct     =========
-      registered.CodexClose.callback()
+      registered.CodexTeardown.callback()
 
       -- ========= [A]ssert  =========
       assert.equal(1, teardown_calls)

@@ -46,7 +46,7 @@
   cmd = {
     "Codex",
     "CodexFocus",
-    "CodexClose",
+    "CodexTeardown",
     "CodexClearInput",
     "CodexSendSelection",
     "CodexSendFile",

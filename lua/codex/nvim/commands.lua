@@ -3,7 +3,7 @@ local CTRL_V = string.char(22)
 local COMMAND_NAMES = {
   "Codex",
   "CodexFocus",
-  "CodexClose",
+  "CodexTeardown",
   "CodexClearInput",
   "CodexSendSelection",
   "CodexSendFile",
@@ -98,10 +98,10 @@ function M.register(codex)
     nargs = 0,
   })
 
-  vim.api.nvim_create_user_command("CodexClose", function()
+  vim.api.nvim_create_user_command("CodexTeardown", function()
     codex.session.teardown()
   end, {
-    desc = "Close the active Codex terminal session",
+    desc = "Teardown the active Codex terminal session",
     nargs = 0,
   })
 

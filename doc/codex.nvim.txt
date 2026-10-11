@@ -73,7 +73,7 @@ Example lazy.nvim spec:
     cmd = {
       "Codex",
       "CodexFocus",
-      "CodexClose",
+      "CodexTeardown",
       "CodexClearInput",
       "CodexSendSelection",
       "CodexSendFile",
@@ -348,7 +348,7 @@ CodexFocus                                                       *:CodexFocus*
     Focus the active Codex terminal, opening one if needed.
 
 CodexTeardown                                                 *:CodexTeardown*
-    Close the active Codex terminal session and reset queued sends.
+    Teardown the active Codex terminal session and reset queued sends.
 
 CodexClearInput                                             *:CodexClearInput*
     Clear the active Codex terminal input line by sending `<C-c>`.
@@ -702,7 +702,7 @@ Example lazy.nvim global mappings:
     cmd = {
       "Codex",
       "CodexFocus",
-      "CodexClose",
+      "CodexTeardown",
       "CodexClearInput",
       "CodexSendSelection",
       "CodexSendFile",
