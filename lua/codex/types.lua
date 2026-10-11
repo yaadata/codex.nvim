@@ -204,7 +204,7 @@
 ---@class codex.Session
 ---@field open fun(focus?: boolean, args?: string[])
 ---@field resume fun(opts?: codex.ResumeOpts): codex.Outcome, string?
----@field close fun()
+---@field teardown fun()
 ---@field toggle fun()
 ---@field focus fun()
 ---@field unfocus fun(): boolean, string?

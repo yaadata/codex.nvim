@@ -1,5 +1,11 @@
 local M = {}
 
+--- Keymaps provides actions that can be executed within the agent harness
+--- terminal buffer. Actions include
+---   - Toggle
+---   - Clear Input
+---   - Teardown (quit)
+---   - Buffer navigation keys
 M.keymaps = require("codex.builtin.keymaps")
 
 --- Sends a slash command to the agent harness. The behavior of this

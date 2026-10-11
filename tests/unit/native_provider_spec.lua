@@ -475,15 +475,15 @@ describe("codex.providers.native", function()
       local cfg = make_config({
         terminal = {
           keymaps = {
-            ["<C-x>"] = { mode = "t", action = builtins.close },
+            ["<C-x>"] = { mode = "t", action = builtins.teardown },
           },
         },
       })
       provider.open("codex", {}, {}, cfg, false)
-      local close_map = find_keymap(state.keymap_set_calls, "<C-x>")
+      local teardown_map = find_keymap(state.keymap_set_calls, "<C-x>")
 
       -- ========= [A]ct     =========
-      close_map.rhs()
+      teardown_map.rhs()
 
       -- ========= [A]ssert  =========
       assert.equal(1, #scheduled)

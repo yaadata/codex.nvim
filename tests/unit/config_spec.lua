@@ -69,7 +69,7 @@ describe("codex.config", function()
           keymaps = {
             ["<C-d>"] = {
               mode = "t",
-              action = keymaps.close,
+              action = keymaps.teardown,
             },
           },
         },
@@ -82,7 +82,7 @@ describe("codex.config", function()
       assert.equal("bottom", cfg.terminal.provider_opts.native.hsplit.side)
       assert.equal(50, cfg.terminal.provider_opts.native.hsplit.size_pct)
       assert.equal("t", cfg.terminal.keymaps["<C-d>"].mode)
-      assert.equal(keymaps.close, cfg.terminal.keymaps["<C-d>"].action)
+      assert.equal(keymaps.teardown, cfg.terminal.keymaps["<C-d>"].action)
       assert.equal("auto", cfg.terminal.provider) -- non-overridden values preserved
     end)
 

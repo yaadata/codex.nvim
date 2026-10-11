@@ -99,7 +99,7 @@ function M.register(codex)
   })
 
   vim.api.nvim_create_user_command("CodexClose", function()
-    codex.session.close()
+    codex.session.teardown()
   end, {
     desc = "Close the active Codex terminal session",
     nargs = 0,

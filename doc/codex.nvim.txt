@@ -347,7 +347,7 @@ Codex[!]                                                    *:Codex* *:Codex!*
 CodexFocus                                                       *:CodexFocus*
     Focus the active Codex terminal, opening one if needed.
 
-CodexClose                                                       *:CodexClose*
+CodexTeardown                                                 *:CodexTeardown*
     Close the active Codex terminal session and reset queued sends.
 
 CodexClearInput                                             *:CodexClearInput*

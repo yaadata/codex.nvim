@@ -289,7 +289,7 @@ session = {
 
   ---Closes the active terminal session and resets the send queue.
   ---@return nil
-  close = function()
+  teardown = function()
     session_lifecycle.close_session(get_deps(), state.config, state.send_queue)
   end,
 

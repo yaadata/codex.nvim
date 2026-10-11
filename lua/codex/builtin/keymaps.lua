@@ -22,11 +22,11 @@ return {
     codex.session.unfocus()
   end,
 
-  close = function()
+  teardown = function()
     vim.schedule(function()
       ---@type codex.Api
       local codex = require("codex")
-      codex.session.close()
+      codex.session.teardown()
     end)
   end,
 

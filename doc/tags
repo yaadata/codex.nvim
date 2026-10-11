@@ -1,12 +1,12 @@
 :Codex	codex.nvim.txt	/*:Codex*
 :Codex!	codex.nvim.txt	/*:Codex!*
 :CodexClearInput	codex.nvim.txt	/*:CodexClearInput*
-:CodexClose	codex.nvim.txt	/*:CodexClose*
 :CodexFocus	codex.nvim.txt	/*:CodexFocus*
 :CodexMentionDirectory	codex.nvim.txt	/*:CodexMentionDirectory*
 :CodexMentionFile	codex.nvim.txt	/*:CodexMentionFile*
 :CodexSendFile	codex.nvim.txt	/*:CodexSendFile*
 :CodexSendSelection	codex.nvim.txt	/*:CodexSendSelection*
+:CodexTeardown	codex.nvim.txt	/*:CodexTeardown*
 codex	codex.nvim.txt	/*codex*
 codex-nvim-api	codex.nvim.txt	/*codex-nvim-api*
 codex-nvim-api-builder	codex.nvim.txt	/*codex-nvim-api-builder*

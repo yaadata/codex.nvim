@@ -699,7 +699,7 @@ describe("codex.init public api lifecycle", function()
 
     -- ========= [A]ct     =========
     env.codex.session.focus()
-    env.codex.session.close()
+    env.codex.session.teardown()
     env.codex.session.open(false)
     env.provider.focus(env.store.get_active().handle)
     local ok, err = env.codex.session.unfocus()
@@ -724,7 +724,7 @@ describe("codex.init public api lifecycle", function()
     env.codex.session.open(false)
 
     -- ========= [A]ct     =========
-    env.codex.session.close()
+    env.codex.session.teardown()
 
     -- ========= [A]ssert  =========
     assert.equal(1, #events)
@@ -759,7 +759,7 @@ describe("codex.init public api lifecycle", function()
     env.codex.session.open(false)
 
     -- ========= [A]ct     =========
-    env.codex.session.close()
+    env.codex.session.teardown()
 
     -- ========= [A]ssert  =========
     assert.is_not_nil(seen)
@@ -820,7 +820,7 @@ describe("codex.init public api lifecycle", function()
     env.codex.session.open(false)
 
     -- ========= [A]ct     =========
-    env.codex.session.close()
+    env.codex.session.teardown()
 
     -- ========= [A]ssert  =========
     assert.equal(1, close_count)
@@ -1000,7 +1000,7 @@ describe("codex.init public api lifecycle", function()
     env.codex.session.open(false)
     assert.is_true(env.codex.session.is_running())
     -- ========= [A]ct     =========
-    env.codex.session.close()
+    env.codex.session.teardown()
     -- ========= [A]ssert  =========
     assert.equal(1, #env.provider.close_calls)
     assert.is_nil(env.store.get_active())

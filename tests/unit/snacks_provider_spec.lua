@@ -385,7 +385,7 @@ describe("codex.providers.snacks", function()
       provider.open("codex", {}, {}, {
         terminal = {
           keymaps = {
-            ["<C-x>"] = { mode = "t", action = builtins.close },
+            ["<C-x>"] = { mode = "t", action = builtins.teardown },
           },
           startup = { grace_ms = 0 },
           provider_opts = {},

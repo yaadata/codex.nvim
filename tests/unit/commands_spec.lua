@@ -164,15 +164,15 @@ describe("codex.nvim command registration", function()
     end)
   end)
 
-  it("dispatches :CodexClose to close", function()
+  it("dispatches :CodexTeardown to close", function()
     with_stubbed_command_registration(function(registered)
       -- ========= [A]rrange =========
-      local close_calls = 0
+      local teardown_calls = 0
 
       package.loaded["codex"] = {
         session = {
-          close = function()
-            close_calls = close_calls + 1
+          teardown = function()
+            teardown_calls = teardown_calls + 1
           end,
         },
       }
@@ -183,7 +183,7 @@ describe("codex.nvim command registration", function()
       registered.CodexClose.callback()
 
       -- ========= [A]ssert  =========
-      assert.equal(1, close_calls)
+      assert.equal(1, teardown_calls)
     end)
   end)
 
