@@ -141,4 +141,27 @@ M.resume = function(opts)
   return require("codex.builtin.resume").resume(opts)
 end
 
+--- one_off runs a one_off function with the agent terminal harness in focus
+--- Example: sending a feedkey
+---
+--- ```lua
+--- local op = function()
+---   require('codex').input.feedkey '<A-m>'
+--- end
+--- end
+--- require('codex.builtin').one_off(op)
+--- ```
+---
+--- is equivalent to
+--- (1) Focusing on a terminal session if its not open or opening with focus if its not running
+--- (2) Executing the feedkey
+--- (3) Unfocusing on the terminal session if prior to the execution the terminal agent session
+---     was not in focus.
+---
+---
+---@param fn fun(): nil
+M.one_off = function(fn)
+  return require("codex.builtin.utility").one_off(fn)
+end
+
 return M
