@@ -3,7 +3,8 @@
 ==============================================================================
 codex.nvim
 
-Neovim plugin for running the Codex CLI in an embedded terminal.
+Neovim plugin for running coding agents (Claude Code, Codex, Pi and others)
+in an embedded terminal.
 
 CONTENTS                                                 *codex-nvim-contents*
 
@@ -31,19 +32,15 @@ CONTENTS                                                 *codex-nvim-contents*
 ==============================================================================
 INTRODUCTION                                         *codex-nvim-introduction*
 
-`codex.nvim` embeds the Codex CLI inside Neovim. It provides:
+`codex.nvim` embeds the coding agents inside Neovim. It provides:
 
 - session lifecycle commands for opening, focusing, toggling, and closing the
   terminal
 - a shared prompt builder for adding text, file references, visual selections
   and skills that can be sent or submitted to as input to codex.
 - immediate skill and terminal-input helpers
-- `/mention` helpers for files and directories
-- wrapper-command helpers for slash commands and `resume`
-
-The authoritative user-facing reference is this helpfile. You should not need
-browser Markdown docs for normal installation, configuration, commands, API
-lookup, or common examples.
+- Common patterns and helper commands can be found in 
+  `require('codex.builtins')`.
 
 ==============================================================================
 REQUIREMENTS                                         *codex-nvim-requirements*
@@ -119,7 +116,7 @@ The resolved default options table is:
 >lua
   {
     launch = {
-      cmd = "codex",
+      cmd = "codex",  -- @type codex.AgentHarness
       args = {},
       env = {},
       auto_start = true,
@@ -176,6 +173,7 @@ launch                                                     *codex-nvim-launch*
 
     `cmd`
       Executable to start. Defaults to `codex`.
+      Other supported values can be found under the type `codex.AgentHarness`
 
     `args`
       Additional CLI arguments appended to `cmd`.
@@ -364,9 +362,13 @@ CodexMentionFile [path]                                    *:CodexMentionFile*
     Send `/mention` for a file path. When `[path]` is omitted, use the current
     buffer path.
 
+    Note: This is specific to the Codex CLI coding agent.
+
 CodexMentionDirectory [path]                          *:CodexMentionDirectory*
     Send `/mention` for a directory path. When `[path]` is omitted, use the
     current buffer directory.
+
+    Note: This is specific to the Codex CLI coding agent.
 
 ==============================================================================
 LUA API                                                       *codex-nvim-api*
@@ -578,8 +580,13 @@ Slash and wrapper commands                              *codex-nvim-api-slash*
 
 builtin.execute_slash_command({opts})    *codex.builtin.execute_slash_command*
     Capture terminal input, save non-empty input to register `e`, clear the
-    terminal input, and send a slash command. Preserve the builder draft and
-    restore captured input after sending. This flow does not press Enter.
+    terminal input, and submit a slash command. Preserve the builder draft.
+    Captured terminal input is not automatically restored.
+
+    Register `e` is a recovery copy of the input present before the command.
+    Each call with non-empty input overwrites it; empty input leaves it
+    unchanged. Use `:reg e` to inspect it or `"ep` in Normal mode to paste
+    it into a buffer. The copy remains available if command delivery fails.
 
     `opts.command`
       Required command name, with or without leading `/` characters.
@@ -606,9 +613,11 @@ builtin.resume({opts})                                  *codex.builtin.resume*
     with resume arguments.
 
     `opts.harness`
-      Defaults to `require("codex.enums.harness").CODEX`: launch `resume`,
-      or `resume --last` when `opts.last` is true. Other harness values,
-      including `CLAUDE` and `PI`, use `--resume` or `--continue`.
+      Defaults to value in `launch.cmd` (see `codex-nvim-config`): 
+      launch `resume`, or `resume --last` when `opts.last` is true. 
+
+      Harness values include `CODEX`, `CLAUDE`, `OPENCODE` and `PI`.
+      Note: `OPENCODE` only `--continue` from the command line.
 
     Returns: `err` (`string|nil`).
 
@@ -673,12 +682,9 @@ Slash commands                                     *codex-nvim-behavior-slash*
 - `builtin.execute_slash_command()` accepts `command` with or without `/`.
 - Empty or whitespace-only `args` are ignored.
 - Input capture focuses the active terminal and must succeed before sending.
-- Non-empty prompt input is saved to register `e` before clearing the line.
-- The builder draft is temporarily replaced with the command, then restored.
-- Command delivery and input restoration use deferred sends with
-  `vim.g.CODEX_SUBMIT_INPUT_DELAY_MS` (90 ms by default).
-- The current implementation sends without Enter. Captured input is sent
-  afterward; these helpers do not confirm that the harness ran the command.
+- Non-empty prompt input overwrites register `e` before clearing the line;
+  empty input leaves that register unchanged. Inspect it with `:reg e` or
+  paste it into a buffer with `"ep` in Normal mode.
 
 Session opening                                     *codex-nvim-behavior-open*
 
@@ -706,8 +712,9 @@ Example lazy.nvim global mappings:
       "CodexClearInput",
       "CodexSendSelection",
       "CodexSendFile",
-      "CodexMentionFile",
-      "CodexMentionDirectory",
+    -- Below are specifc to the Codex CLI coding agent
+    -- "CodexMentionFile",
+    -- "CodexMentionDirectory",
     },
     opts = {},
     config = function(_, opts)
@@ -751,22 +758,6 @@ Example lazy.nvim global mappings:
         end,
         desc = "Codex: Send selection",
         mode = "x",
-      },
-      {
-        "<leader>om",
-        function()
-          require("codex.builtin").mention_file()
-        end,
-        desc = "Codex: Mention current file",
-        mode = { "n", "v" },
-      },
-      {
-        "<leader>oM",
-        function()
-          require("codex.builtin").mention_directory()
-        end,
-        desc = "Codex: Mention current directory",
-        mode = { "n", "v" },
       },
       {
         "<leader>or",

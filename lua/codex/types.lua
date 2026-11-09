@@ -90,7 +90,7 @@
 ---@field snacks snacks.terminal.Opts|table<string, any>
 
 ---@class codex.LaunchConfig
----@field cmd string
+---@field cmd codex.AgentHarness
 ---@field args string[]
 ---@field env table<string, string>
 ---@field auto_start boolean

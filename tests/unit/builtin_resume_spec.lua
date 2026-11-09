@@ -136,6 +136,24 @@ describe("codex.builtin.resume", function()
     assert.equal(0, #env.fake_vim._deferred)
   end)
 
+  it("infers resume for configuration", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps({
+      launch = {
+        cmd = harness.OPENCODE,
+      },
+    })
+
+    -- ========= [A]ct     =========
+    local err = builtin.resume()
+
+    -- ========= [A]ssert  =========
+    assert.is_nil(err)
+    assert.equal(1, #env.provider.open_calls)
+    assert.same({ "--continue" }, env.provider.open_calls[1].args)
+    assert.is_true(env.provider.open_calls[1].focus)
+  end)
+
   it("launches CLAUDE with --resume", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
@@ -184,6 +202,20 @@ describe("codex.builtin.resume", function()
 
     -- ========= [A]ct     =========
     local err = builtin.resume({ harness = harness.PI, last = true })
+
+    -- ========= [A]ssert  =========
+    assert.is_nil(err)
+    assert.equal(1, #env.provider.open_calls)
+    assert.same({ "--continue" }, env.provider.open_calls[1].args)
+    assert.is_true(env.provider.open_calls[1].focus)
+  end)
+
+  it("launches OPENCODE with --continue", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps()
+
+    -- ========= [A]ct     =========
+    local err = builtin.resume({ harness = harness.OPENCODE })
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
