@@ -30,9 +30,9 @@ scan outside the helpfile.
 ## Lua API Recipes
 
 These recipes build custom editor keymaps on top of the public Lua API
-documented in `:help codex.nvim`, especially `|codex-nvim-api-send|`,
-`|codex.send_skill|`, `|codex.execute_slash_command|`, `|codex.copy_input|`, and
-`|codex-nvim-keymaps|`.
+documented in `:help codex.nvim`, especially `|codex.prompt_builder.send|`,
+`|codex.prompt_builder.add_skill|`, `|codex.builtin.execute_slash_command|`,
+`|codex.input.copy|`, and `|codex-nvim-keymaps|`.
 
 <a id="disable-spellcheck"></a>
 
@@ -260,8 +260,8 @@ return {
               return
             end
 
-            local ok, err = require("codex").mention_file(dir .. entry.name)
-            if not ok then
+            local err = require("codex.builtin").mention_file(dir .. entry.name)
+            if err ~= nil then
               warn(string.format("Oil: failed to mention file (%s)", err or "unknown error"))
               return
             end
@@ -281,8 +281,8 @@ return {
               return
             end
 
-            local ok, err = require("codex").mention_directory(dir)
-            if not ok then
+            local err = require("codex.builtin").mention_directory(dir)
+            if err ~= nil then
               warn(string.format("Oil: failed to mention directory (%s)", err or "unknown error"))
               return
             end
@@ -308,7 +308,15 @@ return {
             end
 
             local fp = dir .. entry.name
-            local ok, err = require("codex").send_file({ path = fp, focus = false })
+            local codex = require("codex")
+            local ok, err = codex.prompt_builder.add_file({
+              path = fp,
+            })
+            if not ok then
+              warn(string.format("Oil: failed to send file reference (%s)", err or "unknown error"))
+              return
+            end
+            ok, err = codex.prompt_builder.send()
             if not ok then
               warn(string.format("Oil: failed to send file reference (%s)", err or "unknown error"))
               return
