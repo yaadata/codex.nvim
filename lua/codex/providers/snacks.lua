@@ -4,6 +4,37 @@ local terminal_utils = require("codex.providers.terminal_utils")
 
 local M = {}
 
+---Apply the shared split size to a visible Snacks terminal.
+---@param handle codex.ProviderHandle
+local function maintain_size(handle)
+  local term = handle.terminal
+  if not term or type(term.buf) ~= "number" then
+    return
+  end
+  local position = (term.opts and term.opts.position) or handle.codex_split_position
+  local vertical = position == "left" or position == "right"
+  local horizontal = position == "top" or position == "bottom"
+  if not vertical and not horizontal then
+    return
+  end
+  local winid = terminal_utils.find_win_for_buf(term.buf)
+  if winid then
+    local direction = vertical and "vertical" or "horizontal"
+    local size_pct = vertical and (handle.codex_split_width_pct or 40)
+      or (handle.codex_split_height_pct or 30)
+    terminal_utils.maintain_split_size(winid, term.buf, direction, size_pct)
+  end
+end
+
+local function configure_size(handle, config)
+  local provider_opts = config.terminal.provider_opts or {}
+  local native = provider_opts.native or {}
+  local snacks = provider_opts.snacks or {}
+  handle.codex_split_width_pct = (native.vsplit or {}).size_pct or 40
+  handle.codex_split_height_pct = (native.hsplit or {}).size_pct or 30
+  handle.codex_split_position = (snacks.win or {}).position
+end
+
 --- Return true if the snacks.nvim terminal module is loadable.
 ---@return boolean
 function M.is_available()
@@ -246,6 +277,9 @@ function M.open(cmd, args, env, config, focus, on_exit)
     ready_at_ms = now_ms() + (startup.grace_ms or 0),
   }
 
+  configure_size(handle, config)
+  maintain_size(handle)
+
   if type(terminal.buf) == "number" then
     terminal_utils.set_codex_terminal_marker(terminal.buf, "snacks", full_cmd, cwd)
     keymaps.apply_terminal(terminal.buf, config.terminal.keymaps)
@@ -362,6 +396,8 @@ function M.attach_restored(handle, config, on_exit)
     return false, "invalid restored terminal handle"
   end
 
+  configure_size(handle, config)
+  maintain_size(handle)
   register_restored_exit_autocmd(handle, config.terminal.auto_close == true, on_exit)
   keymaps.apply_terminal(term.buf, config.terminal.keymaps)
   return true
@@ -423,6 +459,7 @@ function M.focus(handle)
     return false, "cannot focus terminal"
   end
 
+  maintain_size(handle)
   local term_buf = type(term.buf) == "number" and term.buf or nil
   if term_buf then
     local current_buf = vim.api.nvim_get_current_buf()
@@ -463,6 +500,7 @@ function M.toggle(handle, cmd, args, env, config)
   if handle.terminal.toggle then
     handle.terminal:toggle()
   end
+  maintain_size(handle)
 
   return handle
 end

@@ -99,7 +99,7 @@ local function open_window_for_buf(native_opts, bufnr)
     local vsplit = native_opts.vsplit or {}
     local winid = open_vsplit(vsplit.side or "right")
     vim.api.nvim_win_set_buf(winid, bufnr)
-    vim.api.nvim_win_set_width(winid, pct_size(vim.o.columns, vsplit.size_pct or 40))
+    terminal_utils.maintain_split_size(winid, bufnr, "vertical", vsplit.size_pct or 40)
     return winid
   end
 
@@ -107,7 +107,7 @@ local function open_window_for_buf(native_opts, bufnr)
     local hsplit = native_opts.hsplit or {}
     local winid = open_hsplit(hsplit.side or "bottom")
     vim.api.nvim_win_set_buf(winid, bufnr)
-    vim.api.nvim_win_set_height(winid, pct_size(vim.o.lines, hsplit.size_pct or 30))
+    terminal_utils.maintain_split_size(winid, bufnr, "horizontal", hsplit.size_pct or 30)
     return winid
   end
 

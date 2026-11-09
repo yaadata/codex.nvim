@@ -65,6 +65,7 @@ local function with_stubbed_native_env(run)
   local original_columns = vim.o.columns
   local original_lines = vim.o.lines
   local original_get_option_value = vim.api.nvim_get_option_value
+  local original_set_option_value = vim.api.nvim_set_option_value
 
   local state = {
     next_buf = 2,
@@ -77,6 +78,7 @@ local function with_stubbed_native_env(run)
     buf_vars = {},
     buf_channels = {},
     autocmds = {},
+    augroups = {},
     cmd_calls = {},
     win_width_calls = {},
     win_height_calls = {},
@@ -149,11 +151,21 @@ local function with_stubbed_native_env(run)
     state.wins[winid].bufnr = bufnr
   end
 
+  local function nvim_win_get_width(winid)
+    return state.wins[winid].width or 0
+  end
+
   local function nvim_win_set_width(winid, width)
+    state.wins[winid].width = width
     table.insert(state.win_width_calls, { winid = winid, width = width })
   end
 
+  local function nvim_win_get_height(winid)
+    return state.wins[winid].height or 0
+  end
+
   local function nvim_win_set_height(winid, height)
+    state.wins[winid].height = height
     table.insert(state.win_height_calls, { winid = winid, height = height })
   end
 
@@ -285,7 +297,9 @@ local function with_stubbed_native_env(run)
   stub(vim.api, "nvim_get_current_buf", nvim_get_current_buf)
   stub(vim.api, "nvim_create_buf", nvim_create_buf)
   stub(vim.api, "nvim_win_set_buf", nvim_win_set_buf)
+  stub(vim.api, "nvim_win_get_width", nvim_win_get_width)
   stub(vim.api, "nvim_win_set_width", nvim_win_set_width)
+  stub(vim.api, "nvim_win_get_height", nvim_win_get_height)
   stub(vim.api, "nvim_win_set_height", nvim_win_set_height)
   stub(vim.api, "nvim_open_win", nvim_open_win)
   stub(vim.api, "nvim_win_is_valid", nvim_win_is_valid)
@@ -297,7 +311,26 @@ local function with_stubbed_native_env(run)
   stub(vim.api, "nvim_buf_get_var", nvim_buf_get_var)
   stub(vim.api, "nvim_buf_set_var", nvim_buf_set_var)
   stub(vim.api, "nvim_get_option_value", nvim_get_option_value)
+  stub(vim.api, "nvim_set_option_value", function(name, value, opts)
+    if (name == "winfixwidth" or name == "winfixheight") and opts.win then
+      state.wins[opts.win][name] = value
+      return
+    end
+    return original_set_option_value(name, value, opts)
+  end)
   stub(vim.api, "nvim_create_autocmd", nvim_create_autocmd)
+  stub(vim.api, "nvim_create_augroup", function(name)
+    state.augroups[name] = state.augroups[name] or vim.tbl_count(state.augroups) + 1
+    return state.augroups[name]
+  end)
+  stub(vim.api, "nvim_del_augroup_by_id", function(group)
+    for name, id in pairs(state.augroups) do
+      if id == group then
+        state.augroups[name] = nil
+        break
+      end
+    end
+  end)
   stub(vim.fn, "getcwd", getcwd)
   stub(vim.fn, "jobstart", jobstart)
   stub(vim.fn, "chansend", chansend)

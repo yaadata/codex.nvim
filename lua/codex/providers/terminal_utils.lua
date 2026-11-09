@@ -1,5 +1,39 @@
 local M = {}
 
+---Maintain a terminal split's percentage of the editor dimensions.
+---@param winid integer
+---@param bufnr integer
+---@param direction "vertical"|"horizontal"
+---@param size_pct number
+function M.maintain_split_size(winid, bufnr, direction, size_pct)
+  local api = vim.api
+  local vertical = direction == "vertical"
+  local get_size = vertical and api.nvim_win_get_width or api.nvim_win_get_height
+  local set_size = vertical and api.nvim_win_set_width or api.nvim_win_set_height
+  local group = api.nvim_create_augroup("codex_split_" .. winid, { clear = true })
+  local function resize()
+    if not api.nvim_win_is_valid(winid) or api.nvim_win_get_buf(winid) ~= bufnr then
+      return
+    end
+    local total = vertical and vim.o.columns or vim.o.lines
+    local size = math.max(1, math.floor(total * size_pct / 100))
+    if get_size(winid) ~= size then
+      set_size(winid, size)
+    end
+  end
+  api.nvim_set_option_value(vertical and "winfixwidth" or "winfixheight", true, { win = winid })
+  resize()
+  api.nvim_create_autocmd("VimResized", { group = group, callback = resize })
+  api.nvim_create_autocmd("WinClosed", {
+    group = group,
+    pattern = tostring(winid),
+    once = true,
+    callback = function()
+      api.nvim_del_augroup_by_id(group)
+    end,
+  })
+end
+
 ---Escape a string so it is safe to embed in a Lua pattern.
 ---@param value string
 ---@return string

@@ -100,6 +100,8 @@ require("codex").setup({
     -- :help codex-nvim-keymaps
     keymaps = {},
 
+    -- Split sizes are reapplied on editor resize; fixed width/height is
+    -- preserved when other splits open or close, subject to available space.
     -- codex.ProviderOptsConfig
     provider_opts = {
       -- codex.NativeProviderOpts
@@ -108,12 +110,12 @@ require("codex").setup({
         -- codex.VsplitConfig
         vsplit = {
           side = "right",
-          size_pct = 40,
+          size_pct = 40, -- shared with Snacks left/right splits
         },
         -- codex.HsplitConfig
         hsplit = {
           side = "bottom",
-          size_pct = 30,
+          size_pct = 30, -- shared with Snacks top/bottom splits
         },
         -- codex.FloatConfig
         float = {

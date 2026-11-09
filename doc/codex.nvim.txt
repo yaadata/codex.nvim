@@ -299,13 +299,19 @@ native provider                                   *codex-nvim-terminal-native*
       `"left"` or `"right"`.
 
     `vsplit.size_pct`
-      Integer width percentage, 10-90.
+      Integer width percentage, 10-90. Also applies to Snacks left/right
+      splits, overriding their configured width. Reapplied on VimResized.
+      Uses window-local 'winfixwidth' to preserve width when other splits
+      open or close, subject to available space.
 
     `hsplit.side`
       `"top"` or `"bottom"`.
 
     `hsplit.size_pct`
-      Integer height percentage, 10-90.
+      Integer height percentage, 10-90. Also applies to Snacks top/bottom
+      splits, overriding their configured height. Reapplied on VimResized.
+      Uses window-local 'winfixheight' to preserve height when other splits
+      open or close, subject to available space.
 
     `float.width_pct`, `float.height_pct`
       Float size percentages, 10-100.
