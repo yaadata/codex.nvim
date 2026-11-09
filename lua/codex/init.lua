@@ -297,21 +297,6 @@ local prompt_builder = {
     return true, nil
   end,
 
-  ---Formats and adds a skill to the prompt buffer. The buffer can be sent by either
-  --- [send] or [submit] apis.
-  ---@param opts codex.AgentSkillOptions
-  ---@return codex.Outcome ok
-  ---@return codex.Error err
-  add_skill = function(opts)
-    state:ensure_ready()
-    local payload, err = state.agent_skill.prompt_payload(opts)
-    if err ~= nil then
-      return outcome.FAILURE, err
-    end
-    state.prompt_buffer:add(payload)
-    return outcome.SUCCESS
-  end,
-
   ---Formats visual selection and buffers the text to be sent by either
   --- [send] or [submit] apis.
   ---@param opts? codex.SelectionOpts Selection range override; falls back to visual marks when omitted.

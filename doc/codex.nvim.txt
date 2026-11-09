@@ -36,9 +36,10 @@ INTRODUCTION                                         *codex-nvim-introduction*
 
 - session lifecycle commands for opening, focusing, toggling, and closing the
   terminal
-- a shared prompt builder for adding text, file references, visual selections
-  and skills that can be sent or submitted to as input to codex.
-- immediate skill and terminal-input helpers
+- a shared prompt builder for adding text, file references or visual
+  selections that can be sent or submitted to as input to codex.
+- Builtins to send formatted skills, run one off command plus other
+  terminal-input actions.
 - Common patterns and helper commands can be found in 
   `require('codex.builtins')`.
 
@@ -496,12 +497,6 @@ prompt_builder.add_selection({opts})      *codex.prompt_builder.add_selection*
     saved visual marks.
     Returns: `codex.Outcome`, `codex.Error`
 
-prompt_builder.add_skill({opts})              *codex.prompt_builder.add_skill*
-    Append a literal skill invocation with a trailing space.
-    `opts.name` is required; `opts.plugin` is optional. The invocation is
-    `$plugin:name ` or `$name `.
-    Returns: `codex.Outcome`, `codex.Error`
-
 prompt_builder.clear()                            *codex.prompt_builder.clear*
     Discard the shared draft. Does not clear text already in the terminal
     or cancel payloads already queued for delivery.
@@ -847,6 +842,52 @@ Slash-command examples:
     nargs = 0,
   })
 <
+
+Skill invocation examples:                    *codex-nvim-examples-skill*
+
+>lua
+  local builtin = require("codex.builtin")
+  local prompt = require("codex").prompt_builder
+  local style = require("codex.enums.skill_style")
+
+  -- Default style: $name or $plugin:name
+  local text, err = builtin.format_skill({ name = "review" })
+  -- text = "$review"
+
+  -- Slash style: /name or /plugin:name
+  local slash, err2 = builtin.format_skill({ name = "review" }, style.SLASH)
+  -- slash = "/review"
+
+  -- With a plugin-qualified skill
+  local qualified = builtin.format_skill({
+    plugin = "myplugin",
+    name = "review",
+  })
+  -- qualified = "$myplugin:review"
+
+  -- Format a skill, buffer it, and send it to the coding harness
+  local skill, format_err = builtin.format_skill({ name = "review" }, style.SLASH)
+  if not skill then
+    vim.notify(format_err, vim.log.levels.ERROR)
+    return
+  end
+
+  prompt.clear()
+  local ok, add_err = prompt.add(skill .. " ")
+  if not ok then
+    vim.notify(add_err, vim.log.levels.ERROR)
+    return
+  end
+  prompt.send() -- use prompt.submit() to also press Enter
+<
+Notes:
+
+- `format_skill()` never touches the shared draft; append the returned text
+  (and any separator) yourself, e.g. `prompt.add(skill .. " ")`.
+- `prompt_builder.add()` concatenates fragments without separators, so include
+  the trailing space when you want one.
+- `prompt_builder.send()` delivers the draft without pressing Enter;
+  |codex.prompt_builder.submit| sends and attempts Enter.
 
 ==============================================================================
 SEE ALSO                                                 *codex-nvim-see-also*

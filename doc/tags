@@ -30,6 +30,7 @@ codex-nvim-commands	codex.nvim.txt	/*codex-nvim-commands*
 codex-nvim-config	codex.nvim.txt	/*codex-nvim-config*
 codex-nvim-contents	codex.nvim.txt	/*codex-nvim-contents*
 codex-nvim-examples	codex.nvim.txt	/*codex-nvim-examples*
+codex-nvim-examples-skill	codex.nvim.txt	/*codex-nvim-examples-skill*
 codex-nvim-hooks	codex.nvim.txt	/*codex-nvim-hooks*
 codex-nvim-install	codex.nvim.txt	/*codex-nvim-install*
 codex-nvim-introduction	codex.nvim.txt	/*codex-nvim-introduction*
@@ -62,7 +63,6 @@ codex.nvim.txt	codex.nvim.txt	/*codex.nvim.txt*
 codex.prompt_builder.add	codex.nvim.txt	/*codex.prompt_builder.add*
 codex.prompt_builder.add_file	codex.nvim.txt	/*codex.prompt_builder.add_file*
 codex.prompt_builder.add_selection	codex.nvim.txt	/*codex.prompt_builder.add_selection*
-codex.prompt_builder.add_skill	codex.nvim.txt	/*codex.prompt_builder.add_skill*
 codex.prompt_builder.clear	codex.nvim.txt	/*codex.prompt_builder.clear*
 codex.prompt_builder.join	codex.nvim.txt	/*codex.prompt_builder.join*
 codex.prompt_builder.peak	codex.nvim.txt	/*codex.prompt_builder.peak*
