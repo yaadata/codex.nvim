@@ -48,7 +48,7 @@ function M.create(opts)
 
   ---Sends a queued item immediately, including optional focus and callbacks.
   ---@param item codex.PendingSend
-  ---@param session codex.Session
+  ---@param session codex.SessionState
   ---@param provider codex.Provider
   ---@return boolean ok
   ---@return string|nil err

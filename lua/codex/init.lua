@@ -79,7 +79,7 @@ local function schedule_restore_attempt()
   end)
 end
 
----@type codex.Session
+---@type codex.SessionCommands
 local session
 
 ---Initializes codex.nvim state, commands, queue, and lifecycle hooks.
@@ -247,91 +247,6 @@ local function deactivate()
   state.focus_state.last_non_codex = nil
 end
 
-session = {
-  ---Opens Codex terminal, optionally focused (defaults to true).
-  ---@param focus? boolean
-  ---@param args? string[] Overrides configured launch arguments
-  ---@return nil
-  open = function(focus, args)
-    state:ensure_ready()
-    if focus == nil then
-      focus = true
-    end
-    session_lifecycle.open_session(
-      get_deps(),
-      state.config,
-      args or state.config.launch.args,
-      focus
-    )
-  end,
-
-  ---Resumes context in-process when possible, otherwise launches `codex resume`.
-  ---@param opts? codex.ResumeOpts
-  ---@return codex.Outcome ok True when `/resume` is sent or resume process is opened.
-  ---@return string|nil err
-  resume = function(opts)
-    state:ensure_ready()
-    opts = opts or {}
-
-    local deps = get_deps()
-    if session.is_running() then
-      return require("codex").execute_slash_command({ command = "resume" })
-    end
-
-    local args = { "resume" }
-    if opts.last then
-      table.insert(args, "--last")
-    end
-
-    session_lifecycle.open_session(deps, state.config, args, true)
-    return true
-  end,
-
-  ---Closes the active terminal session and resets the send queue.
-  ---@return nil
-  teardown = function()
-    session_lifecycle.close_session(get_deps(), state.config, state.send_queue)
-  end,
-
-  ---Toggles terminal visibility for active session or opens a new one.
-  ---@return nil
-  toggle = function()
-    state:ensure_ready()
-    session_lifecycle.toggle_session(get_deps(), state.config)
-  end,
-
-  ---Focuses active session; opens one if none is running.
-  ---@return nil
-  focus = function()
-    state:ensure_ready()
-    if not session_lifecycle.focus_session(get_deps(), state.config) then
-      session.open(true)
-    end
-  end,
-
-  ---Returns focus to the remembered non-Codex editor location.
-  ---@return boolean ok
-  ---@return string|nil err
-  unfocus = function()
-    state:ensure_ready()
-    return session_lifecycle.unfocus_session(get_deps(), state.config)
-  end,
-
-  ---Returns whether an active Codex session is currently alive.
-  ---@return boolean
-  is_running = function()
-    local deps = get_deps()
-    return session_lifecycle.is_running(deps, state.config)
-  end,
-
-  ---Returns whether the current editor focus is on the active Codex session.
-  ---@return boolean
-  is_focused = function()
-    state:ensure_ready()
-    return session_lifecycle.is_session_focused(get_deps(), state.config)
-  end,
-}
-
 ---@param on_sent? fun()
 ---@return codex.Outcome ok True when payload is sent immediately or queued
 ---@return codex.Error err
@@ -458,6 +373,69 @@ local prompt_builder = {
   join = function(current_buffer)
     state:ensure_ready()
     state.prompt_buffer:join(current_buffer)
+  end,
+}
+
+session = {
+  ---Opens Codex terminal, optionally focused (defaults to true).
+  ---@param focus? boolean
+  ---@param args? string[] Overrides configured launch arguments
+  ---@return nil
+  open = function(focus, args)
+    state:ensure_ready()
+    if focus == nil then
+      focus = true
+    end
+    session_lifecycle.open_session(
+      get_deps(),
+      state.config,
+      args or state.config.launch.args,
+      focus
+    )
+  end,
+
+  ---Closes the active terminal session and resets the send queue.
+  ---@return nil
+  teardown = function()
+    session_lifecycle.close_session(get_deps(), state.config, state.send_queue)
+  end,
+
+  ---Toggles terminal visibility for active session or opens a new one.
+  ---@return nil
+  toggle = function()
+    state:ensure_ready()
+    session_lifecycle.toggle_session(get_deps(), state.config)
+  end,
+
+  ---Focuses active session; opens one if none is running.
+  ---@return nil
+  focus = function()
+    state:ensure_ready()
+    if not session_lifecycle.focus_session(get_deps(), state.config) then
+      session.open(true)
+    end
+  end,
+
+  ---Returns focus to the remembered non-Codex editor location.
+  ---@return boolean ok
+  ---@return string|nil err
+  unfocus = function()
+    state:ensure_ready()
+    return session_lifecycle.unfocus_session(get_deps(), state.config)
+  end,
+
+  ---Returns whether an active Codex session is currently alive.
+  ---@return boolean
+  is_running = function()
+    local deps = get_deps()
+    return session_lifecycle.is_running(deps, state.config)
+  end,
+
+  ---Returns whether the current editor focus is on the active Codex session.
+  ---@return boolean
+  is_focused = function()
+    state:ensure_ready()
+    return session_lifecycle.is_session_focused(get_deps(), state.config)
   end,
 }
 

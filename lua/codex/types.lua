@@ -108,7 +108,7 @@
 ---@field cwd string
 ---@field provider_name string
 
----@class codex.Session: codex.SessionSpec
+---@class codex.SessionState: codex.SessionSpec
 ---@field id string
 ---@field alive boolean
 
@@ -201,9 +201,8 @@
 ---@field get fun(): codex.LogEntry[]
 ---@field clear fun()
 
----@class codex.Session
+---@class codex.SessionCommands
 ---@field open fun(focus?: boolean, args?: string[])
----@field resume fun(opts?: codex.ResumeOpts): codex.Outcome, string?
 ---@field teardown fun()
 ---@field toggle fun()
 ---@field focus fun()
@@ -218,7 +217,7 @@
 ---@field logs codex.Logs
 ---@field input codex.Input
 ---@field prompt_builder codex.PromptBuilder
----@field session codex.Session
+---@field session codex.SessionCommands
 
 -- Mention
 

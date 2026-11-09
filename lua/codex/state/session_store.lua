@@ -1,15 +1,15 @@
 ---@class codex.SessionStore
 ---@field create fun(spec: codex.SessionSpec): string
----@field get fun(id: string): codex.Session?
----@field get_active fun(): codex.Session?
+---@field get fun(id: string): codex.SessionState?
+---@field get_active fun(): codex.SessionState?
 ---@field set_active fun(id: string)
 ---@field mark_dead fun(id: string)
 ---@field remove fun(id: string)
----@field list fun(): codex.Session[]
+---@field list fun(): codex.SessionState[]
 ---@field reset fun()
 local M = {}
 
----@type table<string, codex.Session>
+---@type table<string, codex.SessionState>
 local sessions = {}
 ---@type string|nil
 local active_id = nil
@@ -37,13 +37,13 @@ end
 
 --- Look up a session by its id.
 ---@param id string
----@return codex.Session|nil
+---@return codex.SessionState|nil
 function M.get(id)
   return sessions[id]
 end
 
 --- Return the currently active session, or nil if none is active.
----@return codex.Session|nil
+---@return codex.SessionState|nil
 function M.get_active()
   if active_id then
     return sessions[active_id]
@@ -81,9 +81,9 @@ function M.remove(id)
 end
 
 --- Return a list of all stored sessions.
----@return codex.Session[]
+---@return codex.SessionState[]
 function M.list()
-  ---@type codex.Session[]
+  ---@type codex.SessionState[]
   local result = {}
   for _, session in pairs(sessions) do
     table.insert(result, session)

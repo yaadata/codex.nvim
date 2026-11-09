@@ -22,7 +22,7 @@ function M.clear_previous_focus(deps)
 end
 
 ---Return the active Codex terminal buffer number when available.
----@param session codex.Session|nil
+---@param session codex.SessionState|nil
 ---@param provider codex.Provider
 ---@return integer|nil
 local function get_session_bufnr(session, provider)
@@ -99,7 +99,7 @@ local function make_on_exit_callback(deps, config)
 end
 
 ---Return provider-derived buffer/window fields for hook context when available.
----@param session codex.Session
+---@param session codex.SessionState
 ---@param provider codex.Provider
 ---@return integer|nil bufnr
 ---@return integer|nil winid
@@ -136,7 +136,7 @@ end
 ---Build the public lifecycle hook context for a session event.
 ---@param event string
 ---@param config table
----@param session codex.Session
+---@param session codex.SessionState
 ---@param provider codex.Provider
 ---@return table
 local function make_session_hook_context(event, config, session, provider)
@@ -156,7 +156,7 @@ end
 ---@param deps table
 ---@param config table
 ---@param hook_name string
----@param session codex.Session
+---@param session codex.SessionState
 ---@param provider codex.Provider
 ---@return nil
 local function dispatch_session_hook(deps, config, hook_name, session, provider)
@@ -171,7 +171,7 @@ end
 ---Mark a live session as closed and emit the close hook once.
 ---@param deps table
 ---@param config table
----@param session codex.Session
+---@param session codex.SessionState
 ---@param provider codex.Provider
 ---@return nil
 local function mark_session_closed(deps, config, session, provider)
@@ -186,7 +186,7 @@ end
 ---@param deps table
 ---@param provider_name string
 ---@param spec codex.SessionSpec
----@return codex.Session
+---@return codex.SessionState
 local function create_active_session(deps, provider_name, spec)
   local id = deps.session_store.create({
     handle = spec.handle,
@@ -211,7 +211,7 @@ end
 ---@param config table
 ---@param provider codex.Provider
 ---@param provider_name string
----@return codex.Session|nil
+---@return codex.SessionState|nil
 local function restore_session_if_needed(deps, config, provider, provider_name)
   local session = deps.session_store.get_active()
   if M.session_is_alive(session, provider) then
@@ -305,7 +305,7 @@ end
 ---@param focus boolean
 ---@param provider codex.Provider
 ---@param provider_name string
----@param session codex.Session|nil
+---@param session codex.SessionState|nil
 ---@return nil
 local function open_or_reuse_session(deps, config, args, focus, provider, provider_name, session)
   local arg_count = type(args) == "table" and #args or 0
@@ -378,7 +378,7 @@ function M.mark_session_dead_by_handle(deps, dead_handle, config)
 end
 
 ---Checks whether a session exists and the provider still reports it alive.
----@param session codex.Session|nil
+---@param session codex.SessionState|nil
 ---@param provider codex.Provider
 ---@return boolean
 function M.session_is_alive(session, provider)
@@ -386,7 +386,7 @@ function M.session_is_alive(session, provider)
 end
 
 ---Checks whether a live session is also ready to receive input.
----@param session codex.Session|nil
+---@param session codex.SessionState|nil
 ---@param provider codex.Provider
 ---@return boolean
 function M.session_is_ready(session, provider)
@@ -399,7 +399,7 @@ end
 ---Returns the active session and currently configured provider.
 ---@param deps table
 ---@param config table
----@return codex.Session|nil
+---@return codex.SessionState|nil
 ---@return codex.Provider
 ---@return string provider_name
 function M.get_active_session_and_provider(deps, config)
@@ -411,7 +411,7 @@ end
 ---Attempt to attach to a restored session for the configured provider.
 ---@param deps table
 ---@param config table
----@return codex.Session|nil
+---@return codex.SessionState|nil
 function M.restore_session_if_needed(deps, config)
   local provider, provider_name = M.get_provider(deps, config)
   return restore_session_if_needed(deps, config, provider, provider_name)
@@ -420,7 +420,7 @@ end
 ---Return the active session and provider, restoring when needed for command flows.
 ---@param deps table
 ---@param config table
----@return codex.Session|nil
+---@return codex.SessionState|nil
 ---@return codex.Provider
 ---@return string provider_name
 function M.get_or_restore_active_session_and_provider(deps, config)
@@ -433,7 +433,7 @@ end
 ---Return whether the current editor focus is on the active Codex buffer.
 ---@param deps table
 ---@param config table
----@param session? codex.Session|nil
+---@param session? codex.SessionState|nil
 ---@param provider? codex.Provider
 ---@return boolean
 function M.is_session_focused(deps, config, session, provider)
@@ -455,7 +455,7 @@ end
 ---Track the latest non-Codex editor location.
 ---@param deps table
 ---@param config table
----@param session? codex.Session|nil
+---@param session? codex.SessionState|nil
 ---@param provider? codex.Provider
 ---@return nil
 function M.record_non_codex_focus(deps, config, session, provider, winid, bufnr)
@@ -490,7 +490,7 @@ end
 ---Backwards-compatible alias for existing focus-capture call sites.
 ---@param deps table
 ---@param config table
----@param session? codex.Session|nil
+---@param session? codex.SessionState|nil
 ---@param provider? codex.Provider
 ---@return nil
 function M.remember_previous_focus(deps, config, session, provider)
@@ -596,7 +596,7 @@ end
 
 ---Re-focuses the terminal after sends, reopening/toggling when focus is lost.
 ---@param deps table
----@param session codex.Session
+---@param session codex.SessionState
 ---@param provider codex.Provider
 ---@param config table
 ---@return nil
