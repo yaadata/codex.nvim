@@ -148,7 +148,6 @@ end
 --- local op = function()
 ---   require('codex').input.feedkey '<A-m>'
 --- end
---- end
 --- require('codex.builtin').one_off(op)
 --- ```
 ---

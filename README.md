@@ -6,9 +6,10 @@
 
 # CODEX.NVIM
 
-<i>Bringing Openai Codex to Neovim </i>
+<i>Bringing Coding Harness' to Neovim </i>
 
-![codex.nvim within neovim session](images/codex_nvim.jpeg "codex.nvim")
+![pi within neovim session](images/pi_harness.png "codex.nvim")
+![codex within neovim session](images/codex_harness.jpeg "codex.nvim")
 
 | **Primary home:** [Codeberg](https://codeberg.org/yaadata/codex.nvim) | Mirrored on [GitHub](https://github.com/yaadata/codex.nvim) |
 | :-------------------------------------------------------------------: | :---------------------------------------------------------: |

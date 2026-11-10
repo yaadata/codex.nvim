@@ -22,8 +22,9 @@ CONTENTS                                                 *codex-nvim-contents*
    7.5 Prompt builder                                 |codex-nvim-api-builder|
    7.6 Input                                            |codex-nvim-api-input|
    7.7 Slash and wrapper commands                       |codex-nvim-api-slash|
-   7.8 Mention helpers                                |codex-nvim-api-mention|
-   7.9 Terminal keymap builtins                      |codex-nvim-api-builtins|
+   7.8 One-off actions                                |codex-nvim-api-one-off|
+   7.9 Mention helpers                                |codex-nvim-api-mention|
+   7.10 Terminal keymap builtins                     |codex-nvim-api-builtins|
 8. Command Behavior                              |codex-nvim-command-behavior|
 9. Keymaps                                                |codex-nvim-keymaps|
 10. Examples                                             |codex-nvim-examples|
@@ -621,6 +622,38 @@ builtin.resume({opts})                                  *codex.builtin.resume*
       Note: `OPENCODE` only `--continue` from the command line.
 
     Returns: `err` (`string|nil`).
+
+One-off actions                                   *codex-nvim-api-one-off*
+
+builtin.one_off({fn})                                  *codex.builtin.one_off*
+    Run `fn` once with the agent terminal focused, then restore the previous
+    focus state. Use it for a single terminal-input action that needs the
+    harness in focus, such as submitting a slash command or feeding a key.
+
+    Behavior:
+    - When no session is running, open a focused session, wait for the
+      harness to start, run `fn`, then unfocus.
+    - When a session is running but unfocused, focus it, run `fn`, then
+      unfocus.
+    - When the session is already focused, run `fn` and leave focus alone.
+
+    `fn`
+      Required function. It runs after a short delay so the terminal and
+      harness can accept input; it cannot return a value to the caller.
+      Deferred failures produce error notifications.
+
+    Returns: `nil`
+
+    Example: submit `/voice` through the shared prompt builder: >lua
+
+      local op = function()
+        local codex = require("codex")
+        codex.prompt_builder.clear()
+        codex.prompt_builder.add("/voice")
+        codex.prompt_builder.submit()
+      end
+      require("codex.builtin").one_off(op)
+<
 
 Mention helpers                                       *codex-nvim-api-mention*
 

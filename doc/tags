@@ -15,6 +15,7 @@ codex-nvim-api-input	codex.nvim.txt	/*codex-nvim-api-input*
 codex-nvim-api-lifecycle	codex.nvim.txt	/*codex-nvim-api-lifecycle*
 codex-nvim-api-logs	codex.nvim.txt	/*codex-nvim-api-logs*
 codex-nvim-api-mention	codex.nvim.txt	/*codex-nvim-api-mention*
+codex-nvim-api-one-off	codex.nvim.txt	/*codex-nvim-api-one-off*
 codex-nvim-api-returns	codex.nvim.txt	/*codex-nvim-api-returns*
 codex-nvim-api-runtime	codex.nvim.txt	/*codex-nvim-api-runtime*
 codex-nvim-api-send	codex.nvim.txt	/*codex-nvim-api-send*
@@ -49,6 +50,7 @@ codex.builtin.format_skill	codex.nvim.txt	/*codex.builtin.format_skill*
 codex.builtin.keymaps	codex.nvim.txt	/*codex.builtin.keymaps*
 codex.builtin.mention_directory	codex.nvim.txt	/*codex.builtin.mention_directory*
 codex.builtin.mention_file	codex.nvim.txt	/*codex.builtin.mention_file*
+codex.builtin.one_off	codex.nvim.txt	/*codex.builtin.one_off*
 codex.builtin.resume	codex.nvim.txt	/*codex.builtin.resume*
 codex.deactivate	codex.nvim.txt	/*codex.deactivate*
 codex.get_config	codex.nvim.txt	/*codex.get_config*
