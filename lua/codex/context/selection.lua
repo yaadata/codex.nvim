@@ -233,6 +233,9 @@ function M.get_current_buffer_filepath(vim_api, opts)
 end
 
 --- Capture the current visual selection as a SelectionSpec.
+--- Buffer content is not read by default: `spec.lines` stays nil and only the
+--- file path and line range are returned. Set `opts.include_lines = true` to
+--- include the selected text.
 ---@param vim_api table|nil
 ---@param opts? codex.SelectionOpts
 ---@return codex.SelectionSpec|nil spec
@@ -268,6 +271,17 @@ function M.get_visual_selection(vim_api, opts)
   end
 
   start_line, end_line = normalize_lines(start_line, end_line)
+  local filetype = vim_api.bo[bufnr].filetype or ""
+  local spec = {
+    filepath = filepath,
+    start_line = start_line,
+    end_line = end_line,
+    filetype = filetype,
+  }
+
+  if opts.include_lines ~= true then
+    return spec
+  end
 
   local norm_start_line, norm_start_col, norm_end_line, norm_end_col =
     normalize_marks(marks.start_line, marks.start_col, marks.end_line, marks.end_col)
@@ -288,16 +302,9 @@ function M.get_visual_selection(vim_api, opts)
 
   local lines = vim_api.api.nvim_buf_get_lines(bufnr, start_line - 1, end_line, false)
   local visual_mode = resolve_visual_mode(opts)
-  lines = shape_lines(lines, visual_mode, range)
-  local filetype = vim_api.bo[bufnr].filetype or ""
+  spec.lines = shape_lines(lines, visual_mode, range)
 
-  return {
-    filepath = filepath,
-    start_line = start_line,
-    end_line = end_line,
-    filetype = filetype,
-    lines = lines,
-  }
+  return spec
 end
 
 return M

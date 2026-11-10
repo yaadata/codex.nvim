@@ -247,6 +247,7 @@
 ---@field end_col? integer
 ---@field bufnr? integer
 ---@field visual_mode? string
+---@field include_lines? boolean When not true (the default), skip reading buffer content and omit `lines`.
 
 ---@class codex.BufferPathOpts
 ---@field bufnr? integer

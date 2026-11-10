@@ -45,10 +45,6 @@ function M.create(opts)
     end
 
     local fn = deps.vim.fn or {}
-    if type(fn.mode) ~= "function" then
-      return resolved
-    end
-
     local ok_mode, visual_mode = pcall(fn.mode, 1)
     if not ok_mode then
       return resolved
@@ -59,10 +55,6 @@ function M.create(opts)
 
     if resolved.visual_mode == nil then
       resolved.visual_mode = visual_mode
-    end
-
-    if type(fn.getpos) ~= "function" then
-      return resolved
     end
     local api = deps.vim.api
 

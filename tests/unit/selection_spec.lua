@@ -23,8 +23,9 @@ local function make_fake_vim_api(overrides)
   local visual_mode = overrides.visual_mode
   local fs_stat = overrides.fs_stat
   local buf_valid = overrides.buf_valid
+  local get_lines_calls = 0
 
-  return {
+  local vim_api = {
     api = {
       nvim_get_current_buf = function()
         return bufnr
@@ -42,6 +43,7 @@ local function make_fake_vim_api(overrides)
         return marks[mark] or { 0, 0 }
       end,
       nvim_buf_get_lines = function(_, start_idx, end_idx)
+        get_lines_calls = get_lines_calls + 1
         local out = {}
         for i = start_idx + 1, end_idx do
           table.insert(out, lines[i])
@@ -70,6 +72,12 @@ local function make_fake_vim_api(overrides)
       end,
     },
   }
+
+  function vim_api.get_lines_calls()
+    return get_lines_calls
+  end
+
+  return vim_api
 end
 
 describe("codex.context.selection", function()
@@ -170,9 +178,10 @@ describe("codex.context.selection", function()
   it("extracts multi-line selection from visual marks", function()
     -- ========= [A]rrange =========
     local vim_api = make_fake_vim_api()
+    local opts = { include_lines = true }
 
     -- ========= [A]ct     =========
-    local spec = selection.get_visual_selection(vim_api)
+    local spec = selection.get_visual_selection(vim_api, opts)
 
     -- ========= [A]ssert  =========
     assert.equal("lua/codex/init.lua", spec.filepath)
@@ -187,9 +196,10 @@ describe("codex.context.selection", function()
     local vim_api = make_fake_vim_api({
       marks = { ["<"] = { 3, 0 }, [">"] = { 3, 8 } },
     })
+    local opts = { include_lines = true }
 
     -- ========= [A]ct     =========
-    local spec = selection.get_visual_selection(vim_api)
+    local spec = selection.get_visual_selection(vim_api, opts)
 
     -- ========= [A]ssert  =========
     assert.equal(3, spec.start_line)
@@ -204,6 +214,7 @@ describe("codex.context.selection", function()
     })
     local opts = {
       visual_mode = "v",
+      include_lines = true,
     }
 
     -- ========= [A]ct     =========
@@ -222,6 +233,7 @@ describe("codex.context.selection", function()
     })
     local opts = {
       visual_mode = string.char(22),
+      include_lines = true,
     }
 
     -- ========= [A]ct     =========
@@ -298,6 +310,7 @@ describe("codex.context.selection", function()
     local opts = {
       line1 = 1,
       line2 = 2,
+      include_lines = true,
     }
 
     -- ========= [A]ct     =========
@@ -315,6 +328,7 @@ describe("codex.context.selection", function()
     local opts = {
       line1 = 4,
       line2 = 2,
+      include_lines = true,
     }
 
     -- ========= [A]ct     =========
@@ -331,9 +345,10 @@ describe("codex.context.selection", function()
     local vim_api = make_fake_vim_api({
       marks = { ["<"] = { 5, 0 }, [">"] = { 3, 0 } },
     })
+    local opts = { include_lines = true }
 
     -- ========= [A]ct     =========
-    local spec = selection.get_visual_selection(vim_api)
+    local spec = selection.get_visual_selection(vim_api, opts)
 
     -- ========= [A]ssert  =========
     assert.equal(3, spec.start_line)
@@ -349,6 +364,7 @@ describe("codex.context.selection", function()
     local opts = {
       line1 = 0,
       line2 = 3,
+      include_lines = true,
     }
 
     -- ========= [A]ct     =========
@@ -358,6 +374,39 @@ describe("codex.context.selection", function()
     assert.equal(2, spec.start_line)
     assert.equal(3, spec.end_line)
     assert.same({ "line 2", "line 3" }, spec.lines)
+  end)
+
+  it("skips reading buffer content by default", function()
+    -- ========= [A]rrange =========
+    local vim_api = make_fake_vim_api({
+      marks = { ["<"] = { 2, 0 }, [">"] = { 4, 0 } },
+    })
+
+    -- ========= [A]ct     =========
+    local spec = selection.get_visual_selection(vim_api)
+
+    -- ========= [A]ssert  =========
+    assert.equal("lua/codex/init.lua", spec.filepath)
+    assert.equal(2, spec.start_line)
+    assert.equal(4, spec.end_line)
+    assert.equal("lua", spec.filetype)
+    assert.is_nil(spec.lines)
+    assert.equal(0, vim_api.get_lines_calls())
+  end)
+
+  it("reads buffer content when include_lines is true", function()
+    -- ========= [A]rrange =========
+    local vim_api = make_fake_vim_api({
+      marks = { ["<"] = { 2, 0 }, [">"] = { 4, 0 } },
+    })
+    local opts = { include_lines = true }
+
+    -- ========= [A]ct     =========
+    local spec = selection.get_visual_selection(vim_api, opts)
+
+    -- ========= [A]ssert  =========
+    assert.same({ "line 2", "line 3", "line 4" }, spec.lines)
+    assert.equal(1, vim_api.get_lines_calls())
   end)
 
   it("uses explicit line and column opts when visual marks are unavailable", function()
@@ -371,6 +420,7 @@ describe("codex.context.selection", function()
       start_col = 1,
       end_col = 1,
       visual_mode = "v",
+      include_lines = true,
     }
 
     -- ========= [A]ct     =========

@@ -485,7 +485,7 @@ prompt_builder.add_file({opts})                *codex.prompt_builder.add_file*
     Returns: `codex.Outcome`, `codex.Error`
 
 prompt_builder.add_selection({opts})      *codex.prompt_builder.add_selection*
-    Append a path reference, selected line range, and fenced code block.
+    Append a path reference and selected line range.
 
     `opts.line1`, `opts.line2`
       Optional start and end lines.
@@ -499,6 +499,10 @@ prompt_builder.add_selection({opts})      *codex.prompt_builder.add_selection*
     `opts.visual_mode`
       Optional `"v"`, `"V"`, or CTRL-V character for characterwise, linewise,
       or blockwise selection.
+
+    `opts.include_lines`
+      Optional boolean, default `false`. Set to `true` to also read the buffer
+      and append a fenced code block with the selected text.
 
     When no explicit range is given, use the active visual selection or
     saved visual marks.
@@ -687,8 +691,9 @@ across the Markdown command docs.
 Selection sends                                   *codex-nvim-behavior-select*
 
 - `:CodexSendSelection` is visual-only.
-- The payload includes a path reference, selected line range, and a fenced
-  code block containing the selected text.
+- The payload includes only a path reference and selected line range; buffer
+  content is not read. Use `prompt_builder.add_selection({ include_lines = true })`
+  to include the selected text in a fenced code block via the API.
 - The command clears the shared builder draft, adds the selection, and sends
   it without Enter. Previously accumulated draft content is discarded, even
   if selection extraction fails.

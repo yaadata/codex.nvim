@@ -91,6 +91,22 @@ describe("codex.context.formatter", function()
       assert.is_not_nil(result:find("\n`````\n$", 1))
     end)
 
+    it("omits the code fence when lines are nil", function()
+      -- ========= [A]rrange =========
+      local selection_spec = {
+        filepath = "src/a.lua",
+        start_line = 3,
+        end_line = 7,
+        filetype = "lua",
+      }
+
+      -- ========= [A]ct     =========
+      local result = formatter.format_selection(selection_spec)
+
+      -- ========= [A]ssert  =========
+      assert.equal("@src/a.lua#L3-7\n", result)
+    end)
+
     it("accepts string content", function()
       -- ========= [A]rrange =========
       local selection_spec = {

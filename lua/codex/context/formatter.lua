@@ -6,7 +6,7 @@ local M = {}
 ---@field start_line integer
 ---@field end_line integer
 ---@field filetype string
----@field lines string[]|string
+---@field lines string[]|string|nil nil when the caller requested a reference only
 
 --- Return the length of the longest consecutive backtick run in a string.
 ---@param text string
@@ -51,7 +51,8 @@ local function quote_path(path)
   return '"' .. escaped .. '"'
 end
 
---- Format a code selection as a fenced Markdown block with file metadata.
+--- Format a code selection as a `@path#L1-L2` reference, with a fenced Markdown
+--- code block appended when `spec.lines` is present.
 ---@param spec? codex.SelectionSpec
 ---@return string payload
 function M.format_selection(spec)
@@ -61,17 +62,22 @@ function M.format_selection(spec)
   local start_line = spec.start_line or 0
   local end_line = spec.end_line or 0
   local filetype = spec.filetype or ""
-  local content = normalize_lines(spec.lines)
 
-  local fence_size = math.max(3, longest_backtick_run(content) + 1)
-  local fence = string.rep("`", fence_size)
-  local language = filetype ~= "" and filetype or "text"
   local location
   if start_line == end_line then
     location = string.format("@%s#L%d", filepath, start_line)
   else
     location = string.format("@%s#L%d-%d", filepath, start_line, end_line)
   end
+
+  if spec.lines == nil then
+    return location .. "\n"
+  end
+
+  local content = normalize_lines(spec.lines)
+  local fence_size = math.max(3, longest_backtick_run(content) + 1)
+  local fence = string.rep("`", fence_size)
+  local language = filetype ~= "" and filetype or "text"
 
   return string.format("%s\n\n%s%s\n%s\n%s\n", location, fence, language, content, fence)
 end
