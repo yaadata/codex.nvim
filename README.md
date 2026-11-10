@@ -33,7 +33,7 @@
 > [!CAUTION]
 > You are reading the `main` branch README. Install details may differ from
 > tagged releases. The current v2 beta release tag is
-> [`2.0.0-beta.1`](https://codeberg.org/yaadata/codex.nvim/src/tag/v2.0.0-beta.1).
+> [`2.0.0-beta.2`](https://codeberg.org/yaadata/codex.nvim/src/tag/v2.0.0-beta.2).
 > For version-accurate instructions, read the README for your target tag from
 > [Codeberg releases](https://codeberg.org/yaadata/codex.nvim/releases).
 
@@ -42,7 +42,7 @@
 ```lua
 {
   url = "https://codeberg.org/yaadata/codex.nvim.git",
-  version = "2.0.0-beta.1",
+  version = "2.0.0-beta.2",
   lazy = false,
   cmd = {
     "Codex",
