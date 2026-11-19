@@ -45,9 +45,13 @@ function M.execute(opts)
   end
   ---@type codex.Api
   local codex = require("codex")
-  local capture_ok, current_input = codex.input.get()
-  if not capture_ok then
-    return "failed to capture current input"
+  local current_input
+  if codex.session.is_running() then
+    local capture_ok
+    capture_ok, current_input = codex.input.get()
+    if not capture_ok then
+      return "failed to capture current input"
+    end
   end
   current_input = current_input or ""
   if current_input ~= "" then

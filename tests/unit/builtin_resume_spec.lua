@@ -16,8 +16,8 @@ describe("codex.builtin.resume", function()
     vim.defer_fn = original_defer_fn
   end)
 
-  local function setup_terminal()
-    local env = setup_with_deps()
+  local function setup_terminal(overrides)
+    local env = setup_with_deps(overrides)
     vim.defer_fn = env.fake_vim.defer_fn
     env.codex.session.open(false)
     env.provider.get_bufnr_fn = function()
@@ -27,12 +27,12 @@ describe("codex.builtin.resume", function()
     return env
   end
 
-  it("launches Codex resume by default when no session is running", function()
+  it("launches Codex resume when explicitly selected and no session is running", function()
     -- ========= [A]rrange =========
-    local env = setup_with_deps()
+    local env = setup_with_deps({ launch = { cmd = harness.CODEX } })
 
     -- ========= [A]ct     =========
-    local err = builtin.resume()
+    local err = builtin.resume({ harness = harness.CODEX })
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
@@ -125,18 +125,13 @@ describe("codex.builtin.resume", function()
     assert.equal(2, discover_calls)
     assert.equal(0, #env.provider.open_calls)
     assert.equal("restored", env.store.get_active().handle.id)
-    assert.equal(0, #env.provider.send_calls)
-
-    assert.is_nil(builtin.resume())
-    run_deferred(env.fake_vim, 3)
-
     assert.equal(1, #env.provider.send_calls)
     assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[1].text)
     assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
     assert.equal(0, #env.fake_vim._deferred)
   end)
 
-  it("infers resume for configuration", function()
+  it("infers last-resume CLI arguments from the configured harness", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps({
       launch = {
@@ -145,7 +140,7 @@ describe("codex.builtin.resume", function()
     })
 
     -- ========= [A]ct     =========
-    local err = builtin.resume()
+    local err = builtin.resume({ last = true })
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
@@ -154,9 +149,42 @@ describe("codex.builtin.resume", function()
     assert.is_true(env.provider.open_calls[1].focus)
   end)
 
-  it("launches CLAUDE with --resume", function()
+  for _, cmd in ipairs({ harness.ANTIGRAVITY, harness.OPENCODE }) do
+    it("starts " .. cmd .. " and sends /resume once ready for a non-last resume", function()
+      -- ========= [A]rrange =========
+      local env = setup_with_deps({ launch = { cmd = cmd, auto_start = false } })
+      vim.defer_fn = env.fake_vim.defer_fn
+      local ready = false
+      env.provider.is_ready_fn = function()
+        return ready
+      end
+
+      -- ========= [A]ct     =========
+      local err = builtin.resume({ harness = cmd, last = false })
+      run_deferred(env.fake_vim, 2)
+
+      -- ========= [A]ssert  =========
+      assert.is_nil(err)
+      assert.equal(1, #env.provider.open_calls)
+      assert.equal(cmd, env.provider.open_calls[1].cmd)
+      assert.same({ "--flag" }, env.provider.open_calls[1].args)
+      assert.equal(0, #env.provider.send_calls)
+      assert.equal(0, #env.fake_vim._feedkeys_calls)
+
+      ready = true
+      run_deferred(env.fake_vim, 3)
+
+      assert.equal(1, #env.provider.open_calls)
+      assert.equal(1, #env.provider.send_calls)
+      assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[1].text)
+      assert.equal(1, #env.fake_vim._feedkeys_calls)
+      assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
+    end)
+  end
+
+  it("launches explicitly selected Claude with --resume", function()
     -- ========= [A]rrange =========
-    local env = setup_with_deps()
+    local env = setup_with_deps({ launch = { cmd = harness.CLAUDE } })
 
     -- ========= [A]ct     =========
     local err = builtin.resume({ harness = harness.CLAUDE, last = false })
@@ -164,6 +192,7 @@ describe("codex.builtin.resume", function()
     -- ========= [A]ssert  =========
     assert.is_nil(err)
     assert.equal(1, #env.provider.open_calls)
+    assert.equal(harness.CLAUDE, env.provider.open_calls[1].cmd)
     assert.same({ "--resume" }, env.provider.open_calls[1].args)
     assert.is_true(env.provider.open_calls[1].focus)
   end)
@@ -182,9 +211,9 @@ describe("codex.builtin.resume", function()
     assert.is_true(env.provider.open_calls[1].focus)
   end)
 
-  it("launches PI with --resume", function()
+  it("launches explicitly selected Pi with --resume", function()
     -- ========= [A]rrange =========
-    local env = setup_with_deps()
+    local env = setup_with_deps({ launch = { cmd = harness.PI } })
 
     -- ========= [A]ct     =========
     local err = builtin.resume({ harness = harness.PI, last = false })
@@ -192,6 +221,7 @@ describe("codex.builtin.resume", function()
     -- ========= [A]ssert  =========
     assert.is_nil(err)
     assert.equal(1, #env.provider.open_calls)
+    assert.equal(harness.PI, env.provider.open_calls[1].cmd)
     assert.same({ "--resume" }, env.provider.open_calls[1].args)
     assert.is_true(env.provider.open_calls[1].focus)
   end)
@@ -210,12 +240,12 @@ describe("codex.builtin.resume", function()
     assert.is_true(env.provider.open_calls[1].focus)
   end)
 
-  it("launches OPENCODE with --continue", function()
+  it("launches ANTIGRAVITY with --continue", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local err = builtin.resume({ harness = harness.OPENCODE })
+    local err = builtin.resume({ harness = harness.ANTIGRAVITY, last = true })
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
@@ -224,22 +254,40 @@ describe("codex.builtin.resume", function()
     assert.is_true(env.provider.open_calls[1].focus)
   end)
 
-  it("sends /resume to an active non-Codex session", function()
+  it("launches OPENCODE with --continue", function()
     -- ========= [A]rrange =========
-    local env = setup_terminal()
+    local env = setup_with_deps()
 
     -- ========= [A]ct     =========
-    local err = builtin.resume({ harness = harness.CLAUDE })
-    run_deferred(env.fake_vim, 3)
+    local err = builtin.resume({ harness = harness.OPENCODE, last = true })
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)
     assert.equal(1, #env.provider.open_calls)
-    assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[1].text)
-    assert.equal(1, #env.fake_vim._feedkeys_calls)
-    assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
-    assert.equal(0, #env.fake_vim._deferred)
+    assert.same({ "--continue" }, env.provider.open_calls[1].args)
+    assert.is_true(env.provider.open_calls[1].focus)
   end)
+
+  for _, cmd in ipairs({ harness.ANTIGRAVITY, harness.OPENCODE }) do
+    it("sends /resume to an active " .. cmd .. " session", function()
+      -- ========= [A]rrange =========
+      local env = setup_terminal({ launch = { cmd = cmd } })
+
+      -- ========= [A]ct     =========
+      local err = builtin.resume({ harness = cmd, last = false })
+      run_deferred(env.fake_vim, 3)
+
+      -- ========= [A]ssert  =========
+      assert.is_nil(err)
+      assert.equal(1, #env.provider.open_calls)
+      assert.equal(cmd, env.provider.open_calls[1].cmd)
+      assert.equal(1, #env.provider.send_calls)
+      assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[1].text)
+      assert.equal(1, #env.fake_vim._feedkeys_calls)
+      assert.equal("<termcoded:<CR>>", env.fake_vim._feedkeys_calls[1].keys)
+      assert.equal(0, #env.fake_vim._deferred)
+    end)
+  end
 
   it("closes a stale session before launching a resume process", function()
     -- ========= [A]rrange =========
@@ -248,7 +296,7 @@ describe("codex.builtin.resume", function()
     stale_handle.alive = false
 
     -- ========= [A]ct     =========
-    local err = builtin.resume()
+    local err = builtin.resume({ harness = harness.CODEX })
 
     -- ========= [A]ssert  =========
     assert.is_nil(err)

@@ -152,16 +152,21 @@ describe("codex.builtin execute_slash_command", function()
     assert_dispatch(env, "review")
   end)
 
-  it("returns an error when no active session exists", function()
-    local env = setup_with_deps()
+  it("starts a session and submits the command when no session is running", function()
+    -- ========= [A]rrange =========
+    local env = setup_with_deps({ launch = { auto_start = false } })
     vim.defer_fn = env.fake_vim.defer_fn
+    vim.fn.setreg = env.fake_vim.fn.setreg
 
+    -- ========= [A]ct     =========
     local err = builtin.execute_slash_command({ command = "review" })
 
-    assert.equal("failed to capture current input", err)
+    -- ========= [A]ssert  =========
+    assert.is_nil(err)
     assert.equal(0, #env.provider.open_calls)
-    assert.equal(0, #env.provider.send_calls)
-    assert.equal(0, #env.fake_vim._deferred)
+    assert_dispatch(env, "review")
+    assert.equal(1, #env.provider.open_calls)
+    assert.equal(0, #env.fake_vim._setreg_calls)
   end)
 
   it("captures nearest multiline draft and normalizes continuation gutters", function()

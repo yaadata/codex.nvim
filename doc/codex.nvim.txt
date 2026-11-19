@@ -614,16 +614,14 @@ builtin.format_skill({opts}, {style})             *codex.builtin.format_skill*
     `/plugin:name`. Add any desired separator before appending to the draft.
 
 builtin.resume({opts})                                  *codex.builtin.resume*
-    With a running session, send `/resume` through
-    |codex.builtin.execute_slash_command|. Otherwise open a focused session
-    with resume arguments.
+    If a session is already running, send `/resume` to it through
+    |codex.builtin.execute_slash_command|, even when `opts.last` is true.
 
-    `opts.harness`
-      Defaults to value in `launch.cmd` (see `codex-nvim-config`): 
-      launch `resume`, or `resume --last` when `opts.last` is true. 
-
-      Harness values include `CODEX`, `CLAUDE`, `OPENCODE` and `PI`.
-      Note: `OPENCODE` only `--continue` from the command line.
+    If no session is running and `opts.last` is not true, explicitly selecting
+    `CODEX`, `CLAUDE`, or `PI` opens a focused terminal with that harness's
+    command-line resume arguments. For `ANTIGRAVITY`, `OPENCODE`, or when no
+    harness is specified, start the configured harness and send `/resume`
+    once it is ready.
 
     Returns: `err` (`string|nil`).
 
