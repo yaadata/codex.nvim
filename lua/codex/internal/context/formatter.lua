@@ -36,21 +36,6 @@ local function normalize_lines(lines)
   return ""
 end
 
---- Check whether a file path contains shell-significant characters.
----@param path string
----@return boolean
-local function needs_quoting(path)
-  return path:find("[%s\"'`$;&|<>!()%[%]{}*?\\]") ~= nil
-end
-
---- Wrap a path in double quotes, escaping backslashes and double-quote characters.
----@param path string
----@return string
-local function quote_path(path)
-  local escaped = path:gsub("\\", "\\\\"):gsub('"', '\\"')
-  return '"' .. escaped .. '"'
-end
-
 --- Format a code selection as a `@path#L1-L2` reference, with a fenced Markdown
 --- code block appended when `spec.lines` is present.
 ---@param spec? codex.SelectionSpec
@@ -87,17 +72,6 @@ end
 ---@return string payload
 function M.format_buffer_ref(filepath)
   return string.format("@%s ", filepath)
-end
-
---- Format a `/mention` payload; paths are quoted and escaped when needed.
----@param filepath? string
----@return string payload
-function M.format_mention(filepath)
-  local path = filepath or ""
-  if path ~= "" and needs_quoting(path) then
-    path = quote_path(path)
-  end
-  return string.format("/mention %s", path)
 end
 
 return M

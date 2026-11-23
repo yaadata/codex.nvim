@@ -241,18 +241,6 @@
 ---@field prompt_builder codex.PromptBuilder
 ---@field session codex.SessionCommands
 
--- Mention
-
----@class codex.MentionOpts
----@field get_deps fun(): table
----@field profiles codex.Profiles
----@field get_activation? fun(): integer
----@field dispatch_send fun(text: string, opts?: codex.DispatchSendOpts): codex.Outcome, string|nil
-
----@class codex.Mention
----@field mention_file fun(path?: string): codex.Outcome, codex.Error
----@field mention_directory fun(path?: string): codex.Outcome, codex.Error
-
 -- Selection
 
 ---@class codex.SelectionAddCreateOpts
@@ -286,7 +274,6 @@
 ---@class codex.Formatter
 ---@field format_selection fun(spec?: codex.SelectionSpec): string
 ---@field format_buffer_ref fun(filepath: string): string
----@field format_mention fun(filepath?: string): string
 
 -- Queue
 

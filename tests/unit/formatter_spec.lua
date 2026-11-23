@@ -125,41 +125,6 @@ describe("codex.internal.context.formatter", function()
     end)
   end)
 
-  describe("format_mention", function()
-    it("formats mention with spaces in path", function()
-      -- ========= [A]rrange =========
-      local filepath = "/tmp/dir with space/file.lua"
-
-      -- ========= [A]ct     =========
-      local result = formatter.format_mention(filepath)
-
-      -- ========= [A]ssert  =========
-      assert.equal('/mention "/tmp/dir with space/file.lua"', result)
-    end)
-
-    it("escapes double-quotes and backslashes for shell-significant paths", function()
-      -- ========= [A]rrange =========
-      local filepath = 'C:\\work\\my "file".lua'
-
-      -- ========= [A]ct     =========
-      local result = formatter.format_mention(filepath)
-
-      -- ========= [A]ssert  =========
-      assert.equal('/mention "C:\\\\work\\\\my \\"file\\".lua"', result)
-    end)
-
-    it("does not include trailing newline", function()
-      -- ========= [A]rrange =========
-      local filepath = "file.lua"
-
-      -- ========= [A]ct     =========
-      local result = formatter.format_mention(filepath)
-
-      -- ========= [A]ssert  =========
-      assert.equal("/mention file.lua", result)
-    end)
-  end)
-
   describe("format_buffer_ref", function()
     it("formats ACP buffer reference without line metadata", function()
       -- ========= [A]rrange =========

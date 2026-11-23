@@ -5,9 +5,6 @@ M.BRACKETED_PASTE_START = "\27[200~"
 M.BRACKETED_PASTE_END = "\27[201~"
 M.CODEX_ENTER_SEQUENCE = "\r"
 M.PROMPT_CAPTURE_LOOKBACK_LINES = 900
--- Allow Codex CLI enough time to process submit and render a fresh prompt
--- before re-applying captured prompt input.
-M.RESTORE_INPUT_DELAY_MS = 400
 
 local COMPACT_PROMPT_MARKERS = {
   [">"] = true,
@@ -111,7 +108,7 @@ function M.encode_termcode(deps, key)
   return deps.vim.api.nvim_replace_termcodes(key, true, false, true)
 end
 
----Builds key sequence that clears the active prompt line before `/mention`.
+---Builds a key sequence that clears active prompt input.
 ---@param deps table
 ---@param clear_line_count? integer
 ---@return string

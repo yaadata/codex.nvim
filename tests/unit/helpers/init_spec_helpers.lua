@@ -245,7 +245,6 @@ local function make_formatter()
   ---@class tests.InitSpecFormatter: codex.Formatter
   local formatter = {
     selection_specs = {},
-    mention_paths = {},
     selection_payload = "[selection]\n",
     buffer_paths = {},
     buffer_payload = "[@buffer] ",
@@ -254,11 +253,6 @@ local function make_formatter()
   function formatter.format_selection(spec)
     table.insert(formatter.selection_specs, spec)
     return formatter.selection_payload
-  end
-
-  function formatter.format_mention(path)
-    table.insert(formatter.mention_paths, path)
-    return "/mention " .. path
   end
 
   function formatter.format_buffer_ref(path)

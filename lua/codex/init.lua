@@ -5,7 +5,6 @@ local prompt_buffer_mod = require("codex.internal.runtime.prompt_buffer")
 local session_lifecycle = require("codex.internal.state.session_lifecycle")
 local send_dispatch_mod = require("codex.internal.runtime.send_dispatch")
 local agent_skill_mod = require("codex.internal.context.agent_skill")
-local mention_mod = require("codex.internal.context.mention")
 local wrapper_command_mod = require("codex.internal.context.wrapper_command")
 local prompt_ops = require("codex.internal.context.prompt_ops")
 local terminal_size = require("codex.internal.runtime.terminal_size")
@@ -48,8 +47,6 @@ local state = {
   send_dispatch = nil,
   ---@type codex.SelectionAdd|nil
   selection_add = nil,
-  ---@type codex.Mention|nil
-  mention = nil,
   wrapper_command = nil,
   focus_state = {
     previous = nil,
@@ -309,17 +306,6 @@ local function setup(opts)
     end,
   })
 
-  state.mention = mention_mod.create({
-    get_deps = get_deps,
-    profiles = runtime_profiles,
-    get_activation = function()
-      return state.activation
-    end,
-    dispatch_send = function(text, send_opts)
-      return state.send_dispatch.dispatch_send(text, send_opts)
-    end,
-  })
-
   state.wrapper_command = wrapper_command_mod.create({
     get_deps = get_deps,
     profiles = runtime_profiles,
@@ -442,7 +428,6 @@ local function deactivate()
   state.send_queue = nil
   state.send_dispatch = nil
   state.agent_skill = nil
-  state.mention = nil
   state.wrapper_command = nil
   state.focus_state.previous = nil
   state.focus_state.last_non_codex = nil
