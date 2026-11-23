@@ -33,7 +33,7 @@ describe("codex keymap actions and registration", function()
     stub_snapshot = assert:snapshot()
     package.loaded["codex.builtin"] = nil
     package.loaded["codex.builtin.keymaps"] = nil
-    package.loaded["codex.nvim.keymaps"] = nil
+    package.loaded["codex.internal.nvim.keymaps"] = nil
     package.loaded["codex"] = nil
   end)
 
@@ -44,7 +44,7 @@ describe("codex keymap actions and registration", function()
 
   it("exposes builtin actions and descriptions", function()
     -- ========= [A]rrange =========
-    local keymaps = require("codex.nvim.keymaps")
+    local keymaps = require("codex.internal.nvim.keymaps")
     local actions = require("codex.builtin").keymaps
 
     -- ========= [A]ct     =========
@@ -69,7 +69,7 @@ describe("codex keymap actions and registration", function()
   it("apply_terminal uses builtin desc fallback and explicit desc overrides", function()
     with_stubbed_keymap_set(function(calls)
       -- ========= [A]rrange =========
-      local keymaps = require("codex.nvim.keymaps")
+      local keymaps = require("codex.internal.nvim.keymaps")
       local actions = require("codex.builtin").keymaps
       local keymap_defs = {
         ["<C-c>"] = {
@@ -116,7 +116,7 @@ describe("codex keymap actions and registration", function()
   it("apply_terminal is a no-op for nil keymaps", function()
     with_stubbed_keymap_set(function(calls)
       -- ========= [A]rrange =========
-      local keymaps = require("codex.nvim.keymaps")
+      local keymaps = require("codex.internal.nvim.keymaps")
 
       -- ========= [A]ct     =========
       keymaps.apply_terminal(42, nil)
@@ -155,7 +155,7 @@ describe("codex keymap actions and registration", function()
     }
 
     -- ========= [A]ct     =========
-    local keymaps = require("codex.nvim.keymaps")
+    local keymaps = require("codex.internal.nvim.keymaps")
     local actions = require("codex.builtin").keymaps
     actions.unfocus()
 

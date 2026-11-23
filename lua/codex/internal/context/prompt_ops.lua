@@ -1,7 +1,7 @@
-local outcome = require("codex.enums.outcome")
-local capture_input_prompt = require("codex.enums.input_prompt")
-local terminal_io = require("codex.runtime.terminal_io")
-local session_lifecycle = require("codex.state.session_lifecycle")
+local outcome = require("codex.internal.enums.outcome")
+local capture_input_prompt = require("codex.internal.enums.input_prompt")
+local terminal_io = require("codex.internal.runtime.terminal_io")
+local session_lifecycle = require("codex.internal.state.session_lifecycle")
 
 local M = {}
 

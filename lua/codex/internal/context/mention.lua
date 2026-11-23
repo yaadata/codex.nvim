@@ -1,6 +1,6 @@
-local terminal_io = require("codex.runtime.terminal_io")
-local session_lifecycle = require("codex.state.session_lifecycle")
-local prompt_ops = require("codex.context.prompt_ops")
+local terminal_io = require("codex.internal.runtime.terminal_io")
+local session_lifecycle = require("codex.internal.state.session_lifecycle")
+local prompt_ops = require("codex.internal.context.prompt_ops")
 
 local M = {}
 local MENTION_COMMAND_PATH = "/mention"

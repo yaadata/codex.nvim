@@ -1,6 +1,6 @@
-local store = require("codex.state.session_store")
+local store = require("codex.internal.state.session_store")
 
-describe("codex.state.session_store", function()
+describe("codex.internal.state.session_store", function()
   before_each(function()
     store.reset()
   end)

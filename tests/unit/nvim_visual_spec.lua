@@ -1,7 +1,7 @@
 local helpers = require("tests.unit.helpers.init_spec_helpers")
 
-describe("codex.nvim.visual", function()
-  local visual = require("codex.nvim.visual")
+describe("codex.internal.nvim.visual", function()
+  local visual = require("codex.internal.nvim.visual")
   local CTRL_V = string.char(22)
 
   it("sends escape when mode is charwise visual", function()

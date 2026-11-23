@@ -59,14 +59,14 @@ local function make_nested_queue(send_queue, fake_vim)
   end
 end
 
-describe("codex.runtime.send_queue", function()
+describe("codex.internal.runtime.send_queue", function()
   before_each(function()
-    package.loaded["codex.runtime.send_queue"] = nil
+    package.loaded["codex.internal.runtime.send_queue"] = nil
   end)
 
   it("returns true without scheduling when process sends immediately", function()
     -- ========= [A]rrange =========
-    local send_queue = require("codex.runtime.send_queue")
+    local send_queue = require("codex.internal.runtime.send_queue")
     local fake_vim = make_fake_vim()
     local calls = 0
     local queue = send_queue.new({
@@ -90,7 +90,7 @@ describe("codex.runtime.send_queue", function()
 
   it("returns false with error when process drops immediately", function()
     -- ========= [A]rrange =========
-    local send_queue = require("codex.runtime.send_queue")
+    local send_queue = require("codex.internal.runtime.send_queue")
     local fake_vim = make_fake_vim()
     local queue = send_queue.new({
       vim = fake_vim,
@@ -111,7 +111,7 @@ describe("codex.runtime.send_queue", function()
 
   it("schedules a single timer while retrying", function()
     -- ========= [A]rrange =========
-    local send_queue = require("codex.runtime.send_queue")
+    local send_queue = require("codex.internal.runtime.send_queue")
     local fake_vim = make_fake_vim()
     local queue = send_queue.new({
       vim = fake_vim,
@@ -132,7 +132,7 @@ describe("codex.runtime.send_queue", function()
 
   it("flushes queued items in FIFO order", function()
     -- ========= [A]rrange =========
-    local send_queue = require("codex.runtime.send_queue")
+    local send_queue = require("codex.internal.runtime.send_queue")
     local fake_vim = make_fake_vim()
     local ready = false
     local sent = {}
@@ -161,7 +161,7 @@ describe("codex.runtime.send_queue", function()
 
   it("queues nested submit for later retry during flush without re-entrant corruption", function()
     -- ========= [A]rrange =========
-    local send_queue = require("codex.runtime.send_queue")
+    local send_queue = require("codex.internal.runtime.send_queue")
     local fake_vim = make_fake_vim()
     local queue, sent = make_nested_queue(send_queue, fake_vim)
     queue:submit({ text = "first" })
@@ -177,7 +177,7 @@ describe("codex.runtime.send_queue", function()
 
   it("flushes nested submit on a later retry", function()
     -- ========= [A]rrange =========
-    local send_queue = require("codex.runtime.send_queue")
+    local send_queue = require("codex.internal.runtime.send_queue")
     local fake_vim = make_fake_vim()
     local queue, sent, set_nested_ready = make_nested_queue(send_queue, fake_vim)
     queue:submit({ text = "first" })
@@ -194,7 +194,7 @@ describe("codex.runtime.send_queue", function()
 
   it("reset clears queued items and flush flags", function()
     -- ========= [A]rrange =========
-    local send_queue = require("codex.runtime.send_queue")
+    local send_queue = require("codex.internal.runtime.send_queue")
     local fake_vim = make_fake_vim()
     local queue = send_queue.new({
       vim = fake_vim,
@@ -216,7 +216,7 @@ describe("codex.runtime.send_queue", function()
 
   it("ignores stale deferred flush after reset", function()
     -- ========= [A]rrange =========
-    local send_queue = require("codex.runtime.send_queue")
+    local send_queue = require("codex.internal.runtime.send_queue")
     local fake_vim = make_fake_vim()
     local queue = send_queue.new({
       vim = fake_vim,

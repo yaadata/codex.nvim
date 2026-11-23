@@ -1,6 +1,6 @@
-local path = require("codex.context.path")
+local path = require("codex.internal.context.path")
 
-describe("codex.context.path", function()
+describe("codex.internal.context.path", function()
   it("returns relative path from fnamemodify", function()
     -- ========= [A]rrange =========
     local fake_vim = {

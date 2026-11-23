@@ -1,4 +1,4 @@
-local terminal_io = require("codex.runtime.terminal_io")
+local terminal_io = require("codex.internal.runtime.terminal_io")
 local M = {}
 
 local function valid_value(value)

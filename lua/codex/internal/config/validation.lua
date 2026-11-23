@@ -1,6 +1,6 @@
 local M = {}
-local defaults = require("codex.config.defaults")
-local keymaps = require("codex.nvim.keymaps")
+local defaults = require("codex.internal.config.defaults")
+local keymaps = require("codex.internal.nvim.keymaps")
 local hooks = require("codex.hooks")
 
 local valid_setup_keys = { profiles = true, log = true, hooks = true }

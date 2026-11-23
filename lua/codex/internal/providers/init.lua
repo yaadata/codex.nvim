@@ -6,8 +6,8 @@ local log = require("codex.logger")
 local M = {}
 
 local provider_modules = {
-  native = "codex.providers.native",
-  snacks = "codex.providers.snacks",
+  native = "codex.internal.providers.native",
+  snacks = "codex.internal.providers.snacks",
 }
 
 local loaded = {}

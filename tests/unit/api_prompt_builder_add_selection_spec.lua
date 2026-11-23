@@ -66,7 +66,7 @@ describe("codex.init public api prompt_builder.add_selection", function()
 
   it("prompt_builder.add_selection wraps real formatter output in bracketed paste", function()
     -- ========= [A]rrange =========
-    local real_formatter = require("codex.context.formatter")
+    local real_formatter = require("codex.internal.context.formatter")
     local env = setup_with_deps({
       _deps = {
         formatter = real_formatter,

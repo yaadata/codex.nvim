@@ -1,5 +1,5 @@
 local config = require("codex.config")
-local profiles = require("codex.config.profiles")
+local profiles = require("codex.internal.config.profiles")
 local keymaps = require("codex.builtin").keymaps
 
 describe("codex.config", function()

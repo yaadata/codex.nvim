@@ -361,13 +361,13 @@ local function with_stubbed_native_env(run)
   end
 end
 
-describe("codex.providers.native", function()
+describe("codex.internal.providers.native", function()
   local stub_snapshot
 
   before_each(function()
     stub_snapshot = assert:snapshot()
     package.loaded["codex"] = nil
-    package.loaded["codex.providers.native"] = nil
+    package.loaded["codex.internal.providers.native"] = nil
   end)
 
   after_each(function()
@@ -378,7 +378,7 @@ describe("codex.providers.native", function()
   it("opens vsplit windows and restores previous window when focus=false", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           provider_opts = {
@@ -406,7 +406,7 @@ describe("codex.providers.native", function()
   it("omits termopen env when config env is empty", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
 
       -- ========= [A]ct     =========
@@ -421,7 +421,7 @@ describe("codex.providers.native", function()
   it("passes termopen env when config env has values", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       local env = { CODEX_TEST = "1" }
 
@@ -442,7 +442,7 @@ describe("codex.providers.native", function()
   it("does not register terminal keymaps by default", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, make_config(), false)
@@ -455,7 +455,7 @@ describe("codex.providers.native", function()
   it("registers configured builtin terminal keymaps", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           keymaps = default_terminal_keymaps(),
@@ -489,7 +489,7 @@ describe("codex.providers.native", function()
   it("registers custom terminal keymap keys for builtin actions", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           keymaps = {
@@ -518,7 +518,7 @@ describe("codex.providers.native", function()
       stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
       end)
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           keymaps = {
@@ -553,7 +553,7 @@ describe("codex.providers.native", function()
           end,
         },
       }
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       provider.open(
         "codex",
         {},
@@ -581,7 +581,7 @@ describe("codex.providers.native", function()
   it("registers directional navigation keymaps even for float windows", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           provider_opts = {
@@ -613,7 +613,7 @@ describe("codex.providers.native", function()
   it("opens hsplit windows and focuses insert mode when focus=true", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           provider_opts = {
@@ -639,7 +639,7 @@ describe("codex.providers.native", function()
   it("opens float windows with configured options", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           provider_opts = {
@@ -680,7 +680,7 @@ describe("codex.providers.native", function()
   it("clamps split dimensions to at least one", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           provider_opts = {
@@ -703,7 +703,7 @@ describe("codex.providers.native", function()
   it("clamps float dimensions to at least one", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           provider_opts = {
@@ -734,7 +734,7 @@ describe("codex.providers.native", function()
   it("does not auto-close native terminal window on exit when auto_close=false", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           auto_close = false,
@@ -756,7 +756,7 @@ describe("codex.providers.native", function()
   it("auto-closes native terminal window on exit when auto_close=true", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           auto_close = true,
@@ -782,7 +782,7 @@ describe("codex.providers.native", function()
   it("does not notify on non-zero exit and still runs on_exit callback", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           auto_close = true,
@@ -812,7 +812,7 @@ describe("codex.providers.native", function()
   it("focuses terminal window and enters insert mode", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
       state.current_win = 1
@@ -832,7 +832,7 @@ describe("codex.providers.native", function()
   it("focus recovers a stale window id by searching for the terminal buffer", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
       local expected_winid = handle.winid
@@ -855,7 +855,7 @@ describe("codex.providers.native", function()
   it("focus returns terminal window mismatch when selected window buffer is wrong", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
       state.wins[handle.winid].bufnr = 1
@@ -875,7 +875,7 @@ describe("codex.providers.native", function()
   it("focus returns an error when setting the terminal window fails", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
       state.set_current_win_error = "boom"
@@ -894,7 +894,7 @@ describe("codex.providers.native", function()
   it("focus returns terminal window not found when no visible terminal window exists", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
       state.wins[handle.winid].valid = false
@@ -914,7 +914,7 @@ describe("codex.providers.native", function()
   it("toggle closes the window when already focused", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
       state.startinsert_calls = 0
@@ -934,7 +934,7 @@ describe("codex.providers.native", function()
   it("toggle closes the window when the terminal is visible in another window", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
       state.current_win = 1
@@ -956,7 +956,7 @@ describe("codex.providers.native", function()
   it("toggle closes a visible terminal when handle.winid is stale", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       local handle = provider.open("codex", {}, {}, cfg, true)
       local live_winid = handle.winid
@@ -980,7 +980,7 @@ describe("codex.providers.native", function()
   it("toggle re-shows buffer using current configured window type", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local initial_cfg = make_config({
         terminal = {
           provider_opts = {
@@ -1031,7 +1031,7 @@ describe("codex.providers.native", function()
   it("handles missing terminal.startup without error", function()
     with_stubbed_native_env(function()
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config()
       cfg.terminal.startup = nil
 
@@ -1050,7 +1050,7 @@ describe("codex.providers.native", function()
   it("uses default vsplit config when vsplit sub-table is nil", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           provider_opts = {
@@ -1077,7 +1077,7 @@ describe("codex.providers.native", function()
   it("uses default hsplit config when hsplit sub-table is nil", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           provider_opts = {
@@ -1104,7 +1104,7 @@ describe("codex.providers.native", function()
   it("uses default float config when float sub-table is nil", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({
         terminal = {
           provider_opts = {
@@ -1134,7 +1134,7 @@ describe("codex.providers.native", function()
   it("discover_restorable matches terminal buffer names with extra Codex args", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       state.buf_valid[21] = true
       state.buf_names[21] = "term:///tmp/project//123:codex --model o3"
       state.buf_channels[21] = 91
@@ -1162,7 +1162,7 @@ describe("codex.providers.native", function()
       stub(vim.fn, "exepath", function(cmd)
         return cmd == "pi" and "/opt/mise/bin/pi" or ""
       end)
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({ profile_identifier = "default" })
       cfg.launch.cmd = { "pi" }
 
@@ -1193,7 +1193,7 @@ describe("codex.providers.native", function()
   it("matches live native terminal geometry unless ownership is known", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local cfg = make_config({ profile_identifier = "work" })
       cfg.launch.cmd = { "codex", "--model", "o3" }
       state.buf_valid[21] = true
@@ -1233,7 +1233,7 @@ describe("codex.providers.native", function()
   it("attach_restored registers TermClose autocmd and terminal keymaps", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local handle = {
         bufnr = 21,
         winid = 9,
@@ -1269,7 +1269,7 @@ describe("codex.providers.native", function()
         table.insert(scheduled, cb)
       end)
 
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
       local handle = {
         bufnr = 21,
         winid = 9,
@@ -1309,7 +1309,7 @@ describe("codex.providers.native", function()
     function()
       with_stubbed_native_env(function(state)
         -- ========= [A]rrange =========
-        local provider = require("codex.providers.native")
+        local provider = require("codex.internal.providers.native")
         local work_cfg = make_config({ profile_identifier = "work" })
         work_cfg.launch.cmd = { "codex", "--model", "o3" }
 
@@ -1353,7 +1353,7 @@ describe("codex.providers.native", function()
 
   it("falls back to profile_name for float title when float.title is nil", function()
     with_stubbed_native_env(function(state)
-      local provider = require("codex.providers.native")
+      local provider = require("codex.internal.providers.native")
 
       -- Default unnamed profile falls back to " Codex "
       local default_cfg = make_config({

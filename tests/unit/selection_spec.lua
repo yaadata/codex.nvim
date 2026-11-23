@@ -1,4 +1,4 @@
-local selection = require("codex.context.selection")
+local selection = require("codex.internal.context.selection")
 
 local function make_fake_vim_api(overrides)
   overrides = overrides or {}
@@ -80,7 +80,7 @@ local function make_fake_vim_api(overrides)
   return vim_api
 end
 
-describe("codex.context.selection", function()
+describe("codex.internal.context.selection", function()
   it("returns current buffer filepath as relative ACP path", function()
     -- ========= [A]rrange =========
     local vim_api = make_fake_vim_api()

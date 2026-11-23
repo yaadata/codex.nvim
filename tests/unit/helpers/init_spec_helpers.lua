@@ -1,4 +1,4 @@
-local make_session_store = require("codex.state.session_store").new
+local make_session_store = require("codex.internal.state.session_store").new
 
 ---@return tests.InitSpecProvider
 local function make_provider(vim_obj)

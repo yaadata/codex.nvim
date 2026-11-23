@@ -1,5 +1,5 @@
 local M = {}
-local path = require("codex.context.path")
+local path = require("codex.internal.context.path")
 
 local CTRL_V = string.char(22)
 

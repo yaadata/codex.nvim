@@ -1,7 +1,7 @@
 ---@class codex.SendQueue
 local M = {}
 
-local result = require("codex.enums.send_result")
+local result = require("codex.internal.enums.send_result")
 
 ---@class codex.SendQueue
 local Queue = {}

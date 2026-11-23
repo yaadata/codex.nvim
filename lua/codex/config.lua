@@ -1,8 +1,8 @@
-local launch = require("codex.config.launch")
-local validation = require("codex.config.validation")
+local launch = require("codex.internal.config.launch")
+local validation = require("codex.internal.config.validation")
 
 local M = {
-  defaults = require("codex.config.defaults"),
+  defaults = require("codex.internal.config.defaults"),
   split_command = launch.split_command,
   merge_launch = launch.merge_launch,
   validate_launch_override = validation.validate_launch_override,

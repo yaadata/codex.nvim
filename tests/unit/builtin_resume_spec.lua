@@ -1,6 +1,6 @@
 local helpers = require("tests.unit.helpers.init_spec_helpers")
 local builtin = require("codex.builtin")
-local harness = require("codex.enums.harness")
+local harness = require("codex.internal.enums.harness")
 local setup_with_deps = helpers.setup_with_deps
 local run_deferred = helpers.run_deferred
 

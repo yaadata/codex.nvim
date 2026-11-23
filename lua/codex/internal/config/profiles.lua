@@ -1,5 +1,5 @@
-local launch_config = require("codex.config.launch")
-local validation = require("codex.config.validation")
+local launch_config = require("codex.internal.config.launch")
+local validation = require("codex.internal.config.validation")
 local M = {}
 
 ---@param base codex.TerminalConfig

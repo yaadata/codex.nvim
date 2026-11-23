@@ -1,23 +1,23 @@
-local registry = require("codex.providers")
+local registry = require("codex.internal.providers")
 
 local function with_stubbed_provider_modules(stubs, run)
-  local original_snacks = package.loaded["codex.providers.snacks"]
-  local original_native = package.loaded["codex.providers.native"]
+  local original_snacks = package.loaded["codex.internal.providers.snacks"]
+  local original_native = package.loaded["codex.internal.providers.native"]
 
-  package.loaded["codex.providers.snacks"] = stubs.snacks
-  package.loaded["codex.providers.native"] = stubs.native
+  package.loaded["codex.internal.providers.snacks"] = stubs.snacks
+  package.loaded["codex.internal.providers.native"] = stubs.native
 
   local ok, err = pcall(run)
 
-  package.loaded["codex.providers.snacks"] = original_snacks
-  package.loaded["codex.providers.native"] = original_native
+  package.loaded["codex.internal.providers.snacks"] = original_snacks
+  package.loaded["codex.internal.providers.native"] = original_native
 
   if not ok then
     error(err)
   end
 end
 
-describe("codex.providers registry", function()
+describe("codex.internal.providers registry", function()
   before_each(function()
     registry.reset()
   end)

@@ -1,5 +1,5 @@
-local agent_skill = require("codex.context.agent_skill")
-local send_buffer = require("codex.runtime.prompt_buffer")
+local agent_skill = require("codex.internal.context.agent_skill")
+local send_buffer = require("codex.internal.runtime.prompt_buffer")
 
 local function make_env(opts)
   opts = opts or {}
@@ -27,7 +27,7 @@ local function make_env(opts)
   }
 end
 
-describe("codex.context.agent_skill", function()
+describe("codex.internal.context.agent_skill", function()
   it("sends a non-plugin skill", function()
     -- ========= [A]rrange =========
     local env = make_env()

@@ -13,8 +13,8 @@ local required_methods = {
 }
 
 local provider_modules = {
-  { name = "native", path = "codex.providers.native" },
-  { name = "snacks", path = "codex.providers.snacks" },
+  { name = "native", path = "codex.internal.providers.native" },
+  { name = "snacks", path = "codex.internal.providers.snacks" },
 }
 
 describe("provider contract", function()

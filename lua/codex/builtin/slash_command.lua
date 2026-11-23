@@ -1,6 +1,6 @@
 local M = {}
 
-local terminal_io = require("codex.runtime.terminal_io")
+local terminal_io = require("codex.internal.runtime.terminal_io")
 
 ---@param command_opts codex.ExecuteSlashCommandOpts
 ---@return string? command_text

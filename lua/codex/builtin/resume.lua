@@ -1,4 +1,4 @@
-local enum = require("codex.enums.harness")
+local enum = require("codex.internal.enums.harness")
 local config_mod = require("codex.config")
 local M = {}
 

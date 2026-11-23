@@ -171,14 +171,14 @@ local function with_stubbed_send_env(run)
   })
 end
 
-describe("codex.providers.snacks", function()
+describe("codex.internal.providers.snacks", function()
   local stub_snapshot
 
   before_each(function()
     stub_snapshot = assert:snapshot()
     package.loaded["snacks"] = nil
     package.loaded["codex"] = nil
-    package.loaded["codex.providers.snacks"] = nil
+    package.loaded["codex.internal.providers.snacks"] = nil
   end)
 
   after_each(function()
@@ -196,7 +196,7 @@ describe("codex.providers.snacks", function()
           return terminal
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
@@ -227,7 +227,7 @@ describe("codex.providers.snacks", function()
           return terminal
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
       local exited = {}
       local handle = provider.open(
         "codex",
@@ -263,7 +263,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open(
@@ -288,7 +288,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
@@ -318,7 +318,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
@@ -355,7 +355,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
@@ -390,7 +390,7 @@ describe("codex.providers.snacks", function()
       stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
       end)
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
           keymaps = {
@@ -431,7 +431,7 @@ describe("codex.providers.snacks", function()
           end,
         },
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
           keymaps = {
@@ -460,7 +460,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open(
@@ -486,7 +486,7 @@ describe("codex.providers.snacks", function()
           return {}
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open(
@@ -518,7 +518,7 @@ describe("codex.providers.snacks", function()
           state.current_buf = 42
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local ok, err = provider.focus({ terminal = terminal })
@@ -542,7 +542,7 @@ describe("codex.providers.snacks", function()
           state.current_buf = 1
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local ok, err = provider.focus({ terminal = terminal })
@@ -565,7 +565,7 @@ describe("codex.providers.snacks", function()
         win = 9,
         show = function() end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local ok, err = provider.focus({ terminal = terminal })
@@ -581,7 +581,7 @@ describe("codex.providers.snacks", function()
   it("sends text using terminal.jobid when available", function()
     with_stubbed_send_env(function(state)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local ok, err = provider.send({ terminal = { jobid = 77 } }, "hello")
@@ -599,7 +599,7 @@ describe("codex.providers.snacks", function()
       -- ========= [A]rrange =========
       state.buf_valid[42] = true
       state.buf_vars[42] = { terminal_job_id = 88 }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local ok, err = provider.send({ terminal = { buf = 42 } }, "hello")
@@ -617,7 +617,7 @@ describe("codex.providers.snacks", function()
       -- ========= [A]rrange =========
       state.buf_valid[42] = true
       state.buf_channels[42] = 99
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local ok, err = provider.send({ terminal = { buf = 42 } }, "hello")
@@ -634,7 +634,7 @@ describe("codex.providers.snacks", function()
     with_stubbed_send_env(function(state)
       -- ========= [A]rrange =========
       state.buf_valid[42] = true
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local alive = provider.is_alive({ terminal = { buf = 42 } })
@@ -649,7 +649,7 @@ describe("codex.providers.snacks", function()
       -- ========= [A]rrange =========
       state.buf_valid[42] = true
       state.buf_vars[42] = { terminal_job_id = 33 }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local alive = provider.is_alive({ terminal = { buf = 42 } })
@@ -664,7 +664,7 @@ describe("codex.providers.snacks", function()
       -- ========= [A]rrange =========
       state.buf_valid[42] = true
       state.buf_vars[42] = {}
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local ok, err = provider.send({ terminal = { buf = 42 } }, "hello")
@@ -691,7 +691,7 @@ describe("codex.providers.snacks", function()
           return fresh_terminal
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local handle = provider.toggle(
@@ -720,7 +720,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("/tmp/my tools/codex", { "--foo", "local model", "" }, { CODEX_TEST = "1" }, {
@@ -757,7 +757,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
@@ -792,7 +792,7 @@ describe("codex.providers.snacks", function()
         table.insert(scheduled, cb)
       end)
       local on_exit_calls = 0
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
       provider.open(
         "codex",
         {},
@@ -838,7 +838,7 @@ describe("codex.providers.snacks", function()
       stub(vim, "schedule", function(cb)
         table.insert(scheduled, cb)
       end)
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
       provider.open("codex", {}, {}, {
         terminal = {
           auto_close = true,
@@ -867,7 +867,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
@@ -900,7 +900,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
@@ -933,7 +933,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
@@ -964,7 +964,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local handle = provider.open("codex", {}, {}, {
@@ -992,7 +992,7 @@ describe("codex.providers.snacks", function()
           return { buf = 42 }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       provider.open("codex", {}, {}, {
@@ -1036,7 +1036,7 @@ describe("codex.providers.snacks", function()
           }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local restored = provider.discover_restorable({
@@ -1095,7 +1095,7 @@ describe("codex.providers.snacks", function()
         terminal = {},
         win = win_module,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct     =========
       local restored = provider.discover_restorable({
@@ -1123,7 +1123,7 @@ describe("codex.providers.snacks", function()
   it("attach_restored registers TermClose autocmd and terminal keymaps", function()
     with_stubbed_vim_api(function(autocmds, keymap_set_calls)
       -- ========= [A]rrange =========
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
       local handle = {
         terminal = {
           buf = 42,
@@ -1200,7 +1200,7 @@ describe("codex.providers.snacks", function()
         }
 
         local config = require("codex.config")
-        local profiles = require("codex.config.profiles")
+        local profiles = require("codex.internal.config.profiles")
         local profile_opts, base = config.prepare_setup({
           profiles = {
             default = {
@@ -1224,7 +1224,7 @@ describe("codex.providers.snacks", function()
         })
         local resolved = profiles.resolve_profiles(profile_opts, base)
 
-        local provider = require("codex.providers.snacks")
+        local provider = require("codex.internal.providers.snacks")
 
         -- ========= [A]ct =========
         local def_cfg = resolved.default.config
@@ -1288,7 +1288,7 @@ describe("codex.providers.snacks", function()
           return { buf = opts.buf }
         end,
       }
-      local provider = require("codex.providers.snacks")
+      local provider = require("codex.internal.providers.snacks")
 
       -- ========= [A]ct & [A]ssert =========
       local work = {

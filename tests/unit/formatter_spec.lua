@@ -1,6 +1,6 @@
-local formatter = require("codex.context.formatter")
+local formatter = require("codex.internal.context.formatter")
 
-describe("codex.context.formatter", function()
+describe("codex.internal.context.formatter", function()
   describe("format_selection", function()
     it("formats multi-line content with metadata and fence", function()
       -- ========= [A]rrange =========

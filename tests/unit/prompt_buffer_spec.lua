@@ -1,4 +1,4 @@
-local prompt_buffer = require("codex.runtime.prompt_buffer")
+local prompt_buffer = require("codex.internal.runtime.prompt_buffer")
 
 describe("prompt buffer operations", function()
   it("gradually building the send buffer", function()

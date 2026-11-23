@@ -1,5 +1,5 @@
 local M = {}
-local enum = require("codex.enums.skill_style")
+local enum = require("codex.internal.enums.skill_style")
 
 ---@class codex.AgentSkillOptions
 ---@field plugin string|nil name of plugin the skill belongs to

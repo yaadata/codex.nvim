@@ -41,7 +41,7 @@ describe("codex profile global keymaps (real Neovim)", function()
       open = function(_, _, _, config)
         local bufnr = vim.api.nvim_create_buf(false, true)
         table.insert(created_bufs, bufnr)
-        require("codex.nvim.keymaps").apply_terminal(
+        require("codex.internal.nvim.keymaps").apply_terminal(
           bufnr,
           config.terminal.keymaps,
           config.profile_identifier

@@ -629,7 +629,7 @@ builtin.format_skill({opts}, {style})             *codex.builtin.format_skill*
     Returns: `text, err` (`string|nil, string|nil`).
 
     The default format is `$name` or `$plugin:name`, without a trailing space.
-    Pass `require("codex.enums.skill_style").SLASH` for `/name` or
+    Pass `require("codex.internal.enums.skill_style").SLASH` for `/name` or
     `/plugin:name`. Add any desired separator before appending to the draft.
 
 builtin.resume({opts})                                  *codex.builtin.resume*
@@ -916,7 +916,7 @@ Skill invocation examples:                    *codex-nvim-examples-skill*
 >lua
   local builtin = require("codex.builtin")
   local prompt = require("codex").prompt_builder
-  local style = require("codex.enums.skill_style")
+  local style = require("codex.internal.enums.skill_style")
 
   -- Default style: $name or $plugin:name
   local text, err = builtin.format_skill({ name = "review" })

@@ -1,6 +1,6 @@
-local result = require("codex.enums.send_result")
-local terminal_io = require("codex.runtime.terminal_io")
-local session_lifecycle = require("codex.state.session_lifecycle")
+local result = require("codex.internal.enums.send_result")
+local terminal_io = require("codex.internal.runtime.terminal_io")
+local session_lifecycle = require("codex.internal.state.session_lifecycle")
 
 ---@class codex.PendingSend
 local M = {}

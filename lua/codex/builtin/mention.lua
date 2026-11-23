@@ -1,6 +1,6 @@
 local M = {}
 local slash = require("codex.builtin.slash_command")
-local codex_path = require("codex.context.path")
+local codex_path = require("codex.internal.context.path")
 local logger = require("codex.logger")
 
 ---@param path string?
