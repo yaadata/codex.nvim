@@ -454,6 +454,51 @@ session.is_focused()                                *codex.session.is_focused*
     Return whether editor focus is on the active Codex session.
     Returns: `boolean`
 
+session.is_visible({profile})                     *codex.session.is_visible*
+    Return whether the agent terminal is displayed on the current tabpage.
+
+    `profile`
+      Optional |codex.ProfileConfig|. Defaults to the active profile.
+
+    A terminal shown only in another tabpage is not visible. A displayed
+    terminal whose process already exited is still visible; use
+    |codex.session.is_running| for liveness. Returns `false` when the plugin
+    is not set up or the terminal has no window on the current tabpage.
+
+    Returns: `boolean`
+
+    Example: >lua
+
+      if require("codex").session.is_visible() then
+        require("codex").session.focus()
+      end
+<
+
+session.resize({profile})                             *codex.session.resize*
+    Restore the visible agent terminal to the size configured for the
+    selected profile under `terminal.provider_opts`: `vsplit.size_pct` or
+    `hsplit.size_pct` for splits, `float.width_pct` / `float.height_pct` for
+    floats.
+
+    `profile`
+      Optional |codex.ProfileConfig|. Defaults to the active profile.
+
+    Splits are resized for every provider. Floats are only resized for the
+    `native` provider; providers that own their float geometry (for example
+    `snacks`) keep theirs.
+
+    Does nothing when the profile's terminal buffer is not displayed in any
+    window or when the plugin is not set up. Unlike
+    |codex.session.is_visible|, this searches every tabpage. Useful after
+    manually resizing the split or after the terminal float was moved.
+
+    Returns: `nil`
+
+    Example: >lua
+
+      require("codex").session.resize()
+<
+
 Session restoration                              *codex-nvim-session-restore*
 
 At startup or when you load a Neovim session, codex.nvim keeps the selected

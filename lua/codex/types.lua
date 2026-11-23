@@ -224,6 +224,8 @@
 ---@field unfocus fun(): boolean, string?
 ---@field is_running fun(): boolean
 ---@field is_focused fun(): boolean
+---@field is_visible fun(profile?: codex.ProfileConfig): boolean
+---@field resize fun(profile?: codex.ProfileConfig)
 
 ---@class codex.Api
 ---@field setup fun(opts?: codex.SetupOpts)

@@ -8,6 +8,7 @@ local agent_skill_mod = require("codex.internal.context.agent_skill")
 local mention_mod = require("codex.internal.context.mention")
 local wrapper_command_mod = require("codex.internal.context.wrapper_command")
 local prompt_ops = require("codex.internal.context.prompt_ops")
+local terminal_size = require("codex.internal.runtime.terminal_size")
 local hooks = require("codex.hooks")
 local Profile = require("codex.internal.state.profile")
 local config_mod = require("codex.config")
@@ -68,6 +69,23 @@ end
 ---@return table
 local function get_deps()
   return state.deps or default_deps
+end
+
+---@type fun(): codex.ProfileConfig|nil
+local get_profile
+
+---Resolve a caller-supplied profile, defaulting to the active one.
+---@param profile? codex.ProfileConfig
+---@return codex.ProfileConfig|nil
+local function resolve_profile(profile)
+  if not state.config then
+    return nil
+  end
+  if type(profile) == "table" then
+    return profile
+  end
+  local active = get_profile()
+  return type(active) == "table" and active or nil
 end
 
 ---@type codex.SessionCommands
@@ -634,6 +652,28 @@ session = {
     state:ensure_ready()
     return session_lifecycle.is_session_focused(get_deps(), state.config)
   end,
+
+  ---Returns whether the agent terminal is displayed on the current tabpage.
+  ---A displayed terminal whose process already exited is still visible; use
+  ---`is_running` for liveness.
+  ---@param profile? codex.ProfileConfig Defaults to the active profile.
+  ---@return boolean
+  is_visible = function(profile)
+    local active = resolve_profile(profile)
+    return active ~= nil and terminal_size.is_visible(active)
+  end,
+
+  ---Restores the visible agent terminal to its configured size.
+  ---Splits use `native.vsplit`/`native.hsplit` `size_pct`; floats are restored
+  ---only for the `native` provider, which re-centers on `native.float`.
+  ---@param profile? codex.ProfileConfig Defaults to the active profile.
+  ---@return nil
+  resize = function(profile)
+    local active = resolve_profile(profile)
+    if active then
+      terminal_size.resize(get_deps(), active)
+    end
+  end,
 }
 
 ---@type codex.Input
@@ -725,7 +765,7 @@ local logs = {
 
 ---Returns a deep-copied resolved config for inspection.
 ---@return codex.ProfileConfig|nil
-local function get_profile()
+function get_profile()
   local deps = get_deps()
   return state.config and deps.vim.deepcopy(state.config) or nil
 end

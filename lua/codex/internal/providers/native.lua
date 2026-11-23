@@ -37,21 +37,6 @@ local function resolve_terminal_jobid(bufnr)
   return nil
 end
 
---- Ensure a size value is at least 1.
----@param size number
----@return integer
-local function clamp_size(size)
-  return math.max(1, size)
-end
-
---- Compute a pixel size from a percentage of a total, clamped to at least 1.
----@param total number
----@param pct number
----@return integer
-local function pct_size(total, pct)
-  return clamp_size(math.floor(total * pct / 100))
-end
-
 --- Open a vertical split on the specified side and return the new window id.
 ---@param side "left"|"right"
 ---@return integer winid
@@ -116,22 +101,13 @@ local function open_window_for_buf(native_opts, bufnr, profile_name)
 
   if window == "float" then
     local float = native_opts.float or {}
-    local width = pct_size(vim.o.columns, float.width_pct or 80)
-    local height = pct_size(vim.o.lines, float.height_pct or 80)
-    local row = math.max(0, math.floor((vim.o.lines - height) / 2))
-    local col = math.max(0, math.floor((vim.o.columns - width) / 2))
+    local config = terminal_utils.float_geometry(native_opts)
+    config.border = float.border or "rounded"
+    config.title = resolve_float_title(float, profile_name)
+    config.title_pos = float.title_pos or "center"
+    config.style = "minimal"
 
-    return vim.api.nvim_open_win(bufnr, true, {
-      relative = "editor",
-      width = width,
-      height = height,
-      row = row,
-      col = col,
-      border = float.border or "rounded",
-      title = resolve_float_title(float, profile_name),
-      title_pos = float.title_pos or "center",
-      style = "minimal",
-    })
+    return vim.api.nvim_open_win(bufnr, true, config)
   end
 
   error(

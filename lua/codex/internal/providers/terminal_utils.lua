@@ -29,7 +29,7 @@ function M.maintain_split_size(winid, bufnr, direction, size_pct)
       return
     end
     local total = vertical and vim.o.columns or vim.o.lines
-    local size = math.max(1, math.floor(total * size_pct / 100))
+    local size = M.pct_size(total, size_pct)
     if get_size(winid) ~= size then
       set_size(winid, size)
     end
@@ -119,6 +119,31 @@ function M.window_split_type(winid)
     return nil -- A lone normal window has no split even when `win.split` is set.
   end
   return split_types[win.split]
+end
+
+---Compute a window size from a percentage of the editor dimension.
+---@param total number
+---@param pct number
+---@return integer
+function M.pct_size(total, pct)
+  return math.max(1, math.floor(total * pct / 100))
+end
+
+---Resolve centered float geometry for the given native provider options.
+---@param native_opts table|nil
+---@return table config  Ready for `vim.api.nvim_open_win` or `nvim_win_set_config`.
+function M.float_geometry(native_opts)
+  local float = (native_opts or {}).float or {}
+  local width = M.pct_size(vim.o.columns, float.width_pct or 80)
+  local height = M.pct_size(vim.o.lines, float.height_pct or 80)
+  return {
+    relative = "editor",
+    anchor = "NW",
+    width = width,
+    height = height,
+    row = math.max(0, math.floor((vim.o.lines - height) / 2)),
+    col = math.max(0, math.floor((vim.o.columns - width) / 2)),
+  }
 end
 
 local function configured_split_type(config, provider_name)
@@ -227,6 +252,24 @@ function M.extract_terminal_cwd(name)
     return nil
   end
   return name:match("^term://(.-)//%d+:")
+end
+
+---Find the window displaying the Codex terminal for a profile identifier.
+---@param profile_identifier? string
+---@param tabpage? integer Restricts the search to one tabpage; nil searches every tabpage.
+---@return integer|nil winid
+---@return table|nil marker  The `codex_terminal` buffer variable of that window.
+function M.find_terminal_win(profile_identifier, tabpage)
+  local api = vim.api
+  local wanted = profile_identifier or "default"
+  local wins = tabpage and api.nvim_tabpage_list_wins(tabpage) or api.nvim_list_wins()
+  for _, winid in ipairs(wins) do
+    local marker = M.get_buffer_var(api.nvim_win_get_buf(winid), "codex_terminal")
+    if type(marker) == "table" and (marker.profile_identifier or "default") == wanted then
+      return winid, marker
+    end
+  end
+  return nil
 end
 
 ---Find the first window displaying a given buffer.
