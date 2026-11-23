@@ -3,45 +3,44 @@ repos:
     rev: v4.3.0
     hooks:
       - id: conventional-pre-commit
-        name: codex conventional commit check
+        name: conventional commit check
         stages: [commit-msg]
         args:
-          - --strict
           - --verbose
-          - --scopes
-          - ci,codex,config,context,core,nvim,project,providers,state
           - chore
           - docs
           - enhance
           - feat
           - fix
+          - perf
+          - build
           - refactor
           - release
           - test
   - repo: local
     hooks:
-      - id: codex-fmt-check
-        name: codex fmt-check
+      - id: fmt-check
+        name: fmt-check
         entry: mise exec -- just fmt-check
         language: system
         pass_filenames: false
-      - id: codex-lint
-        name: codex lint
+      - id: lint
+        name: lint
         entry: mise exec -- just lint
         language: system
         pass_filenames: false
-      - id: codex-md-fmt-check
-        name: codex md-fmt-check
+      - id: md-fmt-check
+        name: md-fmt-check
         entry: mise exec -- mdformat --number --check doc/ README.md
         language: system
         pass_filenames: false
-      - id: codex-test-unit
-        name: codex test-unit
+      - id: test-unit
+        name: test-unit
         entry: mise exec -- just test-unit
         language: system
         pass_filenames: false
-      - id: codex-test-contract
-        name: codex test-contract
+      - id: test-contract
+        name: test-contract
         entry: mise exec -- just test-contract
         language: system
         pass_filenames: false
