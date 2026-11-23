@@ -66,7 +66,7 @@ Example lazy.nvim spec:
 >lua
   {
     url = "https://codeberg.org/yaadata/codex.nvim.git",
-    version = "2.0.0-beta.2",
+    version = "2.0.0-beta.3",
     lazy = false,
     opts = {},
     config = function(_, opts)
@@ -801,7 +801,7 @@ Example lazy.nvim global mappings:
 >lua
   {
     url = "https://codeberg.org/yaadata/codex.nvim.git",
-    version = "v2.0.0-beta.2",
+    version = "v2.0.0-beta.3",
     main = "codex",
     opts = {},
     config = function(_, opts)
