@@ -57,7 +57,7 @@ jobs:
               ;;
           esac
 
-          JUST_VERSION="1.43.0"
+          JUST_VERSION="1.59.0"
           JUST_TARBALL="just-${JUST_VERSION}-${JUST_ARCH}.tar.gz"
           JUST_URL="https://github.com/casey/just/releases/download/${JUST_VERSION}/${JUST_TARBALL}"
 
