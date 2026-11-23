@@ -1,12 +1,3 @@
-:Codex	codex.nvim.txt	/*:Codex*
-:Codex!	codex.nvim.txt	/*:Codex!*
-:CodexClearInput	codex.nvim.txt	/*:CodexClearInput*
-:CodexFocus	codex.nvim.txt	/*:CodexFocus*
-:CodexMentionDirectory	codex.nvim.txt	/*:CodexMentionDirectory*
-:CodexMentionFile	codex.nvim.txt	/*:CodexMentionFile*
-:CodexSendFile	codex.nvim.txt	/*:CodexSendFile*
-:CodexSendSelection	codex.nvim.txt	/*:CodexSendSelection*
-:CodexTeardown	codex.nvim.txt	/*:CodexTeardown*
 codex	codex.nvim.txt	/*codex*
 codex-nvim-api	codex.nvim.txt	/*codex-nvim-api*
 codex-nvim-api-builder	codex.nvim.txt	/*codex-nvim-api-builder*
@@ -26,8 +17,6 @@ codex-nvim-behavior-mention	codex.nvim.txt	/*codex-nvim-behavior-mention*
 codex-nvim-behavior-open	codex.nvim.txt	/*codex-nvim-behavior-open*
 codex-nvim-behavior-select	codex.nvim.txt	/*codex-nvim-behavior-select*
 codex-nvim-behavior-slash	codex.nvim.txt	/*codex-nvim-behavior-slash*
-codex-nvim-command-behavior	codex.nvim.txt	/*codex-nvim-command-behavior*
-codex-nvim-commands	codex.nvim.txt	/*codex-nvim-commands*
 codex-nvim-config	codex.nvim.txt	/*codex-nvim-config*
 codex-nvim-contents	codex.nvim.txt	/*codex-nvim-contents*
 codex-nvim-examples	codex.nvim.txt	/*codex-nvim-examples*
@@ -47,6 +36,7 @@ codex-nvim-terminal	codex.nvim.txt	/*codex-nvim-terminal*
 codex-nvim-terminal-km	codex.nvim.txt	/*codex-nvim-terminal-km*
 codex-nvim-terminal-native	codex.nvim.txt	/*codex-nvim-terminal-native*
 codex-nvim-terminal-snacks	codex.nvim.txt	/*codex-nvim-terminal-snacks*
+codex-nvim-workflow-behavior	codex.nvim.txt	/*codex-nvim-workflow-behavior*
 codex.builtin.execute_slash_command	codex.nvim.txt	/*codex.builtin.execute_slash_command*
 codex.builtin.format_skill	codex.nvim.txt	/*codex.builtin.format_skill*
 codex.builtin.keymaps	codex.nvim.txt	/*codex.builtin.keymaps*

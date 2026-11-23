@@ -13,36 +13,35 @@ CONTENTS                                                 *codex-nvim-contents*
 3. Install                                                |codex-nvim-install|
 4. Setup                                                    |codex-nvim-setup|
 5. Configuration Reference                                 |codex-nvim-config|
-6. Commands                                              |codex-nvim-commands|
-7. Lua API                                                    |codex-nvim-api|
-   7.1 Return conventions                             |codex-nvim-api-returns|
-   7.2 Setup and runtime                              |codex-nvim-api-runtime|
-   7.3 Session                                        |codex-nvim-api-session|
-   7.4 Logs                                              |codex-nvim-api-logs|
-   7.5 Prompt builder                                 |codex-nvim-api-builder|
-   7.6 Input                                            |codex-nvim-api-input|
-   7.7 Slash and wrapper commands                       |codex-nvim-api-slash|
-   7.8 One-off actions                                |codex-nvim-api-one-off|
-   7.9 Mention helpers                                |codex-nvim-api-mention|
-   7.10 Terminal keymap builtins                     |codex-nvim-api-builtins|
-8. Command Behavior                              |codex-nvim-command-behavior|
-9. Keymaps                                                |codex-nvim-keymaps|
-10. Examples                                             |codex-nvim-examples|
-11. See Also                                             |codex-nvim-see-also|
+6. Lua API                                                    |codex-nvim-api|
+   6.1 Return conventions                             |codex-nvim-api-returns|
+   6.2 Setup and runtime                              |codex-nvim-api-runtime|
+   6.3 Session                                        |codex-nvim-api-session|
+   6.4 Logs                                              |codex-nvim-api-logs|
+   6.5 Prompt builder                                 |codex-nvim-api-builder|
+   6.6 Input                                            |codex-nvim-api-input|
+   6.7 Slash and wrapper commands                       |codex-nvim-api-slash|
+   6.8 One-off actions                                |codex-nvim-api-one-off|
+   6.9 Mention helpers                                |codex-nvim-api-mention|
+   6.10 Terminal keymap builtins                     |codex-nvim-api-builtins|
+7. Workflow Behavior                             |codex-nvim-workflow-behavior|
+8. Keymaps                                                |codex-nvim-keymaps|
+9. Examples                                              |codex-nvim-examples|
+10. See Also                                             |codex-nvim-see-also|
 
 ==============================================================================
 INTRODUCTION                                         *codex-nvim-introduction*
 
 `codex.nvim` embeds the coding agents inside Neovim. It provides:
 
-- session lifecycle commands for opening, focusing, toggling, and closing the
+- session lifecycle APIs for opening, focusing, toggling, and closing the
   terminal
 - a shared prompt builder for adding text, file references or visual
   selections that can be sent or submitted to as input to codex.
 - Builtins to send formatted skills, run one off command plus other
   terminal-input actions.
-- Common patterns and helper commands can be found in 
-  `require('codex.builtins')`.
+- Common patterns and helper workflows can be found in
+  `require('codex.builtin')`.
 
 ==============================================================================
 REQUIREMENTS                                         *codex-nvim-requirements*
@@ -69,24 +68,12 @@ Example lazy.nvim spec:
     url = "https://codeberg.org/yaadata/codex.nvim.git",
     version = "2.0.0-beta.2",
     lazy = false,
-    cmd = {
-      "Codex",
-      "CodexFocus",
-      "CodexTeardown",
-      "CodexClearInput",
-      "CodexSendSelection",
-      "CodexSendFile",
-      "CodexMentionFile",
-      "CodexMentionDirectory",
-    },
     opts = {},
     config = function(_, opts)
       require("codex").setup(opts)
     end,
   }
 <
-
-The `cmd` list allows lazy loading on first `:Codex*` command use.
 
 ==============================================================================
 SETUP                                                       *codex-nvim-setup*
@@ -97,7 +84,7 @@ Minimal setup:
   require("codex").setup({})
 <
 
-When using lazy.nvim with `cmd` and `opts`, prefer:
+When using lazy.nvim with `opts`, prefer:
 
 >lua
   config = function(_, opts)
@@ -105,8 +92,9 @@ When using lazy.nvim with `cmd` and `opts`, prefer:
   end
 <
 
-`setup()` registers the `:Codex*` commands and wires the runtime state used by
-the public Lua API.
+`setup()` initializes config, launch profiles, and runtime state used by the
+public Lua API. `codex.nvim` does not register Neovim user commands; define
+your own with `vim.api.nvim_create_user_command` (see `doc/recipes.md`).
 
 lazy.nvim calls `require("codex").deactivate()` before unloading the plugin.
 
@@ -228,8 +216,8 @@ hooks                                                       *codex-nvim-hooks*
     Supported callbacks:
 
       `on_setup`
-        Fires after setup has initialized config, state, commands, and autocmds,
-        before restore or auto-start can open a terminal.
+        Fires after setup has initialized config, state, and autocmds, before
+        restore or auto-start can open a terminal.
 
       `on_terminal_open`
         Fires after a new Codex terminal session starts.
@@ -370,41 +358,6 @@ terminal.keymaps entries                              *codex-nvim-terminal-km*
       Optional for builtin actions, required for custom functions.
 
 ==============================================================================
-COMMANDS                                                 *codex-nvim-commands*
-
-Codex[!]                                                    *:Codex* *:Codex!*
-    `:Codex` toggles the active Codex terminal or opens one when none exists.
-    `:Codex!` force-opens and focuses the terminal.
-
-CodexFocus                                                       *:CodexFocus*
-    Focus the active Codex terminal, opening one if needed.
-
-CodexTeardown                                                 *:CodexTeardown*
-    Teardown the active Codex terminal session and reset queued sends.
-
-CodexClearInput                                             *:CodexClearInput*
-    Clear the active Codex terminal input line by sending `<C-c>`.
-
-CodexSendSelection                                       *:CodexSendSelection*
-    Send the active visual selection with file path and line-range context.
-    This command is available only from visual mode.
-
-CodexSendFile                                                 *:CodexSendFile*
-    Send the current buffer path as an ACP file reference (`@path`).
-
-CodexMentionFile [path]                                    *:CodexMentionFile*
-    Send `/mention` for a file path. When `[path]` is omitted, use the current
-    buffer path.
-
-    Note: This is specific to the Codex CLI coding agent.
-
-CodexMentionDirectory [path]                          *:CodexMentionDirectory*
-    Send `/mention` for a directory path. When `[path]` is omitted, use the
-    current buffer directory.
-
-    Note: This is specific to the Codex CLI coding agent.
-
-==============================================================================
 LUA API                                                       *codex-nvim-api*
 
 Return conventions                                    *codex-nvim-api-returns*
@@ -425,8 +378,7 @@ Access the core API through `require("codex")` and command helpers through
 Setup and runtime                                     *codex-nvim-api-runtime*
 
 setup({opts})                                                    *codex.setup*
-    Initialize plugin config, launch profiles, and runtime state, and register
-    `:Codex*` commands.
+    Initialize plugin config, launch profiles, and runtime state.
     Returns: `nil`
 
 set_profile({name}, {launch_overrides})                    *codex.set_profile*
@@ -447,8 +399,8 @@ get_profile()                                              *codex.get_profile*
 deactivate()                                                *codex.deactivate*
     Retire plugin runtime state before unloading or reconfiguring the plugin.
     Closes all tracked sessions across profiles, restores displaced global
-    mappings, removes plugin commands and autocmds, and invalidates pending
-    work. lazy.nvim calls this automatically on reload.
+    mappings, removes plugin autocmds, and invalidates pending work.
+    lazy.nvim calls this automatically on reload.
     Returns: `nil`
 
 get_config()                                                *codex.get_config*
@@ -749,35 +701,29 @@ require("codex.builtin").keymaps                       *codex.builtin.keymaps*
       `nav_up`, `nav_right`
 
 ==============================================================================
-COMMAND BEHAVIOR                                 *codex-nvim-command-behavior*
-
-This section captures the user-visible behavior that was previously split
-across the Markdown command docs.
+WORKFLOW BEHAVIOR                               *codex-nvim-workflow-behavior*
 
 Selection sends                                   *codex-nvim-behavior-select*
 
-- `:CodexSendSelection` is visual-only.
-- The payload includes only a path reference and selected line range; buffer
-  content is not read. Use `prompt_builder.add_selection({ include_lines = true })`
-  to include the selected text in a fenced code block via the API.
-- The command clears the shared builder draft, adds the selection, and sends
-  it without Enter. Previously accumulated draft content is discarded, even
-  if selection extraction fails.
-- The command opens a session when needed and focuses it after delivery.
+- `prompt_builder.add_selection()` includes only a path reference and selected
+  line range by default; buffer content is not read. Pass
+  `{ include_lines = true }` to include the selected text in a fenced code
+  block.
+- `prompt_builder.send()` consumes the shared draft and sends it without
+  Enter, opening a session when needed and focusing it after delivery.
 
 File sends                                          *codex-nvim-behavior-file*
 
-- `:CodexSendFile` uses the current buffer path.
+- `prompt_builder.add_file()` resolves `opts.path`, `opts.bufnr`, or the
+  current buffer path.
 - The path must resolve to a regular file.
-- The sent payload is an ACP-style `@path` reference with a trailing space.
-- The command clears the shared builder draft before resolving the file.
-  Previously accumulated draft content is discarded, even if resolution fails.
-- The command sends without Enter and focuses the terminal after delivery.
+- The appended payload is an ACP-style `@path` reference with a trailing
+  space.
 
 Mention helpers                                  *codex-nvim-behavior-mention*
 
-- Mention commands accept an explicit path or fall back to the current buffer
-  file or directory.
+- `builtin.mention_file()` and `builtin.mention_directory()` accept an
+  explicit path or fall back to the current buffer file or directory.
 - Paths are normalized to the current working directory when possible.
 - Directory mentions are forced to end with a trailing separator.
 - Mention helpers use the builtin slash-command flow described below.
@@ -794,8 +740,9 @@ Slash commands                                     *codex-nvim-behavior-slash*
 Session opening                                     *codex-nvim-behavior-open*
 
 - Send-like and mention-like flows can auto-open a terminal when needed.
-- `:CodexFocus` is the explicit "bring it to the front" command.
-- `:Codex` owns the normal toggle behavior; `:Codex!` force-opens and focuses.
+- `session.focus()` is the explicit "bring it to the front" action.
+- `session.toggle()` owns the normal toggle behavior; `session.open(true)`
+  force-opens and focuses.
 
 ==============================================================================
 KEYMAPS                                                   *codex-nvim-keymaps*
@@ -849,17 +796,6 @@ Example lazy.nvim global mappings:
     url = "https://codeberg.org/yaadata/codex.nvim.git",
     version = "v2.0.0-beta.2",
     main = "codex",
-    cmd = {
-      "Codex",
-      "CodexFocus",
-      "CodexTeardown",
-      "CodexClearInput",
-      "CodexSendSelection",
-      "CodexSendFile",
-    -- Below are specifc to the Codex CLI coding agent
-    -- "CodexMentionFile",
-    -- "CodexMentionDirectory",
-    },
     opts = {},
     config = function(_, opts)
       require("codex").setup(opts)
@@ -1021,6 +957,7 @@ Notes:
 SEE ALSO                                                 *codex-nvim-see-also*
 
 - `README.md` for the repository overview
+- `doc/recipes.md` for custom Neovim command recipes and integrations
 - `doc/architecture.md` for implementation and provider internals
 - `doc/contributing.md` for repository workflow and release process
 - `doc/troubleshooting.md` for logging-focused debugging guidance

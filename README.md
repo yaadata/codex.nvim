@@ -21,9 +21,9 @@
 - 🧩 Compose workflows with session, input, prompt-builder, and log APIs.
 - 🔌 Use `codex.builtin` for agent-specific mentions, slash commands, skills,
   and resume flows.
-- 🌱 Use the native terminal provider or `snacks`, lazy-load on commands, and
-  configure terminal-local keymaps.
-- 📚 Use `:help codex.nvim` for configuration, commands, and keymap examples.
+- 🌱 Use the native terminal provider or `snacks`, configure profiles, and
+  set up global or terminal-local keymaps.
+- 📚 Use `:help codex.nvim` for configuration, Lua API, and keymap examples.
 
 ## Requirements
 
@@ -44,16 +44,6 @@
   url = "https://codeberg.org/yaadata/codex.nvim.git",
   version = "2.0.0-beta.2",
   lazy = false,
-  cmd = {
-    "Codex",
-    "CodexFocus",
-    "CodexTeardown",
-    "CodexClearInput",
-    "CodexSendSelection",
-    "CodexSendFile",
-    "CodexMentionFile",
-    "CodexMentionDirectory",
-  },
   opts = {},
   config = function(_, opts)
     require("codex").setup(opts)
@@ -87,18 +77,14 @@ selected profile auto-starts, without taking focus.
 
 ## Usage
 
-Common entry points:
-
-- `:Codex` toggles the terminal; `:Codex!` opens and focuses it.
-- `:CodexSendSelection` sends the active visual selection.
-- `:CodexSendFile` sends the current buffer as an ACP file reference.
-- `:CodexMentionFile [path]` and `:CodexMentionDirectory [path]` send
-  `/mention`.
-
-For Lua workflows, use [`require("codex")`](lua/codex/init.lua) for `session`,
-`input`, `prompt_builder`, and `logs`. Use
+Use [`require("codex")`](lua/codex/init.lua) for `session`, `input`,
+`prompt_builder`, and `logs`. Use
 [`require("codex.builtin")`](lua/codex/builtin/init.lua) for agent-specific
 workflows.
+
+`codex.nvim` does not register Neovim `:Codex*` user commands by default. Bind
+keymaps directly to the Lua API, or define your own commands with
+`vim.api.nvim_create_user_command` (see [doc/recipes.md](doc/recipes.md)).
 
 Example:
 
@@ -114,12 +100,13 @@ end
 prompt.send() -- paste the draft without pressing Enter
 ```
 
-Open `:help codex.nvim` for configuration, commands, and keymaps. If help is
+Open `:help codex.nvim` for configuration, Lua API, and keymaps. If help is
 missing after a raw install, run `:helptags {path-to-codex.nvim}/doc`. Plugin
 managers usually generate tags automatically.
 
 ## Developer Docs
 
+- [doc/recipes.md](doc/recipes.md)
 - [doc/architecture.md](doc/architecture.md)
 - [doc/contributing.md](doc/contributing.md)
 - [doc/troubleshooting.md](doc/troubleshooting.md)

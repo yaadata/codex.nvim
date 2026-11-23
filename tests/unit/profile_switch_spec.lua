@@ -36,7 +36,6 @@ describe("codex.init runtime launch profiles", function()
           providers = env.providers,
           session_store = env.store,
           logger = env.logger,
-          commands = env.commands,
           formatter = env.formatter,
           selection = env.selection,
           vim = env.fake_vim,

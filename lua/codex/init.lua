@@ -18,7 +18,6 @@ local AUGROUP_NAMES = { "codex_focus_tracking", "codex_session_restore" }
 local default_deps = {
   logger = require("codex.logger"),
   providers = require("codex.providers"),
-  commands = require("codex.nvim.commands"),
   session_store = require("codex.state.session_store"),
   send_queue = require("codex.runtime.send_queue"),
   nvim_visual = require("codex.nvim.visual"),
@@ -203,7 +202,7 @@ local function schedule_restore_attempt(startup)
   end)
 end
 
----Initializes codex.nvim state, commands, queue, and lifecycle hooks.
+---Initializes codex.nvim state, queue, and lifecycle hooks.
 ---@param opts? codex.SetupOpts|table
 ---@return nil
 local function setup(opts)
@@ -321,8 +320,6 @@ local function setup(opts)
     deps.logger.set_verbose(state.config.log.verbose)
   end
 
-  deps.commands.register(require("codex"))
-
   local focus_tracking_group = deps.vim.api.nvim_create_augroup("codex_focus_tracking", {
     clear = true,
   })
@@ -426,10 +423,6 @@ local function deactivate()
 
   if deps then
     session_lifecycle.close_all_sessions(deps)
-
-    if deps.commands and type(deps.commands.unregister) == "function" then
-      deps.commands.unregister()
-    end
 
     local api = deps.vim.api
     for _, name in ipairs(AUGROUP_NAMES) do

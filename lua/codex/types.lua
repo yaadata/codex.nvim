@@ -169,11 +169,7 @@
 ---@field send fun(opts?: codex.AgentSkillOptions): codex.Outcome, codex.Error
 ---@field prompt_payload fun(opts?: codex.AgentSkillOptions): string, codex.Error
 
--- Commands
-
----@class codex.Commands
----@field register fun(codex: codex.Api)
----@field unregister fun()
+-- Wrapper commands
 
 ---@class codex.WrapperCommandCreateOpts
 ---@field get_deps fun(): table
@@ -183,13 +179,6 @@
 ---@class codex.ExecuteSlashCommandOpts
 ---@field command string
 ---@field args? string
-
----@class codex.UserCommandOpts
----@field bang boolean
----@field line1 integer
----@field line2 integer
----@field range integer
----@field args string
 
 ---@class codex.AddFileOpts
 ---@field bufnr? integer

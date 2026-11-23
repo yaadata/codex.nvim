@@ -86,8 +86,6 @@ describe("codex.init public api lifecycle", function()
     local env = setup_with_deps({ log = { level = "info", verbose = true } })
 
     -- ========= [A]ssert  =========
-    assert.equal(1, env.commands.register_calls)
-    assert.same({ "commands" }, env.call_order)
     assert.equal("info", env.logger.set_levels[1])
     assert.is_true(env.logger.set_verboses[1])
     assert.equal(2, #env.fake_vim._autocmds)
@@ -121,17 +119,17 @@ describe("codex.init public api lifecycle", function()
           seen = {
             event = ctx.event,
             config = ctx.config,
-            commands = ctx.config.launch.cmd,
+            cmd = ctx.config.launch.cmd,
           }
         end,
       },
     })
 
     -- ========= [A]ssert  =========
-    assert.same({ "commands" }, env.call_order)
+    assert.equal(2, #env.fake_vim._autocmds)
     assert.is_not_nil(seen)
     assert.equal("on_setup", seen.event)
-    assert.same({ "codex-test", "--flag" }, seen.commands)
+    assert.same({ "codex-test", "--flag" }, seen.cmd)
     assert.same(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
     assert.equal(0, #env.provider.open_calls)
     assert.equal(1, #env.provider.discover_restorable_calls)
@@ -148,7 +146,8 @@ describe("codex.init public api lifecycle", function()
     })
 
     -- ========= [A]ssert  =========
-    assert.equal(1, env.commands.register_calls)
+    assert.is_not_nil(env.codex.get_config())
+    assert.equal(2, #env.fake_vim._autocmds)
     assert.matches("codex hook on_setup failed: .*hook boom", env.logger.warns[1])
   end)
 

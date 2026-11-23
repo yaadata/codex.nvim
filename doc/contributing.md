@@ -45,9 +45,9 @@ manually; Markdown formatting does not cover it.
 - Preserve the owning API's return contract: core operations commonly return
   `ok, err`; builtin workflows return an error string or `nil`. Deferred
   failures cannot reach a caller through a synchronous return.
-- Keep tests focused on observable behavior owned by the module. Command tests
-  check dispatch; builtin tests check workflow choices. Avoid repeating terminal
-  capture and delivery cases in every caller's spec.
+- Keep tests focused on observable behavior owned by the module. Builtin tests
+  check workflow choices. Avoid repeating terminal capture and delivery cases in
+  every caller's spec.
 
 Use explicit Arrange, Act, and Assert sections. Keep the operation under test
 visible in Act; helpers may prepare fixtures, but should not hide that call.
@@ -80,8 +80,7 @@ testing builtin timers, register writes, or notifications.
 
 1. Choose the owner using the [architecture boundaries](architecture.md).
    Agent-specific commands and launch arguments belong in `codex.builtin`.
-2. Add focused tests with the call under test visible. For user commands, test
-   argument forwarding by stubbing the API the callback actually calls.
+2. Add focused tests with the call under test visible.
 3. Update shared types and user-facing help when signatures or behavior change.
    Keep README examples brief; link to code for implementation details.
 4. Run the relevant specs, lint, and formatting checks. Run the full suite

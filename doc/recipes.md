@@ -1,6 +1,7 @@
 # Recipes
 
 - [Context](#context)
+- [Custom Neovim Commands](#custom-neovim-commands)
 - [Lua API Recipes](#lua-api-recipes)
   - [Disable spellcheck in Codex terminal buffers](#disable-spellcheck)
   - [Send arbitrary text from a normal-mode keymap](#send-arbitrary-text)
@@ -24,8 +25,126 @@ Most user-facing examples now live in `:help codex.nvim`, especially:
 Use the helpfile for the lazy.nvim setup example, terminal keymap examples, and
 slash-command examples.
 
-This Markdown page is kept for integration-specific examples that are easier to
-scan outside the helpfile.
+This Markdown page is kept for custom command patterns and integration-specific
+examples that are easier to scan outside the helpfile.
+
+<a id="custom-neovim-commands"></a>
+
+## Custom Neovim Commands
+
+`codex.nvim` does not register Neovim user commands (`:Codex*`) out of the box.
+If you want ex-commands alongside (or instead of) keymaps, register your own
+with `vim.api.nvim_create_user_command` on top of `require("codex")` and
+`require("codex.builtin")`.
+
+Define them in your Neovim config (for example inside your `lazy.nvim` `config`
+function after `require("codex").setup(opts)`):
+
+```lua
+local codex = require("codex")
+local builtin = require("codex.builtin")
+
+-- Session lifecycle
+vim.api.nvim_create_user_command("Codex", function(opts)
+  if opts.bang then
+    codex.session.open(true)
+  else
+    codex.session.toggle()
+  end
+end, {
+  desc = "Toggle Codex terminal (use ! to force open and focus)",
+  bang = true,
+  nargs = 0,
+})
+
+vim.api.nvim_create_user_command("CodexFocus", function()
+  codex.session.focus()
+end, {
+  desc = "Focus the Codex terminal, starting it if needed",
+  nargs = 0,
+})
+
+vim.api.nvim_create_user_command("CodexTeardown", function()
+  codex.session.teardown()
+end, {
+  desc = "Teardown the active Codex terminal session",
+  nargs = 0,
+})
+
+-- Terminal input and prompt builder
+vim.api.nvim_create_user_command("CodexClearInput", function()
+  codex.input.clear()
+end, {
+  desc = "Clear the active Codex terminal input line",
+  nargs = 0,
+})
+
+vim.api.nvim_create_user_command("CodexSendFile", function()
+  codex.prompt_builder.clear()
+  local ok, err = codex.prompt_builder.add_file()
+  if not ok then
+    vim.notify(err, vim.log.levels.ERROR)
+    return
+  end
+  codex.prompt_builder.send()
+end, {
+  desc = "Send current buffer path to Codex as an @path reference",
+  nargs = 0,
+})
+
+vim.api.nvim_create_user_command("CodexSendSelection", function(opts)
+  if opts.range == 0 then
+    vim.notify("CodexSendSelection requires a visual range", vim.log.levels.ERROR)
+    return
+  end
+  codex.prompt_builder.clear()
+  local ok, err = codex.prompt_builder.add_selection({
+    line1 = opts.line1,
+    line2 = opts.line2,
+  })
+  if not ok then
+    vim.notify(err, vim.log.levels.ERROR)
+    return
+  end
+  codex.prompt_builder.send()
+end, {
+  desc = "Send visual selection range to Codex",
+  nargs = 0,
+  range = true,
+})
+
+-- Agent-specific builtins (Codex CLI)
+vim.api.nvim_create_user_command("CodexMentionFile", function(opts)
+  local path = opts.args ~= "" and opts.args or nil
+  builtin.mention_file(path)
+end, {
+  desc = "Mention a file in Codex via /mention",
+  nargs = "?",
+  complete = "file",
+})
+
+vim.api.nvim_create_user_command("CodexMentionDirectory", function(opts)
+  local path = opts.args ~= "" and opts.args or nil
+  builtin.mention_directory(path)
+end, {
+  desc = "Mention a directory in Codex via /mention",
+  nargs = "?",
+  complete = "dir",
+})
+
+-- Slash-command wrappers
+vim.api.nvim_create_user_command("CodexReview", function(opts)
+  builtin.execute_slash_command({
+    command = "review",
+    args = opts.args,
+  })
+end, {
+  desc = "Run /review (or /review <instructions>)",
+  nargs = "*",
+})
+```
+
+For more slash-command wrapper examples, see `|codex-nvim-examples|`.
 
 ## Lua API Recipes
 

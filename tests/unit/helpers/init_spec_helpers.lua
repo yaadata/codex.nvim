@@ -602,8 +602,6 @@ end
 ---@field fake_vim tests.InitSpecVim
 ---@field formatter tests.InitSpecFormatter
 ---@field selection tests.InitSpecSelection
----@field commands tests.InitSpecCommands
----@field call_order string[]
 ---@field providers tests.InitSpecProviders
 ---@return tests.InitSpecEnv
 local function setup_with_deps(overrides)
@@ -617,17 +615,9 @@ local function setup_with_deps(overrides)
   local logger = make_logger()
   local formatter = make_formatter()
   local selection = make_selection()
-  local call_order = {}
 
   if type(overrides._provider) == "function" then
     overrides._provider(provider, fake_vim, store, logger)
-  end
-
-  ---@class tests.InitSpecCommands: codex.Commands
-  local commands = { register_calls = 0 }
-  function commands.register()
-    commands.register_calls = commands.register_calls + 1
-    table.insert(call_order, "commands")
   end
 
   ---@class tests.InitSpecProviders: codex.Providers
@@ -655,7 +645,6 @@ local function setup_with_deps(overrides)
       providers = providers,
       session_store = store,
       logger = logger,
-      commands = commands,
       formatter = formatter,
       selection = selection,
       vim = fake_vim,
@@ -670,8 +659,6 @@ local function setup_with_deps(overrides)
     fake_vim = fake_vim,
     formatter = formatter,
     selection = selection,
-    commands = commands,
-    call_order = call_order,
     providers = providers,
   }
 end
