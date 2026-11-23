@@ -1,6 +1,7 @@
 local config_mod = require("codex.config")
 local keymaps_mod = require("codex.nvim.keymaps")
 
+---@class codex.Profile
 local Profile = {}
 Profile.__index = Profile
 

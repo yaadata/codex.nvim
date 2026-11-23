@@ -10,7 +10,7 @@ local MENTION_COMMAND_PATH = "/mention"
 ---@return codex.Mention
 function M.create(opts)
   local get_deps = opts.get_deps
-  local get_config = opts.get_config
+  local get_profile = opts.get_profile
   local get_activation = opts.get_activation or function()
     return 0
   end
@@ -37,7 +37,7 @@ function M.create(opts)
     vdebug("dispatch_mention path=%s", resolved_path)
 
     local existing_input, _, clear_line_count =
-      prompt_ops.capture_active_prompt_input(get_deps, get_config)
+      prompt_ops.capture_active_prompt_input(get_deps, get_profile)
     if existing_input and existing_input ~= "" then
       vdebug("dispatch_mention captured existing prompt input len=%d", #existing_input)
     else
@@ -55,7 +55,7 @@ function M.create(opts)
           if get_activation() ~= expected_activation then
             return false
           end
-          local active_config = get_config()
+          local active_config = get_profile()
           if not active_config then
             return false
           end
@@ -73,7 +73,7 @@ function M.create(opts)
           if not is_same_activation_and_session() then
             return
           end
-          local active_config = get_config()
+          local active_config = get_profile()
           local submit_ok, submit_err
           if existing_input and existing_input:find("\n", 1, true) then
             local submit_session, submit_provider =
@@ -92,7 +92,7 @@ function M.create(opts)
           else
             submit_ok, submit_err = prompt_ops.submit_with_enter_key(
               get_deps,
-              get_config,
+              get_profile,
               MENTION_COMMAND_PATH,
               is_same_activation_and_session
             )

@@ -45,7 +45,6 @@ codex.builtin.mention_file	codex.nvim.txt	/*codex.builtin.mention_file*
 codex.builtin.one_off	codex.nvim.txt	/*codex.builtin.one_off*
 codex.builtin.resume	codex.nvim.txt	/*codex.builtin.resume*
 codex.deactivate	codex.nvim.txt	/*codex.deactivate*
-codex.get_config	codex.nvim.txt	/*codex.get_config*
 codex.get_profile	codex.nvim.txt	/*codex.get_profile*
 codex.input.clear	codex.nvim.txt	/*codex.input.clear*
 codex.input.copy	codex.nvim.txt	/*codex.input.copy*

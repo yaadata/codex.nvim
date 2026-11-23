@@ -399,10 +399,6 @@ set_profile({name}, {launch_overrides})                    *codex.set_profile*
     the selected profile, config, and active mappings unchanged.
     Returns: `boolean, string|nil`
 
-get_profile()                                              *codex.get_profile*
-    Return the currently selected profile name, or `nil` when uninitialized.
-    Returns: `string|nil`
-
 deactivate()                                                *codex.deactivate*
     Retire plugin runtime state before unloading or reconfiguring the plugin.
     Closes all tracked sessions across profiles, restores displaced global
@@ -410,9 +406,10 @@ deactivate()                                                *codex.deactivate*
     lazy.nvim calls this automatically on reload.
     Returns: `nil`
 
-get_config()                                                *codex.get_config*
+get_profile()                                                *codex.get_profile*
     Return a copy of the selected profile's effective config, including launch
-    overrides. Unlike `setup()` options, this table has no `profiles` wrapper.
+    overrides. Read `config.profile_identifier` for the selected profile key.
+    Unlike `setup()` options, this table has no `profiles` wrapper.
     Returns: `table|nil`
 
 Session                                               *codex-nvim-api-session*

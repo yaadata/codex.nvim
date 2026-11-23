@@ -31,9 +31,8 @@ configuration.
 ## Common Checks
 
 - If the terminal does not open, confirm the configured executable runs outside
-  Neovim and inspect `require("codex").get_profile()` and
-  `require("codex").get_config()` to confirm which profile and resolved launch
-  or provider options are active.
+  Neovim and inspect `require("codex").get_profile()` for the selected profile
+  (`profile_identifier`) and its resolved launch or provider options.
 - If text appears but is not submitted, `prompt_builder.send()` pastes without
   Enter. Use `prompt_builder.submit()` when you want to submit it.
 - If a builtin reports a capture failure, open and focus the terminal and retry.

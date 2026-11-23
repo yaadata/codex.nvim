@@ -12,7 +12,7 @@ local COULD_NOT_SAVE_PROMPT_NOTIFY_MSG = "Could not save existing prompt before 
 ---@return { execute_slash_command: fun(command_opts: codex.ExecuteSlashCommandOpts): codex.Outcome, string|nil }
 function M.create(opts)
   local get_deps = opts.get_deps
-  local get_config = opts.get_config
+  local get_profile = opts.get_profile
   local dispatch_send = opts.dispatch_send
 
   ---@param deps table
@@ -74,7 +74,7 @@ function M.create(opts)
     local payload_text = "/" .. command_text
 
     local existing_input, capture_status, clear_line_count =
-      prompt_ops.capture_active_prompt_input(get_deps, get_config)
+      prompt_ops.capture_active_prompt_input(get_deps, get_profile)
 
     if existing_input and existing_input ~= "" then
       local save_ok = pcall(deps.vim.fn.setreg, '"', existing_input)
@@ -113,7 +113,7 @@ function M.create(opts)
         local submit_ok, submit_err
         if submit_via_channel then
           local deps = get_deps()
-          local config = get_config()
+          local config = get_profile()
           local session, provider =
             session_lifecycle.get_or_restore_active_session_and_provider(deps, config)
           if not session_lifecycle.session_is_alive(session, provider) then
@@ -128,7 +128,7 @@ function M.create(opts)
           end
         else
           submit_ok, submit_err =
-            prompt_ops.submit_with_enter_key(get_deps, get_config, command_path)
+            prompt_ops.submit_with_enter_key(get_deps, get_profile, command_path)
         end
         if not submit_ok then
           error(submit_err or ("failed to submit " .. command_path))

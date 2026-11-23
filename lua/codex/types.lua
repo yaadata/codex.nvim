@@ -176,7 +176,7 @@
 
 ---@class codex.WrapperCommandCreateOpts
 ---@field get_deps fun(): table
----@field get_config fun(): table
+---@field get_profile fun(): table
 ---@field dispatch_send fun(text: string, opts: codex.DispatchSendOpts): codex.Outcome, string|nil
 
 ---@class codex.ExecuteSlashCommandOpts
@@ -229,8 +229,7 @@
 ---@field setup fun(opts?: codex.SetupOpts)
 ---@field deactivate fun()
 ---@field set_profile fun(identifier: string, launch_overrides?: codex.ProfileLaunch): boolean, string?
----@field get_profile fun(): string?
----@field get_config fun(): codex.ProfileConfig?
+---@field get_profile fun(): codex.ProfileConfig?
 ---@field logs codex.Logs
 ---@field input codex.Input
 ---@field prompt_builder codex.PromptBuilder
@@ -240,7 +239,7 @@
 
 ---@class codex.MentionOpts
 ---@field get_deps fun(): table
----@field get_config fun(): table
+---@field get_profile fun(): table
 ---@field get_activation? fun(): integer
 ---@field dispatch_send fun(text: string, opts?: codex.DispatchSendOpts): codex.Outcome, string|nil
 
@@ -326,7 +325,7 @@
 
 ---@class codex.SendDispatchOpts
 ---@field get_deps fun(): table
----@field get_config fun(): table
+---@field get_profile fun(): table
 ---@field get_activation? fun(): integer
 ---@field get_send_queue fun(): codex.SendQueue
 ---@field open_session fun(args: string[], focus: boolean)

@@ -1,16 +1,16 @@
 # Lua API
 
-The authoritative user-facing Lua API reference now lives in
-`:help codex.nvim`, especially:
+The authoritative user-facing Lua API reference now lives in `:help codex.nvim`,
+especially:
 
 - `|codex-nvim-api|`
 - `|codex-nvim-profiles|`
 - `|codex-nvim-hooks|`
 - `|codex-nvim-api-runtime|`
 - `|codex.set_profile|`
+- `|codex.get_profile|`
 - `|codex.session.teardown_all|`
 - `|codex-nvim-session-restore|`
-- `|codex.get_profile|`
 - `|codex-nvim-api-lifecycle|`
 - `|codex-nvim-api-send|`
 - `|codex-nvim-api-slash|`

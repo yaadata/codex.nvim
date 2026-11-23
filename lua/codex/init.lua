@@ -257,7 +257,7 @@ local function setup(opts)
 
   state.send_dispatch = send_dispatch_mod.create({
     get_deps = get_deps,
-    get_config = function()
+    get_profile = function()
       return state.config
     end,
     get_activation = function()
@@ -294,7 +294,7 @@ local function setup(opts)
 
   state.mention = mention_mod.create({
     get_deps = get_deps,
-    get_config = function()
+    get_profile = function()
       return state.config
     end,
     get_activation = function()
@@ -307,7 +307,7 @@ local function setup(opts)
 
   state.wrapper_command = wrapper_command_mod.create({
     get_deps = get_deps,
-    get_config = function()
+    get_profile = function()
       return state.config
     end,
     dispatch_send = function(text, send_opts)
@@ -391,15 +391,6 @@ local function set_profile(name, launch_overrides)
     schedule_auto_start(activation, next_config)
   end
   return true, nil
-end
-
----Returns the currently selected profile identifier, or nil when uninitialized.
----@return string|nil
-local function get_profile()
-  if not state.initialized or not state.profile then
-    return nil
-  end
-  return state.profile.identifier
 end
 
 ---Deactivate codex.nvim before lazy.nvim unloads its Lua modules.
@@ -734,14 +725,13 @@ local logs = {
 
 ---Returns a deep-copied resolved config for inspection.
 ---@return codex.ProfileConfig|nil
-local function get_config()
+local function get_profile()
   local deps = get_deps()
   return state.config and deps.vim.deepcopy(state.config) or nil
 end
 
 ---@type codex.Api
 return {
-  get_config = get_config,
   get_profile = get_profile,
   set_profile = set_profile,
   setup = setup,
