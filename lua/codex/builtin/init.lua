@@ -57,7 +57,7 @@ end
 --- For codex cli:
 --- ```lua
 ---local builtin = require("codex.builtin")
----local enum = require("codex.internal.enums.skill_style")
+---local enum = require("codex.enums.skill_style")
 ---local skill = builtin.format_skill({
 ---                 name = "review",
 ---              }, enum.SLASH)

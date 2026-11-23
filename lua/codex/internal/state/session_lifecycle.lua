@@ -1,5 +1,5 @@
 local M = {}
-local outcome = require("codex.internal.enums.outcome")
+local outcome = require("codex.enums.outcome")
 local hooks = require("codex.hooks")
 local config_mod = require("codex.config")
 
