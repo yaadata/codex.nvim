@@ -4,12 +4,25 @@ local keymaps = require("codex.nvim.keymaps")
 local hooks = require("codex.hooks")
 
 local valid_setup_keys = { profiles = true, log = true, hooks = true }
-local valid_profile_keys = { auto_start = true, launch = true, terminal = true, keymaps = true }
+local valid_profile_keys = {
+  profile_name = true,
+  auto_start = true,
+  launch = true,
+  terminal = true,
+  keymaps = true,
+}
 
 local valid_providers = { auto = true, snacks = true, native = true }
 local valid_windows = { vsplit = true, hsplit = true, float = true }
 local valid_provider_opt_keys = { native = true, snacks = true }
 local valid_native_provider_opt_keys = { window = true, vsplit = true, hsplit = true, float = true }
+local valid_native_float_keys = {
+  width_pct = true,
+  height_pct = true,
+  border = true,
+  title = true,
+  title_pos = true,
+}
 local valid_keymap_binding_keys = { mode = true, action = true, desc = true }
 local valid_log_levels = { debug = true, info = true, warn = true, error = true }
 local valid_launch_keys = {
@@ -264,7 +277,7 @@ local function validate_terminal_keys(terminal_tbl, prefix)
       local nested_native_tables = {
         { key = "vsplit", defaults = defaults.terminal.provider_opts.native.vsplit },
         { key = "hsplit", defaults = defaults.terminal.provider_opts.native.hsplit },
-        { key = "float", defaults = defaults.terminal.provider_opts.native.float },
+        { key = "float", defaults = valid_native_float_keys },
       }
       for _, entry in ipairs(nested_native_tables) do
         local value = native_opts[entry.key]
@@ -343,7 +356,7 @@ function M.validate_resolved_terminal(terminal)
     ["terminal.provider_opts.native.float.width_pct"] = { native_opts.float.width_pct, "number" },
     ["terminal.provider_opts.native.float.height_pct"] = { native_opts.float.height_pct, "number" },
     ["terminal.provider_opts.native.float.border"] = { native_opts.float.border, "string" },
-    ["terminal.provider_opts.native.float.title"] = { native_opts.float.title, "string" },
+    ["terminal.provider_opts.native.float.title"] = { native_opts.float.title, "string", true },
     ["terminal.provider_opts.native.float.title_pos"] = { native_opts.float.title_pos, "string" },
     ["terminal.startup"] = { terminal.startup, "table" },
     ["terminal.startup.timeout_ms"] = { terminal.startup.timeout_ms, "number" },
@@ -409,6 +422,11 @@ local function validate_profile_opts(opts, name)
   if #unknown > 0 then
     table.sort(unknown)
     error("codex: unknown profile config key(s): " .. table.concat(unknown, ", "))
+  end
+  if opts.profile_name ~= nil then
+    if type(opts.profile_name) ~= "string" or opts.profile_name:match("%S") == nil then
+      error(string.format("codex: %s.profile_name must be a non-empty string", prefix))
+    end
   end
   if opts.auto_start ~= nil and type(opts.auto_start) ~= "boolean" then
     error(

@@ -107,6 +107,7 @@ Default options for `setup()`:
   {
     profiles = {
       default = {
+        profile_name = nil, -- optional display name (defaults to profile identifier)
         auto_start = true,
         launch = {
           cmd = "codex", -- string or { "codex", "--flag" }
@@ -130,7 +131,7 @@ Default options for `setup()`:
                 width_pct = 80,
                 height_pct = 80,
                 border = "rounded",
-                title = " Codex ",
+                title = nil, -- falls back to profile_name (or " Codex " for default)
                 title_pos = "center",
               },
             },
@@ -170,6 +171,9 @@ profiles                                                 *codex-nvim-profiles*
 
     Named profiles inherit `auto_start`, `launch`, and `terminal` from
     `default` (`terminal.keymaps` replaces inherited bindings when supplied).
+    `profile_name` is an optional non-empty display name for the profile; when
+    omitted it falls back to the profile's identifier key (for example
+    `"default"` or `"work"`) and does not inherit from `default`.
     Global `keymaps` belong only to the profile that defines them and do not
     inherit.
 
@@ -237,9 +241,10 @@ hooks                                                       *codex-nvim-hooks*
       `config`
         Resolved codex.nvim config. Treat as read-only.
 
-      `profile_name`, `provider`, `bufnr`, `winid`, `cmd`, `cwd`
-        Included when available for terminal lifecycle events (`profile_name`
-        identifies the owning profile on open, restore, and close events).
+      `profile_identifier`, `profile_name`, `provider`, `bufnr`, `winid`, `cmd`, `cwd`
+        Included when available for lifecycle events (`profile_identifier`
+        identifies the owning profile key, and `profile_name` is its resolved
+        display name).
 
     Example:
 >lua
@@ -331,7 +336,9 @@ native provider                                   *codex-nvim-terminal-native*
       Floating-window border style.
 
     `float.title`
-      Float title string.
+      Optional float title string. When `nil`, falls back to the profile's
+      `profile_name` (padded with spaces) or `" Codex "` for an unnamed
+      `default` profile.
 
     `float.title_pos`
       `"left"`, `"center"`, or `"right"`.

@@ -59,7 +59,7 @@ function M.create(opts)
           if not active_config then
             return false
           end
-          local current_session = deps.session_store.get_active(active_config.profile_name)
+          local current_session = deps.session_store.get_active(active_config.profile_identifier)
           if not current_session or not current_session.alive then
             return false
           end

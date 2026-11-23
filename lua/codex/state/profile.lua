@@ -4,13 +4,13 @@ local keymaps_mod = require("codex.nvim.keymaps")
 local Profile = {}
 Profile.__index = Profile
 
----@param name string
+---@param identifier string
 ---@param base_config codex.ProfileConfig
 ---@param global_keymaps codex.GlobalKeymapConfig|nil
 ---@return codex.Profile
-function Profile.new(name, base_config, global_keymaps)
+function Profile.new(identifier, base_config, global_keymaps)
   return setmetatable({
-    name = name,
+    identifier = identifier,
     base_config = base_config,
     keymaps = global_keymaps or {},
     _keymap_handle = nil,

@@ -14,6 +14,7 @@ describe("codex.config", function()
   describe("defaults", function()
     it("has expected default values", function()
       -- ========= [A]ssert  =========
+      assert.equal("default", config.defaults.profile_identifier)
       assert.equal("default", config.defaults.profile_name)
       assert.is_true(config.defaults.auto_start)
       assert.equal("codex", config.defaults.launch.cmd)
@@ -29,7 +30,7 @@ describe("codex.config", function()
       assert.equal(80, config.defaults.terminal.provider_opts.native.float.width_pct)
       assert.equal(80, config.defaults.terminal.provider_opts.native.float.height_pct)
       assert.equal("rounded", config.defaults.terminal.provider_opts.native.float.border)
-      assert.equal(" Codex ", config.defaults.terminal.provider_opts.native.float.title)
+      assert.is_nil(config.defaults.terminal.provider_opts.native.float.title)
       assert.equal("center", config.defaults.terminal.provider_opts.native.float.title_pos)
       assert.equal(2000, config.defaults.terminal.startup.timeout_ms)
       assert.equal(50, config.defaults.terminal.startup.retry_interval_ms)
@@ -64,6 +65,7 @@ describe("codex.config", function()
       local cfg_nil = resolve_default(nil)
       local cfg_empty = resolve_default({})
       -- ========= [A]ssert  =========
+      assert.equal("default", cfg_nil.profile_identifier)
       assert.equal("default", cfg_nil.profile_name)
       assert.equal("codex", cfg_nil.launch.cmd)
       assert.equal("auto", cfg_nil.terminal.provider)
@@ -136,6 +138,7 @@ describe("codex.config", function()
       assert.equal("t", def_cfg.terminal.keymaps["<C-d>"].mode)
       assert.equal("auto", def_cfg.terminal.provider)
 
+      assert.equal("work", work_cfg.profile_identifier)
       assert.equal("work", work_cfg.profile_name)
       assert.is_false(work_cfg.auto_start)
       assert.equal("/usr/local/bin/codex", work_cfg.launch.cmd)
@@ -144,11 +147,48 @@ describe("codex.config", function()
       assert.is_not_nil(work_cfg.terminal.keymaps["<C-d>"])
       assert.same({}, resolved.work.keymaps)
 
+      assert.equal("clean", clean_cfg.profile_identifier)
       assert.equal("clean", clean_cfg.profile_name)
       assert.same({ "claude", "--flag" }, clean_cfg.launch.cmd)
       assert.is_nil(clean_cfg.launch.cwd)
       assert.same({}, clean_cfg.launch.env)
       assert.same({}, clean_cfg.terminal.keymaps)
+    end)
+
+    it("resolves optional profile_name without inheriting from default", function()
+      local resolved = resolve_profiles({
+        profiles = {
+          default = {
+            profile_name = "Main Agent",
+          },
+          work = {
+            profile_name = "Work Agent",
+          },
+          scratch = {},
+        },
+      })
+
+      assert.equal("default", resolved.default.config.profile_identifier)
+      assert.equal("Main Agent", resolved.default.config.profile_name)
+
+      assert.equal("work", resolved.work.config.profile_identifier)
+      assert.equal("Work Agent", resolved.work.config.profile_name)
+
+      assert.equal("scratch", resolved.scratch.config.profile_identifier)
+      assert.equal("scratch", resolved.scratch.config.profile_name)
+    end)
+
+    it("rejects invalid profile_name values", function()
+      for _, bad in ipairs({ "", "   ", 123, true, {} }) do
+        local ok, err = pcall(resolve_profiles, {
+          profiles = {
+            default = {},
+            work = { profile_name = bad },
+          },
+        })
+        assert.is_false(ok)
+        assert.matches("profiles%.work%.profile_name must be a non%-empty string", err)
+      end
     end)
 
     it("merges global log and hooks overrides", function()

@@ -44,7 +44,7 @@ describe("codex profile global keymaps (real Neovim)", function()
         require("codex.nvim.keymaps").apply_terminal(
           bufnr,
           config.terminal.keymaps,
-          config.profile_name
+          config.profile_identifier
         )
         next_buf = next_buf + 1
         return { bufnr = bufnr, id = next_buf, alive = true }

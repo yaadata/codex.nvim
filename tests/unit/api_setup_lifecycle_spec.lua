@@ -247,12 +247,17 @@ describe("codex.init public api lifecycle", function()
 
   it("startup selects the first matching named profile before auto-start", function()
     local restored = false
-    local seen
+    local seen_identifier, seen_name
     local env = setup_with_deps({
-      profiles = { default = { auto_start = true }, zulu = {}, alpha = {} },
+      profiles = {
+        default = { auto_start = true },
+        zulu = {},
+        alpha = { profile_name = "Alpha Agent" },
+      },
       hooks = {
         on_terminal_restore = function(ctx)
-          seen = ctx.profile_name
+          seen_identifier = ctx.profile_identifier
+          seen_name = ctx.profile_name
         end,
       },
       _provider = function(provider)
@@ -262,7 +267,7 @@ describe("codex.init public api lifecycle", function()
           end
           return {
             {
-              handle = { id = config.profile_name, alive = true, bufnr = 41 },
+              handle = { id = config.profile_identifier, alive = true, bufnr = 41 },
               cmd = "codex-test",
               cwd = "/tmp",
               bufnr = 41,
@@ -277,7 +282,8 @@ describe("codex.init public api lifecycle", function()
     env.fake_vim._scheduled[1]()
 
     assert.equal("alpha", env.codex.get_profile())
-    assert.equal("alpha", seen)
+    assert.equal("alpha", seen_identifier)
+    assert.equal("Alpha Agent", seen_name)
     assert.matches(
       "reattached restored agent session %(profile=alpha, provider=native, bufnr=41%)",
       env.logger.infos[1]
@@ -326,7 +332,7 @@ describe("codex.init public api lifecycle", function()
       profiles = { default = { auto_start = true }, work = {} },
       _provider = function(provider)
         provider.discover_restorable_fn = function(config)
-          assert.equal("work", config.profile_name)
+          assert.equal("work", config.profile_identifier)
           return {
             { handle = { alive = true, bufnr = 41 }, cmd = "codex-test", cwd = "/tmp", bufnr = 41 },
           }

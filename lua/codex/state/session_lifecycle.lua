@@ -188,11 +188,14 @@ end
 ---@return table
 local function make_session_hook_context(event, config, session, provider)
   local bufnr, winid = get_session_terminal_fields(session, provider)
+  local profile_identifier = (session and session.profile_identifier)
+    or (config and config.profile_identifier)
+    or "default"
+  local profile_name = (config and config.profile_name) or profile_identifier
   return {
     event = event,
-    profile_name = (session and session.profile_name)
-      or (config and config.profile_name)
-      or "default",
+    profile_identifier = profile_identifier,
+    profile_name = profile_name,
     provider = session.provider_name,
     bufnr = bufnr,
     winid = winid,
@@ -245,7 +248,7 @@ local function create_active_session(deps, provider_name, spec)
     cmd = spec.cmd,
     cwd = spec.cwd,
     provider_name = provider_name,
-    profile_name = spec.profile_name or "default",
+    profile_identifier = spec.profile_identifier or "default",
     config = spec.config,
   })
   return deps.session_store.get(id)
@@ -260,8 +263,8 @@ end
 ---@return codex.SessionState|nil
 ---@return boolean? matched
 local function restore_session_if_needed(deps, config, provider, provider_name, on_attached)
-  local profile_name = config.profile_name or "default"
-  local session = deps.session_store.get_active(profile_name)
+  local profile_identifier = config.profile_identifier or "default"
+  local session = deps.session_store.get_active(profile_identifier)
   if M.session_is_alive(session, provider) then
     return session
   end
@@ -300,7 +303,7 @@ local function restore_session_if_needed(deps, config, provider, provider_name, 
   if not attached then
     deps.logger.error(
       "failed to attach restored agent session (profile=%s, provider=%s, bufnr=%d): %s",
-      profile_name,
+      profile_identifier,
       provider_name,
       selected.bufnr,
       tostring(attach_err)
@@ -313,7 +316,7 @@ local function restore_session_if_needed(deps, config, provider, provider_name, 
     cmd = selected.cmd,
     cwd = selected.cwd,
     provider_name = provider_name,
-    profile_name = profile_name,
+    profile_identifier = profile_identifier,
     config = owner_config,
   })
   local ctx =
@@ -322,7 +325,7 @@ local function restore_session_if_needed(deps, config, provider, provider_name, 
   ctx.winid = ctx.winid or selected.winid
   deps.logger.info(
     "reattached restored agent session (profile=%s, provider=%s, bufnr=%d)",
-    profile_name,
+    profile_identifier,
     provider_name,
     selected.bufnr
   )
@@ -392,7 +395,7 @@ local function open_or_reuse_session(deps, config, args, focus, provider, provid
     cmd = executable,
     cwd = config.launch.cwd or deps.vim.fn.getcwd(),
     provider_name = provider_name,
-    profile_name = config.profile_name or "default",
+    profile_identifier = config.profile_identifier or "default",
     config = owner_config,
   })
   dispatch_session_hook(deps, owner_config, "on_terminal_open", new_session, provider)
@@ -452,7 +455,7 @@ end
 ---@return string provider_name
 function M.get_active_session_and_provider(deps, config)
   local provider, provider_name = M.get_provider(deps, config)
-  local session = deps.session_store.get_active(config.profile_name)
+  local session = deps.session_store.get_active(config.profile_identifier)
   return session, provider, provider_name
 end
 
@@ -479,7 +482,7 @@ end
 function M.get_or_restore_active_session_and_provider(deps, config)
   local provider, provider_name = M.get_provider(deps, config)
   local session = restore_session_if_needed(deps, config, provider, provider_name)
-    or deps.session_store.get_active(config.profile_name)
+    or deps.session_store.get_active(config.profile_identifier)
   return session, provider, provider_name
 end
 
@@ -523,7 +526,7 @@ function M.record_non_codex_focus(deps, config, session, provider, winid, bufnr)
     return
   end
 
-  session = session or deps.session_store.get_active(config.profile_name)
+  session = session or deps.session_store.get_active(config.profile_identifier)
   provider = provider or M.get_provider(deps, config)
   local term_bufnr = get_session_bufnr(session, provider)
   if type(term_bufnr) == "number" and bufnr == term_bufnr then

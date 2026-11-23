@@ -25,6 +25,7 @@
 ---@class codex.HookContext
 ---@field event string
 ---@field config codex.ProfileConfig
+---@field profile_identifier? string
 ---@field profile_name? string
 ---@field provider? string
 ---@field bufnr? integer
@@ -57,7 +58,7 @@
 ---@field width_pct number
 ---@field height_pct number
 ---@field border string
----@field title string
+---@field title? string
 ---@field title_pos "left"|"center"|"right"
 
 ---@class codex.StartupConfig
@@ -97,6 +98,7 @@
 ---@field env? table<string, string>
 
 ---@class codex.ProfileOpts
+---@field profile_name? string Optional display name; defaults to the profile identifier.
 ---@field auto_start? boolean
 ---@field launch? codex.ProfileLaunch
 ---@field terminal? table Partial codex.TerminalConfig.
@@ -113,7 +115,8 @@
 ---@field cwd string|nil
 
 ---@class codex.ProfileConfig
----@field profile_name string
+---@field profile_identifier string Profile key under `profiles` (e.g. `"default"`, `"work"`).
+---@field profile_name string Display name for the profile (defaults to `profile_identifier`).
 ---@field snacks_count? integer Internal terminal identity for named profiles.
 ---@field auto_start boolean
 ---@field launch codex.LaunchConfig
@@ -126,13 +129,13 @@
 ---@field cmd string
 ---@field cwd string
 ---@field provider_name string
----@field profile_name? string
+---@field profile_identifier? string
 ---@field config? codex.ProfileConfig
 
 ---@class codex.SessionState: codex.SessionSpec
 ---@field id string
 ---@field alive boolean
----@field profile_name string
+---@field profile_identifier string
 
 ---@class codex.ResumeOpts
 ---@field harness? codex.AgentHarness
@@ -225,7 +228,7 @@
 ---@class codex.Api
 ---@field setup fun(opts?: codex.SetupOpts)
 ---@field deactivate fun()
----@field set_profile fun(name: string, launch_overrides?: codex.ProfileLaunch): boolean, string?
+---@field set_profile fun(identifier: string, launch_overrides?: codex.ProfileLaunch): boolean, string?
 ---@field get_profile fun(): string?
 ---@field get_config fun(): codex.ProfileConfig?
 ---@field logs codex.Logs

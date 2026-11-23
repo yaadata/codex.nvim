@@ -76,11 +76,26 @@ local function open_hsplit(side)
   return vim.api.nvim_get_current_win()
 end
 
+--- Resolve the float window title, falling back to profile_name (or " Codex ").
+---@param float codex.FloatConfig|table
+---@param profile_name? string
+---@return string
+local function resolve_float_title(float, profile_name)
+  if type(float.title) == "string" then
+    return float.title
+  end
+  if type(profile_name) == "string" and profile_name ~= "" and profile_name ~= "default" then
+    return " " .. profile_name .. " "
+  end
+  return " Codex "
+end
+
 --- Open a vsplit, hsplit, or float window and place the buffer inside it.
 ---@param native_opts codex.NativeProviderOpts|table
 ---@param bufnr integer
+---@param profile_name? string
 ---@return integer winid
-local function open_window_for_buf(native_opts, bufnr)
+local function open_window_for_buf(native_opts, bufnr, profile_name)
   local window = native_opts.window or "vsplit"
 
   if window == "vsplit" then
@@ -113,7 +128,7 @@ local function open_window_for_buf(native_opts, bufnr)
       row = row,
       col = col,
       border = float.border or "rounded",
-      title = float.title or " Codex ",
+      title = resolve_float_title(float, profile_name),
       title_pos = float.title_pos or "center",
       style = "minimal",
     })
@@ -127,20 +142,22 @@ end
 
 --- Create a new scratch buffer and open a window for it.
 ---@param native_opts codex.NativeProviderOpts|table
+---@param profile_name? string
 ---@return integer bufnr
 ---@return integer winid
-local function create_window(native_opts)
+local function create_window(native_opts, profile_name)
   local bufnr = vim.api.nvim_create_buf(false, true)
-  local winid = open_window_for_buf(native_opts, bufnr)
+  local winid = open_window_for_buf(native_opts, bufnr, profile_name)
   return bufnr, winid
 end
 
 --- Re-open a window for an existing terminal buffer that has no visible window.
 ---@param native_opts codex.NativeProviderOpts|table
 ---@param bufnr integer
+---@param profile_name? string
 ---@return integer winid
-local function reshow_window(native_opts, bufnr)
-  return open_window_for_buf(native_opts, bufnr)
+local function reshow_window(native_opts, bufnr, profile_name)
+  return open_window_for_buf(native_opts, bufnr, profile_name)
 end
 
 --- Close the window and delete the buffer attached to a handle.
@@ -202,7 +219,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local provider_opts = term_config.provider_opts or {}
   local native_opts = provider_opts.native or {}
   local prev_win = vim.api.nvim_get_current_win()
-  local bufnr, winid = create_window(native_opts)
+  local bufnr, winid = create_window(native_opts, config.profile_name)
 
   local startup = term_config.startup or {}
   local handle = {
@@ -236,11 +253,11 @@ function M.open(cmd, args, env, config, focus, on_exit)
     "native",
     table.concat(argv, " "),
     cwd,
-    config.profile_name
+    config.profile_identifier
   )
 
   vim.bo[bufnr].buflisted = false
-  keymaps.apply_terminal(bufnr, term_config.keymaps, config.profile_name)
+  keymaps.apply_terminal(bufnr, term_config.keymaps, config.profile_identifier)
 
   if focus then
     vim.cmd("startinsert")
@@ -318,13 +335,13 @@ function M.attach_restored(handle, config, on_exit)
 
   local term_config = config.terminal or {}
   register_restored_exit_autocmd(handle, term_config, on_exit)
-  keymaps.apply_terminal(handle.bufnr, term_config.keymaps, config.profile_name)
+  keymaps.apply_terminal(handle.bufnr, term_config.keymaps, config.profile_identifier)
   terminal_utils.set_codex_terminal_marker(
     handle.bufnr,
     "native",
     handle.cmd,
     handle.cwd,
-    config.profile_name
+    config.profile_identifier
   )
   return true
 end
@@ -431,7 +448,7 @@ function M.toggle(handle, cmd, args, env, config)
   local term_config = config.terminal or {}
   local provider_opts = term_config.provider_opts or {}
   local native_opts = provider_opts.native or {}
-  handle.winid = reshow_window(native_opts, handle.bufnr)
+  handle.winid = reshow_window(native_opts, handle.bufnr, config.profile_name)
   vim.cmd("startinsert")
   return handle
 end

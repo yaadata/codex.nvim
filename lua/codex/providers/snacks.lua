@@ -279,9 +279,9 @@ function M.open(cmd, args, env, config, focus, on_exit)
       "snacks",
       table.concat(argv, " "),
       cwd,
-      config.profile_name
+      config.profile_identifier
     )
-    keymaps.apply_terminal(terminal.buf, config.terminal.keymaps, config.profile_name)
+    keymaps.apply_terminal(terminal.buf, config.terminal.keymaps, config.profile_identifier)
   end
 
   if terminal.buf and (on_exit or auto_close) then
@@ -388,13 +388,13 @@ function M.attach_restored(handle, config, on_exit)
   configure_size(handle, config)
   maintain_size(handle)
   register_restored_exit_autocmd(handle, config.terminal.auto_close == true, on_exit)
-  keymaps.apply_terminal(term.buf, config.terminal.keymaps, config.profile_name)
+  keymaps.apply_terminal(term.buf, config.terminal.keymaps, config.profile_identifier)
   terminal_utils.set_codex_terminal_marker(
     term.buf,
     "snacks",
     handle.cmd,
     handle.cwd,
-    config.profile_name
+    config.profile_identifier
   )
   return true
 end

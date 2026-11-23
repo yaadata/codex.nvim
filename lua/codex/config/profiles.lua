@@ -13,15 +13,20 @@ local function merge_terminal(base, override)
   return merged
 end
 
----@param name string
+---@param identifier string
 ---@param opts codex.ProfileOpts
 ---@param base codex.ProfileConfig
 ---@param snacks_count? integer
 ---@return { config: codex.ProfileConfig, keymaps: codex.GlobalKeymapConfig }
-local function resolve_profile(name, opts, base, snacks_count)
+local function resolve_profile(identifier, opts, base, snacks_count)
   local auto_start = opts.auto_start
   if auto_start == nil then
     auto_start = base.auto_start
+  end
+
+  local profile_name = opts.profile_name
+  if profile_name == nil then
+    profile_name = identifier
   end
 
   local launch = launch_config.merge_launch(base.launch, opts.launch)
@@ -29,7 +34,8 @@ local function resolve_profile(name, opts, base, snacks_count)
   validation.validate_resolved_terminal(terminal)
   return {
     config = {
-      profile_name = name,
+      profile_identifier = identifier,
+      profile_name = profile_name,
       auto_start = auto_start,
       launch = launch,
       terminal = terminal,

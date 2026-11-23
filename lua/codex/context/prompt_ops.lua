@@ -299,7 +299,7 @@ function M.submit_with_enter_key(get_deps, get_config, target, is_submit_still_v
   provider.focus(session.handle)
   if
     config ~= get_config()
-    or deps.session_store.get_active(config.profile_name) ~= session
+    or deps.session_store.get_active(config.profile_identifier) ~= session
     or not session.alive
     or (is_submit_still_valid and not is_submit_still_valid())
   then

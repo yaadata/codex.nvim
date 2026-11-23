@@ -83,15 +83,15 @@ end
 ---@param provider_name string
 ---@param full_cmd string
 ---@param cwd string
----@param profile_name? string
+---@param profile_identifier? string
 ---@return nil
-function M.set_codex_terminal_marker(bufnr, provider_name, full_cmd, cwd, profile_name)
+function M.set_codex_terminal_marker(bufnr, provider_name, full_cmd, cwd, profile_identifier)
   local api = vim.api
   pcall(api.nvim_buf_set_var, bufnr, "codex_terminal", {
     provider = provider_name,
     cmd = full_cmd,
     cwd = cwd,
-    profile_name = profile_name or "default",
+    profile_identifier = profile_identifier or "default",
   })
 end
 
@@ -151,13 +151,13 @@ end
 ---@param candidate codex.RestoreCandidate
 ---@return boolean
 function M.matches_restorable_owner(marker, provider_name, config, candidate)
-  local selected = (config and config.profile_name) or "default"
+  local selected = (config and config.profile_identifier) or "default"
   if type(marker) == "table" then
     if marker.provider ~= provider_name then
       return false
     end
-    if marker.profile_name ~= nil then
-      return marker.profile_name == selected
+    if marker.profile_identifier ~= nil then
+      return marker.profile_identifier == selected
     end
   end
   local launch = config and config.launch or {}

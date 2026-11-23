@@ -1163,7 +1163,7 @@ describe("codex.providers.native", function()
         return cmd == "pi" and "/opt/mise/bin/pi" or ""
       end)
       local provider = require("codex.providers.native")
-      local cfg = make_config({ profile_name = "default" })
+      local cfg = make_config({ profile_identifier = "default" })
       cfg.launch.cmd = { "pi" }
 
       for i, cmd in ipairs({
@@ -1182,7 +1182,7 @@ describe("codex.providers.native", function()
       assert.equal(1, restored[1].bufnr)
       assert.equal(2, restored[2].bufnr)
 
-      cfg.profile_name = "work"
+      cfg.profile_identifier = "work"
       cfg.launch.cwd = "/tmp/project"
       assert.equal(2, #provider.discover_restorable(cfg))
       cfg.launch.cwd = "/tmp/other"
@@ -1194,7 +1194,7 @@ describe("codex.providers.native", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
       local provider = require("codex.providers.native")
-      local cfg = make_config({ profile_name = "work" })
+      local cfg = make_config({ profile_identifier = "work" })
       cfg.launch.cmd = { "codex", "--model", "o3" }
       state.buf_valid[21] = true
       state.buf_names[21] = "term:///tmp//123:codex"
@@ -1220,7 +1220,7 @@ describe("codex.providers.native", function()
       assert.same({}, provider.discover_restorable(cfg))
 
       assert.is_true(provider.attach_restored(restored.handle, cfg))
-      assert.equal("work", state.buf_vars[21].codex_terminal.profile_name)
+      assert.equal("work", state.buf_vars[21].codex_terminal.profile_identifier)
       assert.equal(21, provider.discover_restorable(cfg)[1].bufnr)
 
       stub(vim.fn, "jobwait", function()
@@ -1310,7 +1310,7 @@ describe("codex.providers.native", function()
       with_stubbed_native_env(function(state)
         -- ========= [A]rrange =========
         local provider = require("codex.providers.native")
-        local work_cfg = make_config({ profile_name = "work" })
+        local work_cfg = make_config({ profile_identifier = "work" })
         work_cfg.launch.cmd = { "codex", "--model", "o3" }
 
         local work_handle = provider.open("codex", { "--model", "o3" }, {}, work_cfg, false)
@@ -1329,20 +1329,20 @@ describe("codex.providers.native", function()
             provider = "snacks",
             cmd = "codex",
             cwd = "/snacks",
-            profile_name = "work",
+            profile_identifier = "work",
           },
         }
 
         -- ========= [A]ct & [A]ssert =========
         -- Selected work profile recovers only its marked buffer even when launch.cmd changed
-        local changed_work_cfg = make_config({ profile_name = "work" })
+        local changed_work_cfg = make_config({ profile_identifier = "work" })
         changed_work_cfg.launch.cmd = "claude"
         local work_restored = provider.discover_restorable(changed_work_cfg)
         assert.equal(1, #work_restored)
         assert.equal(work_handle.bufnr, work_restored[1].bufnr)
 
         -- Default profile recovers only the unmarked legacy buffer, not work's buffer
-        local default_cfg = make_config({ profile_name = "default" })
+        local default_cfg = make_config({ profile_identifier = "default" })
         default_cfg.launch.cmd = { "codex", "--legacy" }
         local default_restored = provider.discover_restorable(default_cfg)
         assert.equal(1, #default_restored)
@@ -1350,4 +1350,51 @@ describe("codex.providers.native", function()
       end)
     end
   )
+
+  it("falls back to profile_name for float title when float.title is nil", function()
+    with_stubbed_native_env(function(state)
+      local provider = require("codex.providers.native")
+
+      -- Default unnamed profile falls back to " Codex "
+      local default_cfg = make_config({
+        profile_identifier = "default",
+        profile_name = "default",
+        terminal = { provider_opts = { native = { window = "float" } } },
+      })
+      default_cfg.terminal.provider_opts.native.float.title = nil
+      provider.open("codex", {}, {}, default_cfg, true)
+      assert.equal(" Codex ", state.open_win_calls[1].opts.title)
+
+      -- Custom profile_name is used for both open and toggle (re-show)
+      local work_cfg = make_config({
+        profile_identifier = "work",
+        profile_name = "Work Agent",
+        terminal = { provider_opts = { native = { window = "float" } } },
+      })
+      work_cfg.terminal.provider_opts.native.float.title = nil
+      local handle = provider.open("codex", {}, {}, work_cfg, true)
+      assert.equal(" Work Agent ", state.open_win_calls[2].opts.title)
+
+      -- Hide and re-show via toggle
+      provider.toggle(handle, "codex", {}, {}, work_cfg)
+      provider.toggle(handle, "codex", {}, {}, work_cfg)
+      assert.equal(" Work Agent ", state.open_win_calls[3].opts.title)
+
+      -- Explicit float.title takes precedence over profile_name
+      local explicit_cfg = make_config({
+        profile_identifier = "work",
+        profile_name = "Work Agent",
+        terminal = {
+          provider_opts = {
+            native = {
+              window = "float",
+              float = { title = " Custom Title " },
+            },
+          },
+        },
+      })
+      provider.open("codex", {}, {}, explicit_cfg, true)
+      assert.equal(" Custom Title ", state.open_win_calls[4].opts.title)
+    end)
+  end)
 end)

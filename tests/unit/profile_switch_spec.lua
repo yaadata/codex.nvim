@@ -44,6 +44,7 @@ describe("codex.init runtime launch profiles", function()
 
       assert.equal("default", codex.get_profile())
       local cfg = codex.get_config()
+      assert.equal("default", cfg.profile_identifier)
       assert.equal("default", cfg.profile_name)
       assert.is_true(cfg.auto_start)
       assert.equal("codex", cfg.launch.cmd)
@@ -283,37 +284,46 @@ describe("codex.init runtime launch profiles", function()
       assert.equal(default_session.handle, env.provider.focus_calls[1])
     end)
 
-    it("handles inactive session exit with its own config and profile_name", function()
-      local close_events = {}
-      local env = setup_with_deps({
-        profiles = {
-          default = { auto_start = false, launch = { cmd = "codex", cwd = "/default" } },
-          work = { auto_start = false, launch = { cmd = "claude", cwd = "/work" } },
-        },
-        hooks = {
-          on_terminal_close = function(ctx)
-            table.insert(close_events, ctx)
-          end,
-        },
-      })
+    it(
+      "handles inactive session exit with its own config, profile_identifier, and profile_name",
+      function()
+        local close_events = {}
+        local env = setup_with_deps({
+          profiles = {
+            default = { auto_start = false, launch = { cmd = "codex", cwd = "/default" } },
+            work = {
+              profile_name = "Work Agent",
+              auto_start = false,
+              launch = { cmd = "claude", cwd = "/work" },
+            },
+          },
+          hooks = {
+            on_terminal_close = function(ctx)
+              table.insert(close_events, ctx)
+            end,
+          },
+        })
 
-      env.codex.session.open(false)
-      assert.is_true(env.codex.set_profile("work"))
-      env.codex.session.open(false)
-      assert.is_true(env.codex.set_profile("default"))
+        env.codex.session.open(false)
+        assert.is_true(env.codex.set_profile("work"))
+        env.codex.session.open(false)
+        assert.is_true(env.codex.set_profile("default"))
 
-      -- Trigger work (inactive) process exit
-      env.provider.on_exit_callbacks[2]()
+        -- Trigger work (inactive) process exit
+        env.provider.on_exit_callbacks[2]()
 
-      assert.equal(1, #close_events)
-      assert.equal("work", close_events[1].profile_name)
-      assert.equal("claude", close_events[1].cmd)
-      assert.equal("/work", close_events[1].cwd)
-      assert.equal("work", close_events[1].config.profile_name)
-      assert.is_nil(env.store.get_active("work"))
-      assert.is_not_nil(env.store.get_active("default"))
-      assert.equal("default", env.codex.get_profile())
-    end)
+        assert.equal(1, #close_events)
+        assert.equal("work", close_events[1].profile_identifier)
+        assert.equal("Work Agent", close_events[1].profile_name)
+        assert.equal("claude", close_events[1].cmd)
+        assert.equal("/work", close_events[1].cwd)
+        assert.equal("work", close_events[1].config.profile_identifier)
+        assert.equal("Work Agent", close_events[1].config.profile_name)
+        assert.is_nil(env.store.get_active("work"))
+        assert.is_not_nil(env.store.get_active("default"))
+        assert.equal("default", env.codex.get_profile())
+      end
+    )
 
     it("teardown closes only selected profile while deactivate closes all profiles", function()
       local close_events = {}
@@ -342,6 +352,7 @@ describe("codex.init runtime launch profiles", function()
       assert.is_nil(env.store.get_active("work"))
       assert.is_not_nil(env.store.get_active("default"))
       assert.equal(1, #close_events)
+      assert.equal("work", close_events[1].profile_identifier)
       assert.equal("work", close_events[1].profile_name)
 
       -- Reopen work, then deactivate closes both without switching selection

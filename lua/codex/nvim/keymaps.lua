@@ -40,9 +40,9 @@ end
 
 ---@param bufnr integer
 ---@param keymaps codex.TerminalKeymapConfig|nil
----@param profile_name? string
+---@param profile_identifier? string
 ---@return nil
-function M.apply_terminal(bufnr, keymaps, profile_name)
+function M.apply_terminal(bufnr, keymaps, profile_identifier)
   if type(keymaps) ~= "table" then
     return
   end
@@ -50,11 +50,11 @@ function M.apply_terminal(bufnr, keymaps, profile_name)
   for lhs, binding in pairs(keymaps) do
     local action = binding.action
     if
-      profile_name
+      profile_identifier
       and (action == actions.toggle or action == actions.clear_input or action == actions.teardown)
     then
       local function is_owner_selected()
-        return require("codex").get_profile() == profile_name
+        return require("codex").get_profile() == profile_identifier
       end
       local builtin = action
       action = function()

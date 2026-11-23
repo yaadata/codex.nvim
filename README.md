@@ -72,8 +72,10 @@ Later, call `require("codex").set_profile("home")` to switch profiles without
 stopping existing sessions.
 
 Named profiles inherit `launch` (`cmd`, `cwd`, `env`), `auto_start`, and `terminal`
-from `default`. Global `keymaps` are per profile and do not inherit. Only the
-selected profile auto-starts, without taking focus.
+from `default`. Optional `profile_name` sets a display name per profile (defaulting
+to the profile identifier without inheriting from `default`). Global `keymaps` are
+per profile and do not inherit. Only the selected profile auto-starts, without
+taking focus.
 
 ## Usage
 

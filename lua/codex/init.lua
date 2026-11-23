@@ -146,7 +146,7 @@ end
 
 local function restore_profiles()
   local deps = get_deps()
-  if deps.session_store.get_active(state.config.profile_name) then
+  if deps.session_store.get_active(state.config.profile_identifier) then
     local ok, running = pcall(session_lifecycle.is_running, deps, state.config)
     if ok and running then
       return true
@@ -345,6 +345,7 @@ local function setup(opts)
   deps.logger.debug("codex.nvim initialized")
   hooks.dispatch(deps, state.config, "on_setup", {
     event = "on_setup",
+    profile_identifier = state.config.profile_identifier,
     profile_name = state.config.profile_name,
     config = state.config,
   })
@@ -392,13 +393,13 @@ local function set_profile(name, launch_overrides)
   return true, nil
 end
 
----Returns the currently selected profile name, or nil when uninitialized.
+---Returns the currently selected profile identifier, or nil when uninitialized.
 ---@return string|nil
 local function get_profile()
   if not state.initialized or not state.profile then
     return nil
   end
-  return state.profile.name
+  return state.profile.identifier
 end
 
 ---Deactivate codex.nvim before lazy.nvim unloads its Lua modules.
@@ -544,7 +545,7 @@ local prompt_builder = {
         if not state.initialized or not state.config or state.activation ~= expected_activation then
           return false
         end
-        local current_session = deps.session_store.get_active(state.config.profile_name)
+        local current_session = deps.session_store.get_active(state.config.profile_identifier)
         return current_session ~= nil and current_session.alive and current_session == sent_session
       end
       deps.vim.defer_fn(function()

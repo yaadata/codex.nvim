@@ -1,5 +1,6 @@
 ---@type codex.ProfileConfig
 local defaults = {
+  profile_identifier = "default",
   profile_name = "default",
   auto_start = true,
   launch = {
@@ -33,7 +34,7 @@ local defaults = {
           width_pct = 80,
           height_pct = 80,
           border = "rounded",
-          title = " Codex ",
+          title = nil,
           title_pos = "center",
         },
       },

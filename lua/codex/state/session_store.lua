@@ -12,8 +12,8 @@ local function new()
   ---@param session codex.SessionState|nil
   ---@return nil
   local function clear_active(session)
-    if session and active_by_profile[session.profile_name] == session.id then
-      active_by_profile[session.profile_name] = nil
+    if session and active_by_profile[session.profile_identifier] == session.id then
+      active_by_profile[session.profile_identifier] = nil
     end
   end
 
@@ -23,7 +23,7 @@ local function new()
   function M.create(spec)
     counter = counter + 1
     local id = "session_" .. counter
-    local profile_name = spec.profile_name or "default"
+    local profile_identifier = spec.profile_identifier or "default"
 
     sessions[id] = {
       id = id,
@@ -31,12 +31,12 @@ local function new()
       cmd = spec.cmd,
       cwd = spec.cwd,
       provider_name = spec.provider_name,
-      profile_name = profile_name,
+      profile_identifier = profile_identifier,
       config = spec.config,
       alive = true,
     }
 
-    active_by_profile[profile_name] = id
+    active_by_profile[profile_identifier] = id
     return id
   end
 
@@ -47,25 +47,27 @@ local function new()
     return sessions[id]
   end
 
-  --- Return the currently active session for `profile_name` (defaults to "default"), or nil.
-  ---@param profile_name? string
+  --- Return the currently active session for `profile_identifier` (defaults to "default"), or nil.
+  ---@param profile_identifier? string
   ---@return codex.SessionState|nil
-  function M.get_active(profile_name)
-    local id = active_by_profile[profile_name or "default"]
+  function M.get_active(profile_identifier)
+    local id = active_by_profile[profile_identifier or "default"]
     return id and sessions[id] or nil
   end
 
   --- Set the active session id for a profile; pass nil to clear that profile's active session.
   ---@param id string|nil
-  ---@param profile_name? string
+  ---@param profile_identifier? string
   ---@return nil
-  function M.set_active(id, profile_name)
+  function M.set_active(id, profile_identifier)
     if id == nil then
-      active_by_profile[profile_name or "default"] = nil
+      active_by_profile[profile_identifier or "default"] = nil
       return
     end
     local session = sessions[id]
-    local target_profile = profile_name or (session and session.profile_name) or "default"
+    local target_profile = profile_identifier
+      or (session and session.profile_identifier)
+      or "default"
     active_by_profile[target_profile] = id
   end
 

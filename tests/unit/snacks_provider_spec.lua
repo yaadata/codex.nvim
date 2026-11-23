@@ -1292,7 +1292,7 @@ describe("codex.providers.snacks", function()
 
       -- ========= [A]ct & [A]ssert =========
       local work = {
-        profile_name = "work",
+        profile_identifier = "work",
         launch = { cmd = { "codex", "--model", "two words", "" } },
         terminal = { provider_opts = {} },
       }
@@ -1304,7 +1304,7 @@ describe("codex.providers.snacks", function()
       assert.same({}, provider.discover_restorable(work))
 
       local default_restored = provider.discover_restorable({
-        profile_name = "default",
+        profile_identifier = "default",
         launch = { cmd = "codex", cwd = nil },
         terminal = { provider_opts = {} },
       })

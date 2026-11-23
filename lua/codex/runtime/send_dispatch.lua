@@ -78,7 +78,7 @@ function M.create(opts)
         return false, nil, true
       end
       config = get_config()
-      local current_session = deps.session_store.get_active(config.profile_name)
+      local current_session = deps.session_store.get_active(config.profile_identifier)
       if current_session ~= session then
         return false, nil, true
       end
@@ -137,7 +137,7 @@ function M.create(opts)
       tostring(first_attempt)
     )
 
-    local session = deps.session_store.get_active(config.profile_name)
+    local session = deps.session_store.get_active(config.profile_identifier)
     local provider = session_lifecycle.get_provider(deps, config)
 
     if not session or not session.alive then
@@ -147,7 +147,7 @@ function M.create(opts)
         return result.DROP
       end
       config = get_config()
-      session = deps.session_store.get_active(config.profile_name)
+      session = deps.session_store.get_active(config.profile_identifier)
       provider = session_lifecycle.get_provider(deps, config)
       if first_attempt then
         item.opened_in_dispatch = true
@@ -167,7 +167,7 @@ function M.create(opts)
         return result.DROP
       end
       config = get_config()
-      session = deps.session_store.get_active(config.profile_name)
+      session = deps.session_store.get_active(config.profile_identifier)
       provider = session_lifecycle.get_provider(deps, config)
       item.reopen_attempted = true
     end
