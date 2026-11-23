@@ -15,8 +15,17 @@ Browse [`lua/codex/`](../lua/codex/) for implementations and types, and
   collaborators through `_deps`; builtin calls to global `vim` need separate
   test overrides.
 - Keep the shared prompt builder, terminal input, and readiness queue distinct.
+- The selected profile owns active configuration and reversible global keymaps,
+  while the session store binds each session handle and config snapshot to its
+  owning profile name so switching profiles neither closes nor transfers live
+  sessions.
 
 ## Providers
 
 Use the current provider type and an existing provider as references. When adding
 one, update its registration, configuration, shared types, and contract tests.
+`lua/codex/init.lua` chooses which profiles to check at startup and on
+`SessionLoadPost`. Providers discover and attach live terminals for one resolved
+profile at a time. `terminal_utils.matches_restorable_owner` checks ownership
+markers first; for unmarked terminals it uses available command, working
+directory, and split metadata. It does not compare environment variables.

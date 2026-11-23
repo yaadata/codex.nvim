@@ -82,24 +82,12 @@ local function resolve_jobid(term)
   return nil
 end
 
---- Join the command and its arguments into a single shell string.
----@param cmd string
----@param args string[]
----@return string
-local function build_cmd(cmd, args)
-  local parts = { cmd }
-  for _, arg in ipairs(args) do
-    table.insert(parts, arg)
-  end
-  return table.concat(parts, " ")
-end
-
 ---Build an attached terminal wrapper around an already-running terminal buffer.
 ---@param snacks table
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@param bufnr integer
 ---@return table|nil
-local function create_attached_terminal(snacks, config, bufnr)
+local function create_attached_terminal(snacks, config, bufnr, restored_winid)
   local win_factory = snacks.win
   if type(win_factory) == "table" then
     local mt = getmetatable(win_factory)
@@ -119,7 +107,7 @@ local function create_attached_terminal(snacks, config, bufnr)
   local win_obj = nil
   local terminal = {
     buf = bufnr,
-    win = terminal_utils.find_win_for_buf(bufnr),
+    win = restored_winid,
   }
 
   local function sync_win()
@@ -237,13 +225,13 @@ end
 ---@param cmd string
 ---@param args string[]
 ---@param env table<string, string>
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@param focus boolean
 ---@param on_exit? fun(handle: codex.ProviderHandle): nil
 ---@return codex.ProviderHandle handle
 function M.open(cmd, args, env, config, focus, on_exit)
   local snacks = require("snacks")
-  local full_cmd = build_cmd(cmd, args)
+  local argv = terminal_utils.command_argv(cmd, args)
   local launch = config.launch or {}
   local cwd = launch.cwd or vim.fn.getcwd()
   local provider_opts = config.terminal.provider_opts or {}
@@ -251,20 +239,25 @@ function M.open(cmd, args, env, config, focus, on_exit)
   local auto_close = config.terminal.auto_close == true
 
   local base_opts = {
-    cmd = full_cmd,
-    cwd = cwd,
     interactive = true,
     -- Keep Snacks auto_close disabled so codex controls TermClose behavior and
     -- avoids Snacks non-zero exit notifications for intentional closes.
     auto_close = false,
   }
-  if next(env) ~= nil then
-    base_opts.env = env
-  end
 
   local opts = vim.tbl_deep_extend("force", base_opts, snacks_opts)
+  opts.cmd = argv
+  opts.cwd = cwd
+  if next(env) ~= nil then
+    opts.env = vim.deepcopy(env)
+  else
+    opts.env = nil
+  end
+  if config.snacks_count ~= nil then
+    opts.count = config.snacks_count
+  end
 
-  local terminal = snacks.terminal(full_cmd, opts)
+  local terminal = snacks.terminal(argv, opts)
 
   if focus and terminal.show then
     terminal:show()
@@ -281,8 +274,14 @@ function M.open(cmd, args, env, config, focus, on_exit)
   maintain_size(handle)
 
   if type(terminal.buf) == "number" then
-    terminal_utils.set_codex_terminal_marker(terminal.buf, "snacks", full_cmd, cwd)
-    keymaps.apply_terminal(terminal.buf, config.terminal.keymaps)
+    terminal_utils.set_codex_terminal_marker(
+      terminal.buf,
+      "snacks",
+      table.concat(argv, " "),
+      cwd,
+      config.profile_name
+    )
+    keymaps.apply_terminal(terminal.buf, config.terminal.keymaps, config.profile_name)
   end
 
   if terminal.buf and (on_exit or auto_close) then
@@ -314,7 +313,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
 end
 
 ---Discover live Codex terminal buffers that can be reattached.
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@return codex.RestoredSessionSpec[]
 function M.discover_restorable(config)
   if not M.is_available() then
@@ -332,46 +331,36 @@ function M.discover_restorable(config)
   for _, bufnr in ipairs(api.nvim_list_bufs()) do
     if api.nvim_buf_is_valid(bufnr) then
       local jobid = resolve_jobid({ buf = bufnr })
-      if jobid then
+      if terminal_utils.is_live_job(jobid) then
         local marker = terminal_utils.get_buffer_var(bufnr, "codex_terminal")
         local snacks_term = terminal_utils.get_buffer_var(bufnr, "snacks_terminal")
         local name = api.nvim_buf_get_name(bufnr)
-        local cmd = nil
-        local cwd = cwd_fallback
+        local metadata = type(marker) == "table" and marker or {}
+        local snacks_metadata = type(snacks_term) == "table" and snacks_term or {}
+        local winid = terminal_utils.find_win_for_buf(bufnr)
+        local candidate = {
+          cmd = metadata.cmd or snacks_metadata.cmd or terminal_utils.extract_terminal_command(
+            name
+          ),
+          cwd = metadata.cwd or snacks_metadata.cwd or terminal_utils.extract_terminal_cwd(name),
+          split = terminal_utils.window_split_type(winid),
+        }
 
-        if
-          type(marker) == "table"
-          and marker.provider == "snacks"
-          and terminal_utils.matches_launch_cmd(marker.cmd, launch.cmd)
-        then
-          cmd = marker.cmd
-          cwd = marker.cwd or cwd
-        elseif
-          type(snacks_term) == "table"
-          and terminal_utils.matches_launch_cmd(snacks_term.cmd, launch.cmd)
-        then
-          cmd = snacks_term.cmd
-          cwd = snacks_term.cwd or cwd
-        else
-          local parsed_cmd = terminal_utils.extract_terminal_command(name)
-          if terminal_utils.matches_launch_cmd(parsed_cmd, launch.cmd) then
-            cmd = parsed_cmd
-            cwd = terminal_utils.extract_terminal_cwd(name) or cwd
-          end
-        end
-
-        if cmd then
-          local terminal = create_attached_terminal(snacks, config, bufnr)
+        if terminal_utils.matches_restorable_owner(marker, "snacks", config, candidate) then
+          local terminal = create_attached_terminal(snacks, config, bufnr, winid)
           if terminal then
+            local cmd = candidate.cmd
             local handle = {
               terminal = terminal,
               provider = "snacks",
               ready_at_ms = now_ms(),
+              cmd = type(cmd) == "table" and table.concat(cmd, " ") or cmd or "",
+              cwd = candidate.cwd or cwd_fallback,
             }
             table.insert(restored, {
               handle = handle,
-              cmd = cmd,
-              cwd = cwd,
+              cmd = handle.cmd,
+              cwd = handle.cwd,
               bufnr = bufnr,
               winid = terminal.win,
             })
@@ -386,7 +375,7 @@ end
 
 ---Apply post-selection setup for a restored snacks terminal handle.
 ---@param handle codex.ProviderHandle
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@param on_exit? fun(handle: codex.ProviderHandle): nil
 ---@return boolean ok
 ---@return string|nil err
@@ -399,7 +388,14 @@ function M.attach_restored(handle, config, on_exit)
   configure_size(handle, config)
   maintain_size(handle)
   register_restored_exit_autocmd(handle, config.terminal.auto_close == true, on_exit)
-  keymaps.apply_terminal(term.buf, config.terminal.keymaps)
+  keymaps.apply_terminal(term.buf, config.terminal.keymaps, config.profile_name)
+  terminal_utils.set_codex_terminal_marker(
+    term.buf,
+    "snacks",
+    handle.cmd,
+    handle.cwd,
+    config.profile_name
+  )
   return true
 end
 
@@ -489,7 +485,7 @@ end
 ---@param cmd string
 ---@param args string[]
 ---@param env table<string, string>
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@return codex.ProviderHandle|nil new_handle
 ---@return string|nil err
 function M.toggle(handle, cmd, args, env, config)

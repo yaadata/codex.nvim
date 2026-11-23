@@ -38,8 +38,10 @@ codex-nvim-introduction	codex.nvim.txt	/*codex-nvim-introduction*
 codex-nvim-keymaps	codex.nvim.txt	/*codex-nvim-keymaps*
 codex-nvim-launch	codex.nvim.txt	/*codex-nvim-launch*
 codex-nvim-log	codex.nvim.txt	/*codex-nvim-log*
+codex-nvim-profiles	codex.nvim.txt	/*codex-nvim-profiles*
 codex-nvim-requirements	codex.nvim.txt	/*codex-nvim-requirements*
 codex-nvim-see-also	codex.nvim.txt	/*codex-nvim-see-also*
+codex-nvim-session-restore	codex.nvim.txt	/*codex-nvim-session-restore*
 codex-nvim-setup	codex.nvim.txt	/*codex-nvim-setup*
 codex-nvim-terminal	codex.nvim.txt	/*codex-nvim-terminal*
 codex-nvim-terminal-km	codex.nvim.txt	/*codex-nvim-terminal-km*
@@ -54,6 +56,7 @@ codex.builtin.one_off	codex.nvim.txt	/*codex.builtin.one_off*
 codex.builtin.resume	codex.nvim.txt	/*codex.builtin.resume*
 codex.deactivate	codex.nvim.txt	/*codex.deactivate*
 codex.get_config	codex.nvim.txt	/*codex.get_config*
+codex.get_profile	codex.nvim.txt	/*codex.get_profile*
 codex.input.clear	codex.nvim.txt	/*codex.input.clear*
 codex.input.copy	codex.nvim.txt	/*codex.input.copy*
 codex.input.feedkey	codex.nvim.txt	/*codex.input.feedkey*
@@ -70,11 +73,13 @@ codex.prompt_builder.join	codex.nvim.txt	/*codex.prompt_builder.join*
 codex.prompt_builder.peak	codex.nvim.txt	/*codex.prompt_builder.peak*
 codex.prompt_builder.send	codex.nvim.txt	/*codex.prompt_builder.send*
 codex.prompt_builder.submit	codex.nvim.txt	/*codex.prompt_builder.submit*
-codex.session.close	codex.nvim.txt	/*codex.session.close*
 codex.session.focus	codex.nvim.txt	/*codex.session.focus*
 codex.session.is_focused	codex.nvim.txt	/*codex.session.is_focused*
 codex.session.is_running	codex.nvim.txt	/*codex.session.is_running*
 codex.session.open	codex.nvim.txt	/*codex.session.open*
+codex.session.teardown	codex.nvim.txt	/*codex.session.teardown*
+codex.session.teardown_all	codex.nvim.txt	/*codex.session.teardown_all*
 codex.session.toggle	codex.nvim.txt	/*codex.session.toggle*
 codex.session.unfocus	codex.nvim.txt	/*codex.session.unfocus*
+codex.set_profile	codex.nvim.txt	/*codex.set_profile*
 codex.setup	codex.nvim.txt	/*codex.setup*

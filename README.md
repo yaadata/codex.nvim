@@ -66,88 +66,24 @@ Codex terminal.
 
 ## Configuration
 
-Use this as a quick-reference setup example. For full behavior notes and the
-complete user-facing reference, see `:help codex.nvim`.
+See `:help codex-nvim-config` for defaults and terminal options.
 
 ```lua
--- codex.Config
--- :help codex-nvim-config
-require("codex").setup({
-
-  -- codex.LaunchConfig
-  -- :help codex-nvim-launch
-  launch = {
-    cmd = "codex", -- executable to launch
-    args = {}, -- extra CLI args
-    env = {}, -- extra environment variables
-    auto_start = true, -- open a session after setup
-    cwd = nil, -- nil = current Neovim working directory
-  },
-
-  -- codex.TerminalConfig
-  -- :help codex-nvim-terminal
-  terminal = {
-    provider = "auto", -- prefer snacks when available, otherwise native
-    auto_close = true, -- close after the Codex process exits
-
-    -- codex.StartupConfig
-    startup = {
-      timeout_ms = 2000,
-      retry_interval_ms = 50,
-      grace_ms = 800,
-    },
-
-    -- codex.TerminalKeymapConfig
-    -- :help codex-nvim-keymaps
-    keymaps = {},
-
-    -- Split sizes are reapplied on editor resize; fixed width/height is
-    -- preserved when other splits open or close, subject to available space.
-    -- codex.ProviderOptsConfig
-    provider_opts = {
-      -- codex.NativeProviderOpts
-      native = {
-        window = "vsplit",
-        -- codex.VsplitConfig
-        vsplit = {
-          side = "right",
-          size_pct = 40, -- shared with Snacks left/right splits
-        },
-        -- codex.HsplitConfig
-        hsplit = {
-          side = "bottom",
-          size_pct = 30, -- shared with Snacks top/bottom splits
-        },
-        -- codex.FloatConfig
-        float = {
-          width_pct = 80,
-          height_pct = 80,
-          border = "rounded",
-          title = " Codex ",
-          title_pos = "center",
-        },
-      },
-      snacks = {}, -- snacks.terminal(..., opts) pass-through
-    },
-  },
-
-  -- codex.LogConfig
-  -- :help codex-nvim-log
-  log = {
-    level = "warn",
-    verbose = false,
-  },
-
-  -- codex.HooksConfig
-  -- :help codex-nvim-hooks
-  hooks = {
-    on_setup = nil,
-    on_terminal_open = nil,
-    on_terminal_restore = nil,
-    on_terminal_close = nil,
+local codex = require("codex")
+codex.setup({
+  profiles = {
+    default = {},
+    home = { launch = { cwd = vim.fn.expand("~") } },
   },
 })
 ```
+
+Later, call `require("codex").set_profile("home")` to switch profiles without
+stopping existing sessions.
+
+Named profiles inherit `launch` (`cmd`, `cwd`, `env`), `auto_start`, and `terminal`
+from `default`. Global `keymaps` are per profile and do not inherit. Only the
+selected profile auto-starts, without taking focus.
 
 ## Usage
 

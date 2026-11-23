@@ -24,7 +24,8 @@
 
 ---@class codex.HookContext
 ---@field event string
----@field config codex.Config
+---@field config codex.ProfileConfig
+---@field profile_name? string
 ---@field provider? string
 ---@field bufnr? integer
 ---@field winid? integer
@@ -65,11 +66,12 @@
 ---@field grace_ms number
 
 ---@class codex.TerminalKeymapBinding
----@field mode string|string[]
----@field action fun()
----@field desc? string
+---@field mode string|string[] Neovim mode or list of modes.
+---@field action fun() Callback invoked by the mapping.
+---@field desc? string Mapping description; required for custom callbacks.
 
 ---@alias codex.TerminalKeymapConfig table<string, codex.TerminalKeymapBinding>
+---@alias codex.GlobalKeymapConfig table<string, codex.TerminalKeymapBinding>
 
 ---@class codex.TerminalConfig
 ---@field provider codex.ProviderName
@@ -89,14 +91,31 @@
 ---@diagnostic disable-next-line: undefined-doc-name
 ---@field snacks snacks.terminal.Opts|table<string, any>
 
+---@class codex.ProfileLaunch
+---@field cmd? string|string[] Executable or argv with executable first.
+---@field cwd? string|false
+---@field env? table<string, string>
+
+---@class codex.ProfileOpts
+---@field auto_start? boolean
+---@field launch? codex.ProfileLaunch
+---@field terminal? table Partial codex.TerminalConfig.
+---@field keymaps? codex.GlobalKeymapConfig
+
+---@class codex.SetupOpts
+---@field profiles? table<string, codex.ProfileOpts>
+---@field log? table
+---@field hooks? codex.HooksConfig
+
 ---@class codex.LaunchConfig
----@field cmd codex.AgentHarness
----@field args string[]
+---@field cmd string|string[]
 ---@field env table<string, string>
----@field auto_start boolean
 ---@field cwd string|nil
 
----@class codex.Config
+---@class codex.ProfileConfig
+---@field profile_name string
+---@field snacks_count? integer Internal terminal identity for named profiles.
+---@field auto_start boolean
 ---@field launch codex.LaunchConfig
 ---@field terminal codex.TerminalConfig
 ---@field log codex.LogConfig
@@ -107,10 +126,13 @@
 ---@field cmd string
 ---@field cwd string
 ---@field provider_name string
+---@field profile_name? string
+---@field config? codex.ProfileConfig
 
 ---@class codex.SessionState: codex.SessionSpec
 ---@field id string
 ---@field alive boolean
+---@field profile_name string
 
 ---@class codex.ResumeOpts
 ---@field harness? codex.AgentHarness
@@ -127,13 +149,13 @@
 
 ---@class codex.Provider
 ---@field is_available fun(): boolean
----@field open fun(cmd: string, args: string[], env: table<string, string>, config: codex.Config, focus: boolean, on_exit?: fun(handle: codex.ProviderHandle): nil): codex.ProviderHandle|nil, codex.Error
----@field discover_restorable fun(config: codex.Config): codex.RestoredSessionSpec[]
----@field attach_restored fun(handle: codex.ProviderHandle, config: codex.Config, on_exit?: fun(handle: codex.ProviderHandle): nil): codex.Outcome, codex.Error
+---@field open fun(cmd: string, args: string[], env: table<string, string>, config: codex.ProfileConfig, focus: boolean, on_exit?: fun(handle: codex.ProviderHandle): nil): codex.ProviderHandle|nil, codex.Error
+---@field discover_restorable fun(config: codex.ProfileConfig): codex.RestoredSessionSpec[]
+---@field attach_restored fun(handle: codex.ProviderHandle, config: codex.ProfileConfig, on_exit?: fun(handle: codex.ProviderHandle): nil): codex.Outcome, codex.Error
 ---@field close fun(handle: codex.ProviderHandle|nil): boolean, codex.Error
 ---@field send fun(handle: codex.ProviderHandle|nil, text: string): codex.Outcome, codex.Error
 ---@field focus fun(handle: codex.ProviderHandle|nil): boolean, codex.Error
----@field toggle fun(handle: codex.ProviderHandle|nil, cmd: string, args: string[], env: table<string, string>, config: codex.Config): codex.ProviderHandle|nil, string|nil
+---@field toggle fun(handle: codex.ProviderHandle|nil, cmd: string, args: string[], env: table<string, string>, config: codex.ProfileConfig): codex.ProviderHandle|nil, string|nil
 ---@field is_alive fun(handle: codex.ProviderHandle|nil): boolean
 ---@field is_ready fun(handle: codex.ProviderHandle|nil): boolean
 ---@field get_bufnr fun(handle: codex.ProviderHandle|nil): integer|nil
@@ -204,6 +226,7 @@
 ---@class codex.SessionCommands
 ---@field open fun(focus?: boolean, args?: string[])
 ---@field teardown fun()
+---@field teardown_all fun()
 ---@field toggle fun()
 ---@field focus fun()
 ---@field unfocus fun(): boolean, string?
@@ -211,9 +234,11 @@
 ---@field is_focused fun(): boolean
 
 ---@class codex.Api
----@field setup fun(opts?: codex.Config)
+---@field setup fun(opts?: codex.SetupOpts)
 ---@field deactivate fun()
----@field get_config fun(): codex.Config?
+---@field set_profile fun(name: string, launch_overrides?: codex.ProfileLaunch): boolean, string?
+---@field get_profile fun(): string?
+---@field get_config fun(): codex.ProfileConfig?
 ---@field logs codex.Logs
 ---@field input codex.Input
 ---@field prompt_builder codex.PromptBuilder
@@ -224,6 +249,7 @@
 ---@class codex.MentionOpts
 ---@field get_deps fun(): table
 ---@field get_config fun(): table
+---@field get_activation? fun(): integer
 ---@field dispatch_send fun(text: string, opts?: codex.DispatchSendOpts): codex.Outcome, string|nil
 
 ---@class codex.Mention
@@ -292,7 +318,8 @@
 ---@field pre_focus boolean
 ---@field post_focus boolean
 ---@field command_path string|nil
----@field on_sent fun()|nil
+---@field on_sent fun(session?: codex.SessionState)|nil
+---@field activation integer|nil
 ---@field created_at integer
 ---@field opened_in_dispatch boolean
 ---@field reopen_attempted boolean
@@ -303,11 +330,12 @@
 ---@field pre_focus? boolean
 ---@field post_focus? boolean
 ---@field command_path? string
----@field on_sent? fun()
+---@field on_sent? fun(session?: codex.SessionState)
 
 ---@class codex.SendDispatchOpts
 ---@field get_deps fun(): table
 ---@field get_config fun(): table
+---@field get_activation? fun(): integer
 ---@field get_send_queue fun(): codex.SendQueue
 ---@field open_session fun(args: string[], focus: boolean)
 

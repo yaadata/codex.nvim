@@ -11,6 +11,9 @@ local MENTION_COMMAND_PATH = "/mention"
 function M.create(opts)
   local get_deps = opts.get_deps
   local get_config = opts.get_config
+  local get_activation = opts.get_activation or function()
+    return 0
+  end
   local dispatch_send = opts.dispatch_send
 
   ---Emit a verbose-only debug log when supported.
@@ -30,7 +33,6 @@ function M.create(opts)
   ---@return string|nil err
   local function dispatch_mention(resolved_path)
     local deps = get_deps()
-    local config = get_config()
     local mention = deps.formatter.format_mention(resolved_path)
     vdebug("dispatch_mention path=%s", resolved_path)
 
@@ -47,12 +49,35 @@ function M.create(opts)
       open_focus = true,
       pre_focus = true,
       command_path = MENTION_COMMAND_PATH,
-      on_sent = function()
+      on_sent = function(sent_session)
+        local expected_activation = get_activation()
+        local function is_same_activation_and_session()
+          if get_activation() ~= expected_activation then
+            return false
+          end
+          local active_config = get_config()
+          if not active_config then
+            return false
+          end
+          local current_session = deps.session_store.get_active(active_config.profile_name)
+          if not current_session or not current_session.alive then
+            return false
+          end
+          if sent_session and current_session.id ~= sent_session.id then
+            return false
+          end
+          return true
+        end
+
         deps.vim.defer_fn(function()
+          if not is_same_activation_and_session() then
+            return
+          end
+          local active_config = get_config()
           local submit_ok, submit_err
           if existing_input and existing_input:find("\n", 1, true) then
             local submit_session, submit_provider =
-              session_lifecycle.get_or_restore_active_session_and_provider(deps, config)
+              session_lifecycle.get_or_restore_active_session_and_provider(deps, active_config)
             if not session_lifecycle.session_is_alive(submit_session, submit_provider) then
               submit_ok, submit_err = false, "no active Codex session"
             else
@@ -65,8 +90,12 @@ function M.create(opts)
                 submit_provider.send(submit_session.handle, terminal_io.CODEX_ENTER_SEQUENCE)
             end
           else
-            submit_ok, submit_err =
-              prompt_ops.submit_with_enter_key(get_deps, get_config, MENTION_COMMAND_PATH)
+            submit_ok, submit_err = prompt_ops.submit_with_enter_key(
+              get_deps,
+              get_config,
+              MENTION_COMMAND_PATH,
+              is_same_activation_and_session
+            )
           end
           if not submit_ok then
             vdebug("dispatch_mention submit failed err=%s", submit_err or "unknown")
@@ -80,6 +109,9 @@ function M.create(opts)
           end
 
           deps.vim.defer_fn(function()
+            if not is_same_activation_and_session() then
+              return
+            end
             vdebug("dispatch_mention restoring previous prompt input len=%d", #existing_input)
             local restore_payload = existing_input
             if existing_input:find("\n", 1, true) then

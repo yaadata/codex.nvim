@@ -1,4 +1,5 @@
 local enum = require("codex.enums.harness")
+local config_mod = require("codex.config")
 local M = {}
 
 local supports_non_last_resume = {
@@ -34,7 +35,8 @@ local function detect_harness(plugin, opts)
   end
 
   local config = plugin.get_config()
-  local cmd = config and config.launch.cmd
+  local raw_cmd = config and config.launch and config.launch.cmd
+  local cmd = config_mod.split_command(raw_cmd)
   if type(cmd) ~= "string" or cmd == "" then
     return enum.CODEX
   end

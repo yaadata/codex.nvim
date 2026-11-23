@@ -44,11 +44,13 @@ function Queue:_flush()
     end
 
     local outcome = self._process(item)
-    if outcome == "retry" then
+    if outcome == result.RETRY then
       break
     end
 
-    table.remove(self._items, 1)
+    if self._items[1] == item then
+      table.remove(self._items, 1)
+    end
   end
 
   self._flush_active = false
@@ -74,6 +76,12 @@ function Queue:submit(item)
   table.insert(self._items, item)
   schedule_flush(self)
   return true
+end
+
+--- Return the number of pending queued items.
+---@return integer
+function Queue:pending_count()
+  return #self._items
 end
 
 --- Clear all queued items and reset flush state.

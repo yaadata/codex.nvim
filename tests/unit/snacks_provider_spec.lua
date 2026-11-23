@@ -120,6 +120,15 @@ local function with_stubbed_vim_api(run)
   stub(vim, "cmd", function(cmd)
     table.insert(cmd_calls, cmd)
   end)
+  stub(vim.fn, "jobwait", function()
+    return { -1 }
+  end)
+  stub(vim.api, "nvim_win_get_config", function()
+    return { relative = "" }
+  end)
+  stub(vim.api, "nvim_win_get_tabpage", function()
+    return vim.api.nvim_get_current_tabpage()
+  end)
   stub(vim.fn, "jobstop", function(jobid)
     table.insert(state.jobstop_calls, jobid)
   end)
@@ -714,7 +723,7 @@ describe("codex.providers.snacks", function()
       local provider = require("codex.providers.snacks")
 
       -- ========= [A]ct     =========
-      provider.open("codex", { "--foo", "bar" }, { CODEX_TEST = "1" }, {
+      provider.open("/tmp/my tools/codex", { "--foo", "local model", "" }, { CODEX_TEST = "1" }, {
         launch = {
           cwd = "/tmp/work",
         },
@@ -729,7 +738,7 @@ describe("codex.providers.snacks", function()
       }, false, nil)
 
       -- ========= [A]ssert  =========
-      assert.equal("codex --foo bar", captured_cmd)
+      assert.same({ "/tmp/my tools/codex", "--foo", "local model", "" }, captured_cmd)
       assert.equal("/tmp/work", captured_opts.cwd)
       assert.equal("1", captured_opts.env.CODEX_TEST)
       assert.is_true(captured_opts.interactive)
@@ -1138,6 +1147,169 @@ describe("codex.providers.snacks", function()
       assert.equal(6, #keymap_set_calls)
       assert.is_not_nil(find_keymap(keymap_set_calls, "<C-c>"))
       assert.is_not_nil(find_keymap(keymap_set_calls, "<M-BS>"))
+    end)
+  end)
+
+  it(
+    "isolates named profiles in a caching Snacks terminal fake even with identical cmd, cwd, and env",
+    function()
+      with_stubbed_vim_api(function(_, _, _, state)
+        -- ========= [A]rrange =========
+        local cache = {}
+        local next_buf = 200
+        local function tid_for(cmd, opts)
+          local env_parts = {}
+          for k, v in pairs(opts.env or {}) do
+            table.insert(env_parts, tostring(k) .. "=" .. tostring(v))
+          end
+          table.sort(env_parts)
+          return table.concat({
+            tostring(cmd),
+            tostring(opts.cwd or ""),
+            tostring(opts.count or 1),
+            table.concat(env_parts, ","),
+          }, "|")
+        end
+
+        package.loaded["snacks"] = {
+          win = function(opts)
+            return { buf = opts.buf }
+          end,
+          terminal = function(cmd, opts)
+            local tid = tid_for(cmd, opts)
+            if cache[tid] then
+              return cache[tid]
+            end
+            next_buf = next_buf + 1
+            local bufnr = next_buf
+            state.buf_valid[bufnr] = true
+            state.buf_channels[bufnr] = 500 + bufnr
+            local term
+            term = {
+              buf = bufnr,
+              tid = tid,
+              opts = vim.deepcopy(opts),
+              toggle_calls = 0,
+              toggle = function(self)
+                self.toggle_calls = self.toggle_calls + 1
+              end,
+            }
+            cache[tid] = term
+            return term
+          end,
+        }
+
+        local config = require("codex.config")
+        local profiles = require("codex.config.profiles")
+        local profile_opts, base = config.prepare_setup({
+          profiles = {
+            default = {
+              launch = { cmd = "codex", cwd = "/same", env = { SHARED = "1" } },
+              terminal = {
+                provider_opts = {
+                  snacks = {
+                    cmd = "stale-cmd",
+                    cwd = "/stale-cwd",
+                    env = { STALE = "1" },
+                    win = { position = "right" },
+                  },
+                },
+              },
+            },
+            work = {},
+            home = {
+              launch = { env = {} },
+            },
+          },
+        })
+        local resolved = profiles.resolve_profiles(profile_opts, base)
+
+        local provider = require("codex.providers.snacks")
+
+        -- ========= [A]ct =========
+        local def_cfg = resolved.default.config
+        local work_cfg = resolved.work.config
+        local home_cfg = resolved.home.config
+
+        local h_def = provider.open("codex", {}, def_cfg.launch.env, def_cfg, false)
+        local h_work = provider.open("codex", {}, work_cfg.launch.env, work_cfg, false)
+        local h_home = provider.open("codex", {}, home_cfg.launch.env, home_cfg, false)
+
+        -- ========= [A]ssert =========
+        assert.is_not.equal(h_def.terminal, h_work.terminal)
+        assert.is_not.equal(h_def.terminal, h_home.terminal)
+        assert.is_not.equal(h_work.terminal, h_home.terminal)
+
+        -- Resolved launch fields override stale provider_opts.snacks fields
+        assert.same({ "codex" }, h_def.terminal.opts.cmd)
+        assert.equal("/same", h_def.terminal.opts.cwd)
+        assert.same({ SHARED = "1" }, h_def.terminal.opts.env)
+        assert.is_nil(h_def.terminal.opts.count)
+
+        assert.equal(-2, work_cfg.snacks_count)
+        assert.equal(-1, home_cfg.snacks_count)
+        assert.equal(work_cfg.snacks_count, h_work.terminal.opts.count)
+        assert.equal(home_cfg.snacks_count, h_home.terminal.opts.count)
+        -- Cleared env = {} is not undone by stale snacks provider_opts.env
+        assert.is_nil(h_home.terminal.opts.env)
+        assert.equal("right", h_work.terminal.opts.win.position)
+
+        -- Handle-based toggle stays on the same terminal object
+        local toggled = provider.toggle(h_work, "codex", {}, work_cfg.launch.env, work_cfg)
+        assert.equal(h_work.terminal, toggled.terminal)
+        assert.equal(1, h_work.terminal.toggle_calls)
+
+        -- Markers isolate discovery per profile
+        local work_restored = provider.discover_restorable(work_cfg)
+        assert.equal(1, #work_restored)
+        assert.equal(h_work.terminal.buf, work_restored[1].bufnr)
+
+        local def_restored = provider.discover_restorable(def_cfg)
+        assert.equal(1, #def_restored)
+        assert.equal(h_def.terminal.buf, def_restored[1].bufnr)
+      end)
+    end
+  )
+
+  it("matches named profiles against structured Snacks argv", function()
+    with_stubbed_vim_api(function(_, _, _, state)
+      -- ========= [A]rrange =========
+      state.buf_valid[42] = true
+      state.buf_channels[42] = 55
+      state.buf_vars[42] = {
+        snacks_terminal = {
+          cmd = { "codex", "--model", "two words", "" },
+          cwd = "/tmp/snacks",
+        },
+      }
+      package.loaded["snacks"] = {
+        terminal = {},
+        win = function(opts)
+          return { buf = opts.buf }
+        end,
+      }
+      local provider = require("codex.providers.snacks")
+
+      -- ========= [A]ct & [A]ssert =========
+      local work = {
+        profile_name = "work",
+        launch = { cmd = { "codex", "--model", "two words", "" } },
+        terminal = { provider_opts = {} },
+      }
+      local work_restored = provider.discover_restorable(work)
+      assert.equal(1, #work_restored)
+      assert.equal(42, work_restored[1].bufnr)
+
+      work.launch.cmd[3] = "o4"
+      assert.same({}, provider.discover_restorable(work))
+
+      local default_restored = provider.discover_restorable({
+        profile_name = "default",
+        launch = { cmd = "codex", cwd = nil },
+        terminal = { provider_opts = {} },
+      })
+      assert.equal(1, #default_restored)
+      assert.equal(42, default_restored[1].bufnr)
     end)
   end)
 end)

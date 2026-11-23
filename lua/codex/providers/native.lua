@@ -20,18 +20,6 @@ local function now_ms()
   return uv.now()
 end
 
---- Join the command and its arguments into a single shell string.
----@param cmd string
----@param args string[]
----@return string
-local function build_cmd(cmd, args)
-  local parts = { cmd }
-  for _, arg in ipairs(args) do
-    table.insert(parts, arg)
-  end
-  return table.concat(parts, " ")
-end
-
 ---Resolve the live terminal job id from a buffer.
 ---@param bufnr integer
 ---@return integer|nil
@@ -202,12 +190,12 @@ end
 ---@param cmd string
 ---@param args string[]
 ---@param env table<string, string>
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@param focus boolean
 ---@param on_exit? fun(handle: codex.ProviderHandle): nil
 ---@return codex.ProviderHandle handle
 function M.open(cmd, args, env, config, focus, on_exit)
-  local full_cmd = build_cmd(cmd, args)
+  local argv = terminal_utils.command_argv(cmd, args)
   local launch = config.launch or {}
   local cwd = launch.cwd or vim.fn.getcwd()
   local term_config = config.terminal
@@ -241,12 +229,18 @@ function M.open(cmd, args, env, config, focus, on_exit)
     termopen_opts.env = env
   end
 
-  local jobid = vim.fn.jobstart(full_cmd, termopen_opts)
+  local jobid = vim.fn.jobstart(argv, termopen_opts)
   handle.jobid = jobid
-  terminal_utils.set_codex_terminal_marker(bufnr, "native", full_cmd, cwd)
+  terminal_utils.set_codex_terminal_marker(
+    bufnr,
+    "native",
+    table.concat(argv, " "),
+    cwd,
+    config.profile_name
+  )
 
   vim.bo[bufnr].buflisted = false
-  keymaps.apply_terminal(bufnr, term_config.keymaps)
+  keymaps.apply_terminal(bufnr, term_config.keymaps, config.profile_name)
 
   if focus then
     vim.cmd("startinsert")
@@ -259,7 +253,7 @@ function M.open(cmd, args, env, config, focus, on_exit)
 end
 
 ---Discover live Codex terminal buffers that can be reattached.
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@return codex.RestoredSessionSpec[]
 function M.discover_restorable(config)
   local api = vim.api
@@ -272,38 +266,34 @@ function M.discover_restorable(config)
   for _, bufnr in ipairs(api.nvim_list_bufs()) do
     if api.nvim_buf_is_valid(bufnr) then
       local jobid = resolve_terminal_jobid(bufnr)
-      if jobid then
+      if terminal_utils.is_live_job(jobid) then
         local marker = terminal_utils.get_buffer_var(bufnr, "codex_terminal")
+        local snacks_term = terminal_utils.get_buffer_var(bufnr, "snacks_terminal")
         local name = api.nvim_buf_get_name(bufnr)
-        local cmd = nil
-        local cwd = cwd_fallback
+        local metadata = type(marker) == "table" and marker or {}
+        local winid = terminal_utils.find_win_for_buf(bufnr)
+        local candidate = {
+          cmd = metadata.cmd or terminal_utils.extract_terminal_command(name),
+          cwd = metadata.cwd or terminal_utils.extract_terminal_cwd(name),
+          split = terminal_utils.window_split_type(winid),
+        }
 
         if
-          type(marker) == "table"
-          and marker.provider == "native"
-          and terminal_utils.matches_launch_cmd(marker.cmd, launch.cmd)
+          (type(marker) == "table" or type(snacks_term) ~= "table")
+          and terminal_utils.matches_restorable_owner(marker, "native", config, candidate)
         then
-          cmd = marker.cmd
-          cwd = marker.cwd or cwd
-        else
-          local parsed_cmd = terminal_utils.extract_terminal_command(name)
-          if terminal_utils.matches_launch_cmd(parsed_cmd, launch.cmd) then
-            cmd = parsed_cmd
-            cwd = terminal_utils.extract_terminal_cwd(name) or cwd
-          end
-        end
-
-        if cmd then
           local handle = {
             bufnr = bufnr,
-            winid = terminal_utils.find_win_for_buf(bufnr),
+            winid = winid,
             jobid = jobid,
             ready_at_ms = now_ms(),
+            cmd = candidate.cmd or "",
+            cwd = candidate.cwd or cwd_fallback,
           }
           table.insert(restored, {
             handle = handle,
-            cmd = cmd,
-            cwd = cwd,
+            cmd = handle.cmd,
+            cwd = handle.cwd,
             bufnr = bufnr,
             winid = handle.winid,
           })
@@ -317,7 +307,7 @@ end
 
 ---Apply post-selection setup for a restored native terminal handle.
 ---@param handle codex.ProviderHandle
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@param on_exit? fun(handle: codex.ProviderHandle): nil
 ---@return boolean ok
 ---@return string|nil err
@@ -328,7 +318,14 @@ function M.attach_restored(handle, config, on_exit)
 
   local term_config = config.terminal or {}
   register_restored_exit_autocmd(handle, term_config, on_exit)
-  keymaps.apply_terminal(handle.bufnr, term_config.keymaps)
+  keymaps.apply_terminal(handle.bufnr, term_config.keymaps, config.profile_name)
+  terminal_utils.set_codex_terminal_marker(
+    handle.bufnr,
+    "native",
+    handle.cmd,
+    handle.cwd,
+    config.profile_name
+  )
   return true
 end
 
@@ -408,7 +405,7 @@ end
 ---@param cmd string
 ---@param args string[]
 ---@param env table<string, string>
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@return codex.ProviderHandle|nil handle
 ---@return string|nil err
 function M.toggle(handle, cmd, args, env, config)

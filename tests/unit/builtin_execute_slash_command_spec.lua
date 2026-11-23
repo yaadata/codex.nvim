@@ -154,7 +154,7 @@ describe("codex.builtin execute_slash_command", function()
 
   it("starts a session and submits the command when no session is running", function()
     -- ========= [A]rrange =========
-    local env = setup_with_deps({ launch = { auto_start = false } })
+    local env = setup_with_deps({ profiles = { default = { auto_start = false } } })
     vim.defer_fn = env.fake_vim.defer_fn
     vim.fn.setreg = env.fake_vim.fn.setreg
 

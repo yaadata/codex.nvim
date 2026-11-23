@@ -22,8 +22,11 @@ return {
     codex.session.unfocus()
   end,
 
-  teardown = function()
+  teardown = function(is_owner_selected)
     vim.schedule(function()
+      if is_owner_selected and not is_owner_selected() then
+        return
+      end
       ---@type codex.Api
       local codex = require("codex")
       codex.session.teardown()

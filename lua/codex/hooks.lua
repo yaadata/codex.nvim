@@ -27,7 +27,7 @@ end
 
 ---Dispatch a configured lifecycle hook.
 ---@param deps table
----@param config codex.Config
+---@param config codex.ProfileConfig
 ---@param hook_name string
 ---@param ctx table
 ---@return nil

@@ -113,16 +113,53 @@ lazy.nvim calls `require("codex").deactivate()` before unloading the plugin.
 ==============================================================================
 CONFIGURATION REFERENCE                                    *codex-nvim-config*
 
-The resolved default options table is:
+Default options for `setup()`:
 
 >lua
   {
-    launch = {
-      cmd = "codex",  -- @type codex.AgentHarness
-      args = {},
-      env = {},
-      auto_start = true,
-      cwd = nil,
+    profiles = {
+      default = {
+        auto_start = true,
+        launch = {
+          cmd = "codex", -- string or { "codex", "--flag" }
+          env = {},
+          cwd = nil,
+        },
+        terminal = {
+          provider = "auto",
+          provider_opts = {
+            native = {
+              window = "vsplit",
+              vsplit = {
+                side = "right",
+                size_pct = 40,
+              },
+              hsplit = {
+                side = "bottom",
+                size_pct = 30,
+              },
+              float = {
+                width_pct = 80,
+                height_pct = 80,
+                border = "rounded",
+                title = " Codex ",
+                title_pos = "center",
+              },
+            },
+            snacks = {
+              -- pass-through for snacks.terminal(..., opts)
+            },
+          },
+          auto_close = true,
+          startup = {
+            timeout_ms = 2000,
+            retry_interval_ms = 50,
+            grace_ms = 800,
+          },
+          keymaps = {},
+        },
+        keymaps = {},
+      },
     },
     log = {
       level = "warn",
@@ -134,61 +171,45 @@ The resolved default options table is:
       on_terminal_restore = nil,
       on_terminal_close = nil,
     },
-    terminal = {
-      provider = "auto",
-      provider_opts = {
-        native = {
-          window = "vsplit",
-          vsplit = {
-            side = "right",
-            size_pct = 40,
-          },
-          hsplit = {
-            side = "bottom",
-            size_pct = 30,
-          },
-          float = {
-            width_pct = 80,
-            height_pct = 80,
-            border = "rounded",
-            title = " Codex ",
-            title_pos = "center",
-          },
-        },
-        snacks = {
-          -- pass-through for snacks.terminal(..., opts)
-        },
-      },
-      auto_close = true,
-      startup = {
-        timeout_ms = 2000,
-        retry_interval_ms = 50,
-        grace_ms = 800,
-      },
-      keymaps = {},
-    },
   }
 <
 
+profiles                                                 *codex-nvim-profiles*
+    Named launch profiles selectable at runtime via |codex.set_profile|.
+
+    If you provide `profiles`, include `default`. It can be empty. Use any
+    other name for additional profiles.
+
+    Named profiles inherit `auto_start`, `launch`, and `terminal` from
+    `default` (`terminal.keymaps` replaces inherited bindings when supplied).
+    Global `keymaps` belong only to the profile that defines them and do not
+    inherit.
+
+    `auto_start` sits beside `launch` inside each profile. On setup or profile
+    selection, codex.nvim tries to restore a session first. If `auto_start` is
+    true and no live session exists, it opens one without taking focus.
+    Unselected profiles never auto-start.
+
+    Migration from top-level options:
+    Move top-level `launch` and `terminal` under `profiles.default`.
+    Put arguments in `launch.cmd` and move `auto_start` beside `launch`.
+
 launch                                                     *codex-nvim-launch*
-    Process launch settings.
+    Process launch settings. Omitted fields inherit from `default` (or the
+    selected profile when passed as overrides to |codex.set_profile|).
 
     `cmd`
-      Executable to start. Defaults to `codex`.
-      Other supported values can be found under the type `codex.AgentHarness`
-
-    `args`
-      Additional CLI arguments appended to `cmd`.
-
-    `env`
-      Extra environment variables merged into the process environment.
-
-    `auto_start`
-      When true, the terminal can be opened automatically for send-like flows.
+      Executable string or argv list (`{ "codex", "--model", "o3" }`). A
+      supplied value replaces the entire inherited command.
 
     `cwd`
-      Working directory override. When nil, use Neovim's current working
-      directory.
+      Working directory string, `nil` to inherit, or `false` to clear an
+      inherited directory and use Neovim's current working directory.
+
+    `env`
+      Extra environment variables merged by key onto inherited overrides. Pass
+      `env = {}` to clear inherited overrides without clearing the process
+      environment.
 
 log                                                           *codex-nvim-log*
     Logging controls.
@@ -228,8 +249,9 @@ hooks                                                       *codex-nvim-hooks*
       `config`
         Resolved codex.nvim config. Treat as read-only.
 
-      `provider`, `bufnr`, `winid`, `cmd`, `cwd`
-        Included when available for terminal lifecycle events.
+      `profile_name`, `provider`, `bufnr`, `winid`, `cmd`, `cwd`
+        Included when available for terminal lifecycle events (`profile_name`
+        identifies the owning profile on open, restore, and close events).
 
     Example:
 >lua
@@ -328,7 +350,11 @@ native provider                                   *codex-nvim-terminal-native*
 
 snacks provider                                   *codex-nvim-terminal-snacks*
     `terminal.provider_opts.snacks` is passed through to
-    `snacks.terminal(..., opts)`.
+    `snacks.terminal(..., opts)`. Resolved `launch` settings (`cmd`, `cwd`,
+    and `env`) take precedence over `snacks` options, and named profiles
+    automatically reserve negative `count` values to keep Snacks terminal
+    identities isolated (an explicit negative `count` on `default` is
+    rejected when named profiles are configured).
 
 terminal.keymaps entries                              *codex-nvim-terminal-km*
     Each entry is a table with:
@@ -399,18 +425,35 @@ Access the core API through `require("codex")` and command helpers through
 Setup and runtime                                     *codex-nvim-api-runtime*
 
 setup({opts})                                                    *codex.setup*
-    Initialize plugin config and runtime state, and register `:Codex*`
-    commands.
+    Initialize plugin config, launch profiles, and runtime state, and register
+    `:Codex*` commands.
     Returns: `nil`
+
+set_profile({name}, {launch_overrides})                    *codex.set_profile*
+    Select a configured profile by `name` with optional per-activation
+    `launch_overrides` (`cmd`, `cwd`, `env`).
+    Example: >lua
+      require("codex").set_profile("home", { cwd = false })
+<
+    Switching keeps existing sessions alive. Launch overrides last until your
+    next selection and apply only when starting a new process. Errors leave
+    the selected profile, config, and active mappings unchanged.
+    Returns: `boolean, string|nil`
+
+get_profile()                                              *codex.get_profile*
+    Return the currently selected profile name, or `nil` when uninitialized.
+    Returns: `string|nil`
 
 deactivate()                                                *codex.deactivate*
     Retire plugin runtime state before unloading or reconfiguring the plugin.
-    Closes the active terminal, removes plugin commands and autocmds, and
-    invalidates pending work. lazy.nvim calls this automatically on reload.
+    Closes all tracked sessions across profiles, restores displaced global
+    mappings, removes plugin commands and autocmds, and invalidates pending
+    work. lazy.nvim calls this automatically on reload.
     Returns: `nil`
 
 get_config()                                                *codex.get_config*
-    Return a deep-copied snapshot of the resolved config.
+    Return a copy of the selected profile's effective config, including launch
+    overrides. Unlike `setup()` options, this table has no `profiles` wrapper.
     Returns: `table|nil`
 
 Session                                               *codex-nvim-api-session*
@@ -419,13 +462,20 @@ Session                                               *codex-nvim-api-session*
 Access session methods through `require("codex").session`.
 
 session.open({focus}, {args})                             *codex.session.open*
-    Open a Codex terminal session.
+    Open a Codex terminal session for the selected profile.
     `focus` defaults to true when omitted. Optional `args` is a string array
-    that overrides configured launch arguments.
+    that replaces configured arguments from `launch.cmd` (including `{}`).
     Returns: `nil`
 
-session.close()                                          *codex.session.close*
-    Close the active session and reset the send queue.
+session.teardown()                                    *codex.session.teardown*
+    Close only the currently selected profile's active session and reset the
+    send queue.
+    Returns: `nil`
+
+session.teardown_all()                            *codex.session.teardown_all*
+    Close all tracked sessions across profiles and cancel pending sends and
+    scheduled auto-starts. Keep the selected profile, mappings, and plugin
+    setup active. Does not scan for untracked terminals.
     Returns: `nil`
 
 session.toggle()                                        *codex.session.toggle*
@@ -447,6 +497,19 @@ session.is_running()                                *codex.session.is_running*
 session.is_focused()                                *codex.session.is_focused*
     Return whether editor focus is on the active Codex session.
     Returns: `boolean`
+
+Session restoration                              *codex-nvim-session-restore*
+
+At startup or when you load a Neovim session, codex.nvim keeps the selected
+profile if it already has a live session. Otherwise it checks named profiles
+alphabetically, then `default`. It selects the first profile with a matching
+live terminal and applies its keymaps. Other terminals stay open.
+
+`set_profile()` checks only the requested profile, using any launch overrides.
+Startup and profile switches try to reconnect before starting a new terminal.
+Loading a session later never starts an agent. If your session manager does
+not recreate a live terminal, there is nothing to reconnect to: restoring a
+Neovim session cannot bring back an old process.
 
 Logs                                                     *codex-nvim-api-logs*
 
@@ -623,6 +686,11 @@ builtin.resume({opts})                                  *codex.builtin.resume*
     harness is specified, start the configured harness and send `/resume`
     once it is ready.
 
+    Unless `opts.harness` is supplied, harness detection uses the executable
+    portion of `launch.cmd`, not its arguments. When launching a new resume
+    process, resume arguments replace any arguments configured in `launch.cmd`;
+    running sessions keep current behavior.
+
     Returns: `err` (`string|nil`).
 
 One-off actions                                   *codex-nvim-api-one-off*
@@ -677,7 +745,7 @@ require("codex.builtin").keymaps                       *codex.builtin.keymaps*
     Builtin terminal-local actions for `terminal.keymaps`.
 
     Available actions:
-      `toggle`, `clear_input`, `unfocus`, `close`, `nav_left`, `nav_down`,
+      `toggle`, `clear_input`, `unfocus`, `teardown`, `nav_left`, `nav_down`,
       `nav_up`, `nav_right`
 
 ==============================================================================
@@ -732,8 +800,47 @@ Session opening                                     *codex-nvim-behavior-open*
 ==============================================================================
 KEYMAPS                                                   *codex-nvim-keymaps*
 
-`codex.nvim` does not register global mappings in `setup()`. Define any global
-maps in your plugin spec or config.
+`codex.nvim` does not register global mappings by default. Define global maps
+either in your plugin spec or per profile via `profiles.<name>.keymaps`.
+
+Switching removes the previous profile's global mappings and restores any
+they replaced. Terminal-local mappings stay with their buffers. The built-in
+`toggle`, `clear_input`, and `teardown` terminal mappings only act while their
+profile is selected.
+
+Example profile global and terminal-local mappings:
+
+>lua
+  local km = require("codex.builtin").keymaps
+
+  require("codex").setup({
+    profiles = {
+      default = {
+        keymaps = {
+          ["<leader>ot"] = {
+            mode = "n",
+            action = function()
+              require("codex").session.toggle()
+            end,
+            desc = "Codex: Toggle terminal",
+          },
+        },
+        terminal = {
+          keymaps = {
+            ["<C-c>"] = { mode = { "t", "n" }, action = km.toggle },
+            ["<M-BS>"] = { mode = { "t", "n" }, action = km.clear_input },
+            ["<C-g>"] = { mode = { "t", "n" }, action = km.unfocus },
+            ["<C-x>"] = { mode = { "t", "n" }, action = km.teardown },
+            ["<A-h>"] = { mode = { "t", "n" }, action = km.nav_left },
+            ["<A-j>"] = { mode = { "t", "n" }, action = km.nav_down },
+            ["<A-k>"] = { mode = { "t", "n" }, action = km.nav_up },
+            ["<A-l>"] = { mode = { "t", "n" }, action = km.nav_right },
+          },
+        },
+      },
+    },
+  })
+<
 
 Example lazy.nvim global mappings:
 
@@ -809,27 +916,6 @@ Example lazy.nvim global mappings:
 <
 
 Set `vim.g.mapleader` before plugin setup so `<leader>` expands as expected.
-
-Example terminal-local mappings:
-
->lua
-  local km = require("codex.builtin").keymaps
-
-  require("codex").setup({
-    terminal = {
-      keymaps = {
-        ["<C-c>"] = { mode = { "t", "n" }, action = km.toggle },
-        ["<M-BS>"] = { mode = { "t", "n" }, action = km.clear_input },
-        ["<C-g>"] = { mode = { "t", "n" }, action = km.unfocus },
-        ["<C-x>"] = { mode = { "t", "n" }, action = km.close },
-        ["<A-h>"] = { mode = { "t", "n" }, action = km.nav_left },
-        ["<A-j>"] = { mode = { "t", "n" }, action = km.nav_down },
-        ["<A-k>"] = { mode = { "t", "n" }, action = km.nav_up },
-        ["<A-l>"] = { mode = { "t", "n" }, action = km.nav_right },
-      },
-    },
-  })
-<
 
 ==============================================================================
 EXAMPLES                                                 *codex-nvim-examples*

@@ -95,7 +95,7 @@ describe("codex.init public api lifecycle", function()
     assert.same({ "VimEnter", "SessionLoadPost" }, env.fake_vim._autocmds[2].event)
 
     local cfg = env.codex.get_config()
-    assert.equal("codex-test", cfg.launch.cmd)
+    assert.same({ "codex-test", "--flag" }, cfg.launch.cmd)
     assert.is_nil(cfg._deps)
   end)
 
@@ -131,8 +131,8 @@ describe("codex.init public api lifecycle", function()
     assert.same({ "commands" }, env.call_order)
     assert.is_not_nil(seen)
     assert.equal("on_setup", seen.event)
-    assert.equal("codex-test", seen.commands)
-    assert.equal(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
+    assert.same({ "codex-test", "--flag" }, seen.commands)
+    assert.same(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
     assert.equal(0, #env.provider.open_calls)
     assert.equal(1, #env.provider.discover_restorable_calls)
   end)
@@ -168,7 +168,7 @@ describe("codex.init public api lifecycle", function()
     assert.equal(0, #cleared)
   end)
 
-  it("setup reattaches the visible restored session and closes extras", function()
+  it("setup reattaches the first candidate without closing extras", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps({
       _provider = function(provider, fake_vim)
@@ -198,18 +198,12 @@ describe("codex.init public api lifecycle", function()
 
     -- ========= [A]ssert  =========
     assert.is_not_nil(session)
-    assert.equal("visible", session.handle.id)
-    assert.equal("codex-test", session.cmd)
-    assert.equal("/visible", session.cwd)
-    assert.equal(1, #env.provider.close_calls)
-    assert.equal("hidden", env.provider.close_calls[1].id)
+    assert.equal("hidden", session.handle.id)
+    assert.equal("codex-test resume", session.cmd)
+    assert.equal("/hidden", session.cwd)
+    assert.equal(0, #env.provider.close_calls)
     assert.equal(1, #env.provider.attach_restored_calls)
-    assert.equal("visible", env.provider.attach_restored_calls[1].handle.id)
-    assert.same(env.provider.close_calls[1], {
-      id = "hidden",
-      alive = true,
-      bufnr = 41,
-    })
+    assert.equal("hidden", env.provider.attach_restored_calls[1].handle.id)
   end)
 
   it("fires on_terminal_restore after a restored session is attached", function()
@@ -249,47 +243,105 @@ describe("codex.init public api lifecycle", function()
     assert.equal(7, seen.winid)
     assert.equal("codex-test", seen.cmd)
     assert.equal("/visible", seen.cwd)
-    assert.equal(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
+    assert.same(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
   end)
 
-  it("setup attaches restored session only after extra sessions are closed", function()
-    -- ========= [A]rrange =========
+  it("startup selects the first matching named profile before auto-start", function()
+    local restored = false
+    local seen
     local env = setup_with_deps({
-      _provider = function(provider, fake_vim)
-        fake_vim._set_window_buf(7, 71)
-        provider.discover_restorable_fn = function()
+      profiles = { default = { auto_start = true }, zulu = {}, alpha = {} },
+      hooks = {
+        on_terminal_restore = function(ctx)
+          seen = ctx.profile_name
+        end,
+      },
+      _provider = function(provider)
+        provider.discover_restorable_fn = function(config)
+          if not restored then
+            return {}
+          end
           return {
             {
-              handle = { id = "hidden", alive = true, bufnr = 41 },
-              cmd = "codex-test resume",
-              cwd = "/hidden",
+              handle = { id = config.profile_name, alive = true, bufnr = 41 },
+              cmd = "codex-test",
+              cwd = "/tmp",
               bufnr = 41,
             },
-            {
-              handle = { id = "visible", alive = true, bufnr = 71, winid = 7 },
-              cmd = "codex-test",
-              cwd = "/visible",
-              bufnr = 71,
-              winid = 7,
-            },
           }
-        end
-        provider.attach_restored_fn = function(handle, _, on_exit)
-          assert.equal(1, #provider.close_calls)
-          assert.equal("hidden", provider.close_calls[1].id)
-          assert.equal("visible", handle.id)
-          assert.is_function(on_exit)
-          return true
         end
       end,
     })
 
-    -- ========= [A]ct     =========
-    local session = env.store.get_active()
+    restored = true
+    assert.equal(1, #env.fake_vim._scheduled)
+    env.fake_vim._scheduled[1]()
 
-    -- ========= [A]ssert  =========
-    assert.is_not_nil(session)
-    assert.equal("visible", session.handle.id)
+    assert.equal("alpha", env.codex.get_profile())
+    assert.equal("alpha", seen)
+    assert.matches(
+      "reattached restored agent session %(profile=alpha, provider=native, bufnr=41%)",
+      env.logger.infos[1]
+    )
+    assert.equal("alpha", env.store.get_active("alpha").handle.id)
+    assert.equal(1, #env.provider.attach_restored_calls)
+    assert.equal(0, #env.provider.open_calls)
+  end)
+
+  it("explicit profile switch probes with launch overrides and supersedes startup", function()
+    local env = setup_with_deps({
+      profiles = { default = { auto_start = true }, work = {} },
+      _provider = function(provider)
+        provider.discover_restorable_fn = function(config)
+          if config.launch.cmd ~= "custom-agent" then
+            return {}
+          end
+          return {
+            {
+              handle = { id = "hidden", alive = true, bufnr = 41 },
+              cmd = "custom-agent",
+              cwd = "/tmp",
+              bufnr = 41,
+            },
+          }
+        end
+      end,
+    })
+
+    assert.is_true(env.codex.set_profile("work", { cmd = "custom-agent" }))
+    assert.equal("hidden", env.store.get_active("work").handle.id)
+
+    env.fake_vim._fire_autocmd("VimEnter")
+    assert.equal(1, #env.fake_vim._scheduled)
+    env.fake_vim._scheduled[1]()
+    assert.equal("work", env.codex.get_profile())
+    assert.equal(0, #env.provider.open_calls)
+
+    assert.is_true(env.codex.set_profile("default"))
+    assert.is_true(env.codex.set_profile("work", { cmd = "custom-agent" }))
+    assert.equal(1, #env.provider.attach_restored_calls)
+  end)
+
+  it("stops at a failed attach without switching profiles or starting a process", function()
+    local env = setup_with_deps({
+      profiles = { default = { auto_start = true }, work = {} },
+      _provider = function(provider)
+        provider.discover_restorable_fn = function(config)
+          assert.equal("work", config.profile_name)
+          return {
+            { handle = { alive = true, bufnr = 41 }, cmd = "codex-test", cwd = "/tmp", bufnr = 41 },
+          }
+        end
+        provider.attach_restored_ok = false
+        provider.attach_restored_err = "attach failed"
+      end,
+    })
+
+    assert.equal("default", env.codex.get_profile())
+    assert.is_nil(env.store.get_active("work"))
+    assert.equal(1, #env.provider.attach_restored_calls)
+    assert.equal(0, #env.provider.open_calls)
+    assert.equal(0, #env.fake_vim._scheduled)
   end)
 
   it("SessionLoadPost schedules a restore after session buffers appear", function()
@@ -377,7 +429,7 @@ describe("codex.init public api lifecycle", function()
     assert.equal(21, seen.winid)
     assert.equal("codex-test", seen.cmd)
     assert.equal("/test/cwd", seen.cwd)
-    assert.equal(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
+    assert.same(env.codex.get_config().launch.cmd, seen.config.launch.cmd)
   end)
 
   it("includes Snacks terminal window fields in on_terminal_open context", function()
@@ -454,7 +506,11 @@ describe("codex.init public api lifecycle", function()
   it("toggle resolves provider once when opening from no active session", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps({
-      terminal = { provider = "auto" },
+      profiles = {
+        default = {
+          terminal = { provider = "auto" },
+        },
+      },
     })
     env.providers.resolve_calls = {}
     -- ========= [A]ct     =========
@@ -975,8 +1031,12 @@ describe("codex.init public api lifecycle", function()
   it("queued payloads flush in FIFO order once startup readiness is reached", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps({
-      terminal = {
-        startup = { timeout_ms = 200, retry_interval_ms = 50 },
+      profiles = {
+        default = {
+          terminal = {
+            startup = { timeout_ms = 200, retry_interval_ms = 50 },
+          },
+        },
       },
     })
     env.provider.is_alive_fn = function(handle)

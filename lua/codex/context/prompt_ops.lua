@@ -277,9 +277,10 @@ end
 ---@param get_deps fun(): table
 ---@param get_config fun(): table
 ---@param target string
+---@param is_submit_still_valid? fun(): boolean Rechecked after focus, which can change the destination.
 ---@return codex.Outcome ok
 ---@return codex.Error err
-function M.submit_with_enter_key(get_deps, get_config, target)
+function M.submit_with_enter_key(get_deps, get_config, target, is_submit_still_valid)
   local deps = get_deps()
   local config = get_config()
   local function vdebug(msg, ...)
@@ -296,20 +297,31 @@ function M.submit_with_enter_key(get_deps, get_config, target)
 
   session_lifecycle.remember_previous_focus(deps, config, session, provider)
   provider.focus(session.handle)
-  local enter_termcode = terminal_io.encode_termcode(deps, "<CR>")
-  local feedkeys = deps.vim.api.nvim_feedkeys
-  terminal_io.append_send_debug_entry(
-    deps,
-    string.format("%s[feedkeys_submit]", target),
-    enter_termcode
-  )
-  local ok, feedkeys_err = pcall(feedkeys, enter_termcode, "nt", false)
-  if ok then
-    vdebug("submit_with_enter_key feedkeys success target=%s", target)
-    return outcome.SUCCESS
+  if
+    config ~= get_config()
+    or deps.session_store.get_active(config.profile_name) ~= session
+    or not session.alive
+    or (is_submit_still_valid and not is_submit_still_valid())
+  then
+    return outcome.FAILURE, "session changed before submit"
   end
-  vdebug("submit_with_enter_key feedkeys failed target=%s err=%s", target, feedkeys_err)
-  deps.logger.warn("feedkeys submit failed, falling back to channel send: %s", feedkeys_err)
+  local bufnr = provider.get_bufnr(session.handle)
+  if not bufnr or deps.vim.api.nvim_get_current_buf() == bufnr then
+    local enter_termcode = terminal_io.encode_termcode(deps, "<CR>")
+    local feedkeys = deps.vim.api.nvim_feedkeys
+    terminal_io.append_send_debug_entry(
+      deps,
+      string.format("%s[feedkeys_submit]", target),
+      enter_termcode
+    )
+    local ok, feedkeys_err = pcall(feedkeys, enter_termcode, "nt", false)
+    if ok then
+      vdebug("submit_with_enter_key feedkeys success target=%s", target)
+      return outcome.SUCCESS
+    end
+    vdebug("submit_with_enter_key feedkeys failed target=%s err=%s", target, feedkeys_err)
+    deps.logger.warn("feedkeys submit failed, falling back to channel send: %s", feedkeys_err)
+  end
 
   terminal_io.append_send_debug_entry(
     deps,

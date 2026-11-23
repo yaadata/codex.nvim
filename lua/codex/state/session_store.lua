@@ -1,102 +1,116 @@
----@class codex.SessionStore
----@field create fun(spec: codex.SessionSpec): string
----@field get fun(id: string): codex.SessionState?
----@field get_active fun(): codex.SessionState?
----@field set_active fun(id: string)
----@field mark_dead fun(id: string)
----@field remove fun(id: string)
----@field list fun(): codex.SessionState[]
----@field reset fun()
-local M = {}
+---@return codex.SessionStore
+local function new()
+  ---@class codex.SessionStore
+  local M = {}
 
----@type table<string, codex.SessionState>
-local sessions = {}
----@type string|nil
-local active_id = nil
-local counter = 0
+  ---@type table<string, codex.SessionState>
+  local sessions = {}
+  ---@type table<string, string>
+  local active_by_profile = {}
+  local counter = 0
 
---- Create a new session from the given spec, store it, and set it as active.
----@param spec codex.SessionSpec
----@return string id
-function M.create(spec)
-  counter = counter + 1
-  local id = "session_" .. counter
-
-  sessions[id] = {
-    id = id,
-    handle = spec.handle,
-    cmd = spec.cmd,
-    cwd = spec.cwd,
-    provider_name = spec.provider_name,
-    alive = true,
-  }
-
-  active_id = id
-  return id
-end
-
---- Look up a session by its id.
----@param id string
----@return codex.SessionState|nil
-function M.get(id)
-  return sessions[id]
-end
-
---- Return the currently active session, or nil if none is active.
----@return codex.SessionState|nil
-function M.get_active()
-  if active_id then
-    return sessions[active_id]
+  ---@param session codex.SessionState|nil
+  ---@return nil
+  local function clear_active(session)
+    if session and active_by_profile[session.profile_name] == session.id then
+      active_by_profile[session.profile_name] = nil
+    end
   end
-  return nil
-end
 
---- Set the active session id; pass nil to clear the active session.
----@param id string|nil
----@return nil
-function M.set_active(id)
-  active_id = id
-end
+  --- Create a new session from the given spec, store it, and set it as active for its profile.
+  ---@param spec codex.SessionSpec
+  ---@return string id
+  function M.create(spec)
+    counter = counter + 1
+    local id = "session_" .. counter
+    local profile_name = spec.profile_name or "default"
 
---- Mark a session as no longer alive and clear it from active if it was active.
----@param id string
----@return nil
-function M.mark_dead(id)
-  if sessions[id] then
-    sessions[id].alive = false
+    sessions[id] = {
+      id = id,
+      handle = spec.handle,
+      cmd = spec.cmd,
+      cwd = spec.cwd,
+      provider_name = spec.provider_name,
+      profile_name = profile_name,
+      config = spec.config,
+      alive = true,
+    }
+
+    active_by_profile[profile_name] = id
+    return id
   end
-  if active_id == id then
-    active_id = nil
+
+  --- Look up a session by its id.
+  ---@param id string
+  ---@return codex.SessionState|nil
+  function M.get(id)
+    return sessions[id]
   end
-end
 
---- Remove a session from the store entirely and clear it from active if needed.
----@param id string
----@return nil
-function M.remove(id)
-  sessions[id] = nil
-  if active_id == id then
-    active_id = nil
+  --- Return the currently active session for `profile_name` (defaults to "default"), or nil.
+  ---@param profile_name? string
+  ---@return codex.SessionState|nil
+  function M.get_active(profile_name)
+    local id = active_by_profile[profile_name or "default"]
+    return id and sessions[id] or nil
   end
-end
 
---- Return a list of all stored sessions.
----@return codex.SessionState[]
-function M.list()
-  ---@type codex.SessionState[]
-  local result = {}
-  for _, session in pairs(sessions) do
-    table.insert(result, session)
+  --- Set the active session id for a profile; pass nil to clear that profile's active session.
+  ---@param id string|nil
+  ---@param profile_name? string
+  ---@return nil
+  function M.set_active(id, profile_name)
+    if id == nil then
+      active_by_profile[profile_name or "default"] = nil
+      return
+    end
+    local session = sessions[id]
+    local target_profile = profile_name or (session and session.profile_name) or "default"
+    active_by_profile[target_profile] = id
   end
-  return result
+
+  --- Mark a session as no longer alive and clear it from active if it was active.
+  ---@param id string
+  ---@return nil
+  function M.mark_dead(id)
+    local session = sessions[id]
+    if session then
+      session.alive = false
+      clear_active(session)
+    end
+  end
+
+  --- Remove a session from the store entirely and clear it from active if needed.
+  ---@param id string
+  ---@return nil
+  function M.remove(id)
+    local session = sessions[id]
+    clear_active(session)
+    sessions[id] = nil
+  end
+
+  --- Return a list of all stored sessions.
+  ---@return codex.SessionState[]
+  function M.list()
+    ---@type codex.SessionState[]
+    local result = {}
+    for _, session in pairs(sessions) do
+      table.insert(result, session)
+    end
+    return result
+  end
+
+  --- Clear all sessions, active mappings, and reset the id counter.
+  ---@return nil
+  function M.reset()
+    sessions = {}
+    active_by_profile = {}
+    counter = 0
+  end
+
+  return M
 end
 
---- Clear all sessions, the active id, and reset the id counter.
----@return nil
-function M.reset()
-  sessions = {}
-  active_id = nil
-  counter = 0
-end
-
+local M = new()
+M.new = new
 return M

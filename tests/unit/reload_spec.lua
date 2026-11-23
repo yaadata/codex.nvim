@@ -17,7 +17,11 @@ describe("codex.nvim lazy reload lifecycle", function()
   local function setup(auto_start, schedule)
     local codex = require("codex")
     codex.setup({
-      launch = { auto_start = auto_start },
+      profiles = {
+        default = {
+          auto_start = auto_start,
+        },
+      },
       hooks = {
         on_terminal_close = function()
           close_hooks = close_hooks + 1

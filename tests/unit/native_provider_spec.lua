@@ -335,6 +335,15 @@ local function with_stubbed_native_env(run)
   stub(vim.fn, "jobstart", jobstart)
   stub(vim.fn, "chansend", chansend)
   stub(vim.fn, "jobstop", jobstop)
+  stub(vim.fn, "jobwait", function()
+    return { -1 }
+  end)
+  stub(vim.api, "nvim_win_get_config", function()
+    return { relative = "" }
+  end)
+  stub(vim.api, "nvim_win_get_tabpage", function()
+    return vim.api.nvim_get_current_tabpage()
+  end)
   stub(vim, "cmd", fake_cmd)
   stub(vim.keymap, "set", keymap_set)
   vim.bo = fake_bo
@@ -417,9 +426,14 @@ describe("codex.providers.native", function()
       local env = { CODEX_TEST = "1" }
 
       -- ========= [A]ct     =========
-      provider.open("codex", {}, env, cfg, false)
+      local args = { "--model", "local model", "" }
+      provider.open("/tmp/my tools/codex", args, env, cfg, false)
 
       -- ========= [A]ssert  =========
+      assert.same(
+        { "/tmp/my tools/codex", "--model", "local model", "" },
+        state.jobstart_calls[1].cmd
+      )
       assert.same(env, state.jobstart_calls[1].opts.env)
       assert.is_true(state.jobstart_calls[1].opts.term)
     end)
@@ -1143,6 +1157,79 @@ describe("codex.providers.native", function()
     end)
   end)
 
+  it("discovers unmarked default terminals by the PATH-resolved executable", function()
+    with_stubbed_native_env(function(state)
+      stub(vim.fn, "exepath", function(cmd)
+        return cmd == "pi" and "/opt/mise/bin/pi" or ""
+      end)
+      local provider = require("codex.providers.native")
+      local cfg = make_config({ profile_name = "default" })
+      cfg.launch.cmd = { "pi" }
+
+      for i, cmd in ipairs({
+        "/opt/mise/bin/pi",
+        "/opt/mise/bin/pi --flag",
+        "/other/bin/pi",
+        "/opt/mise/bin/pilot",
+      }) do
+        state.buf_valid[i] = true
+        state.buf_names[i] = "term:///tmp/project//123:" .. cmd
+        state.buf_channels[i] = 90 + i
+      end
+
+      local restored = provider.discover_restorable(cfg)
+      assert.equal(2, #restored)
+      assert.equal(1, restored[1].bufnr)
+      assert.equal(2, restored[2].bufnr)
+
+      cfg.profile_name = "work"
+      cfg.launch.cwd = "/tmp/project"
+      assert.equal(2, #provider.discover_restorable(cfg))
+      cfg.launch.cwd = "/tmp/other"
+      assert.same({}, provider.discover_restorable(cfg))
+    end)
+  end)
+
+  it("matches live native terminal geometry unless ownership is known", function()
+    with_stubbed_native_env(function(state)
+      -- ========= [A]rrange =========
+      local provider = require("codex.providers.native")
+      local cfg = make_config({ profile_name = "work" })
+      cfg.launch.cmd = { "codex", "--model", "o3" }
+      state.buf_valid[21] = true
+      state.buf_names[21] = "term:///tmp//123:codex"
+      state.buf_channels[21] = 91
+      state.wins[9] = { bufnr = 21, valid = true }
+
+      local win_config = { relative = "", split = "above" }
+      stub(vim.api, "nvim_win_get_config", function()
+        return win_config
+      end)
+      stub(vim.fn, "winlayout", function()
+        return { "row", {} }
+      end)
+
+      -- ========= [A]ct & [A]ssert =========
+      assert.same({}, provider.discover_restorable(cfg))
+
+      win_config.split = "right"
+      local restored = provider.discover_restorable(cfg)[1]
+      assert.equal(21, restored.bufnr)
+
+      win_config.relative = "editor"
+      assert.same({}, provider.discover_restorable(cfg))
+
+      assert.is_true(provider.attach_restored(restored.handle, cfg))
+      assert.equal("work", state.buf_vars[21].codex_terminal.profile_name)
+      assert.equal(21, provider.discover_restorable(cfg)[1].bufnr)
+
+      stub(vim.fn, "jobwait", function()
+        return { 0 }
+      end)
+      assert.same({}, provider.discover_restorable(cfg))
+    end)
+  end)
+
   it("attach_restored registers TermClose autocmd and terminal keymaps", function()
     with_stubbed_native_env(function(state)
       -- ========= [A]rrange =========
@@ -1216,4 +1303,51 @@ describe("codex.providers.native", function()
       assert.is_nil(handle.bufnr)
     end)
   end)
+
+  it(
+    "isolates discover_restorable by explicit profile and provider markers across unmarked buffers",
+    function()
+      with_stubbed_native_env(function(state)
+        -- ========= [A]rrange =========
+        local provider = require("codex.providers.native")
+        local work_cfg = make_config({ profile_name = "work" })
+        work_cfg.launch.cmd = { "codex", "--model", "o3" }
+
+        local work_handle = provider.open("codex", { "--model", "o3" }, {}, work_cfg, false)
+        state.buf_channels[work_handle.bufnr] = work_handle.jobid
+
+        -- Unmarked legacy terminal buffer
+        state.buf_valid[30] = true
+        state.buf_names[30] = "term:///tmp/legacy//123:codex --legacy"
+        state.buf_channels[30] = 300
+
+        -- Snacks-owned terminal buffer
+        state.buf_valid[31] = true
+        state.buf_channels[31] = 301
+        state.buf_vars[31] = {
+          codex_terminal = {
+            provider = "snacks",
+            cmd = "codex",
+            cwd = "/snacks",
+            profile_name = "work",
+          },
+        }
+
+        -- ========= [A]ct & [A]ssert =========
+        -- Selected work profile recovers only its marked buffer even when launch.cmd changed
+        local changed_work_cfg = make_config({ profile_name = "work" })
+        changed_work_cfg.launch.cmd = "claude"
+        local work_restored = provider.discover_restorable(changed_work_cfg)
+        assert.equal(1, #work_restored)
+        assert.equal(work_handle.bufnr, work_restored[1].bufnr)
+
+        -- Default profile recovers only the unmarked legacy buffer, not work's buffer
+        local default_cfg = make_config({ profile_name = "default" })
+        default_cfg.launch.cmd = { "codex", "--legacy" }
+        local default_restored = provider.discover_restorable(default_cfg)
+        assert.equal(1, #default_restored)
+        assert.equal(30, default_restored[1].bufnr)
+      end)
+    end
+  )
 end)

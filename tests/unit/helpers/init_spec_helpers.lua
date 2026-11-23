@@ -1,77 +1,7 @@
----@return tests.InitSpecSessionStore
-local function make_session_store()
-  local sessions = {}
-  local active_id = nil
-  local counter = 0
-
-  ---@class tests.InitSpecSessionStore: codex.SessionStore
-  local store = {}
-
-  function store.create(spec)
-    counter = counter + 1
-    local id = "session_" .. counter
-    sessions[id] = {
-      id = id,
-      handle = spec.handle,
-      cmd = spec.cmd,
-      cwd = spec.cwd,
-      provider_name = spec.provider_name,
-      alive = true,
-    }
-    active_id = id
-    return id
-  end
-
-  function store.get(id)
-    return sessions[id]
-  end
-
-  function store.get_active()
-    if active_id then
-      return sessions[active_id]
-    end
-    return nil
-  end
-
-  function store.set_active(id)
-    active_id = id
-  end
-
-  function store.mark_dead(id)
-    if sessions[id] then
-      sessions[id].alive = false
-    end
-    if active_id == id then
-      active_id = nil
-    end
-  end
-
-  function store.remove(id)
-    sessions[id] = nil
-    if active_id == id then
-      active_id = nil
-    end
-  end
-
-  function store.list()
-    local result = {}
-    for _, session in pairs(sessions) do
-      table.insert(result, session)
-    end
-    return result
-  end
-
-  function store.reset()
-    sessions = {}
-    active_id = nil
-    counter = 0
-  end
-
-  return store
-end
+local make_session_store = require("codex.state.session_store").new
 
 ---@return tests.InitSpecProvider
-local function make_provider()
+local function make_provider(vim_obj)
   ---@class tests.InitSpecProvider: codex.Provider
   local provider = {
     open_calls = {},
@@ -164,6 +94,15 @@ local function make_provider()
       return next_focus
     end
 
+    local bufnr = provider.get_bufnr(handle)
+    if provider.focus_ok and bufnr then
+      local winid = vim_obj.fn.bufwinid(bufnr)
+      if winid == -1 then
+        winid = 9000
+        vim_obj._set_window_buf(winid, bufnr)
+      end
+      vim_obj._set_current_win(winid)
+    end
     return provider.focus_ok, provider.focus_err
   end
 
@@ -416,7 +355,7 @@ local function make_fake_vim()
       end
 
       if matches and autocmd.spec and type(autocmd.spec.callback) == "function" then
-        autocmd.spec.callback()
+        autocmd.spec.callback({ event = event })
       end
     end
   end
@@ -658,7 +597,7 @@ end
 ---@class tests.InitSpecEnv
 ---@field codex codex.Api
 ---@field provider tests.InitSpecProvider
----@field store tests.InitSpecSessionStore
+---@field store codex.SessionStore
 ---@field logger tests.InitSpecLogger
 ---@field fake_vim tests.InitSpecVim
 ---@field formatter tests.InitSpecFormatter
@@ -672,10 +611,10 @@ local function setup_with_deps(overrides)
 
   overrides = overrides or {}
 
-  local provider = make_provider()
+  local fake_vim = make_fake_vim()
+  local provider = make_provider(fake_vim)
   local store = make_session_store()
   local logger = make_logger()
-  local fake_vim = make_fake_vim()
   local formatter = make_formatter()
   local selection = make_selection()
   local call_order = {}
@@ -703,12 +642,15 @@ local function setup_with_deps(overrides)
   local setup_overrides = vim.deepcopy(overrides)
   setup_overrides._provider = nil
   codex.setup(vim.tbl_deep_extend("force", {
-    launch = {
-      cmd = "codex-test",
-      args = { "--flag" },
-      env = { CODEX_TEST = "1" },
+    profiles = {
+      default = {
+        launch = {
+          cmd = { "codex-test", "--flag" },
+          env = { CODEX_TEST = "1" },
+        },
+        terminal = { provider = "native" },
+      },
     },
-    terminal = { provider = "native" },
     _deps = {
       providers = providers,
       session_store = store,

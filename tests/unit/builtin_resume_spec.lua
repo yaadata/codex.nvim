@@ -29,7 +29,7 @@ describe("codex.builtin.resume", function()
 
   it("launches Codex resume when explicitly selected and no session is running", function()
     -- ========= [A]rrange =========
-    local env = setup_with_deps({ launch = { cmd = harness.CODEX } })
+    local env = setup_with_deps({ profiles = { default = { launch = { cmd = harness.CODEX } } } })
 
     -- ========= [A]ct     =========
     local err = builtin.resume({ harness = harness.CODEX })
@@ -134,8 +134,12 @@ describe("codex.builtin.resume", function()
   it("infers last-resume CLI arguments from the configured harness", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps({
-      launch = {
-        cmd = harness.OPENCODE,
+      profiles = {
+        default = {
+          launch = {
+            cmd = harness.OPENCODE,
+          },
+        },
       },
     })
 
@@ -152,7 +156,14 @@ describe("codex.builtin.resume", function()
   for _, cmd in ipairs({ harness.ANTIGRAVITY, harness.OPENCODE }) do
     it("starts " .. cmd .. " and sends /resume once ready for a non-last resume", function()
       -- ========= [A]rrange =========
-      local env = setup_with_deps({ launch = { cmd = cmd, auto_start = false } })
+      local env = setup_with_deps({
+        profiles = {
+          default = {
+            auto_start = false,
+            launch = { cmd = { cmd, "--flag" } },
+          },
+        },
+      })
       vim.defer_fn = env.fake_vim.defer_fn
       local ready = false
       env.provider.is_ready_fn = function()
@@ -184,7 +195,7 @@ describe("codex.builtin.resume", function()
 
   it("launches explicitly selected Claude with --resume", function()
     -- ========= [A]rrange =========
-    local env = setup_with_deps({ launch = { cmd = harness.CLAUDE } })
+    local env = setup_with_deps({ profiles = { default = { launch = { cmd = harness.CLAUDE } } } })
 
     -- ========= [A]ct     =========
     local err = builtin.resume({ harness = harness.CLAUDE, last = false })
@@ -213,7 +224,7 @@ describe("codex.builtin.resume", function()
 
   it("launches explicitly selected Pi with --resume", function()
     -- ========= [A]rrange =========
-    local env = setup_with_deps({ launch = { cmd = harness.PI } })
+    local env = setup_with_deps({ profiles = { default = { launch = { cmd = harness.PI } } } })
 
     -- ========= [A]ct     =========
     local err = builtin.resume({ harness = harness.PI, last = false })
@@ -271,7 +282,7 @@ describe("codex.builtin.resume", function()
   for _, cmd in ipairs({ harness.ANTIGRAVITY, harness.OPENCODE }) do
     it("sends /resume to an active " .. cmd .. " session", function()
       -- ========= [A]rrange =========
-      local env = setup_terminal({ launch = { cmd = cmd } })
+      local env = setup_terminal({ profiles = { default = { launch = { cmd = cmd } } } })
 
       -- ========= [A]ct     =========
       local err = builtin.resume({ harness = cmd, last = false })

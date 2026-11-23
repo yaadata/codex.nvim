@@ -11,8 +11,17 @@ local M = {}
 function M.create(opts)
   local get_deps = opts.get_deps
   local get_config = opts.get_config
+  local get_activation = opts.get_activation or function()
+    return 0
+  end
   local get_send_queue = opts.get_send_queue
   local open_session = opts.open_session
+
+  ---@param item codex.PendingSend
+  ---@return boolean
+  local function is_stale(item)
+    return item.activation ~= nil and item.activation ~= get_activation()
+  end
 
   ---Emit a verbose-only debug log when supported.
   ---@param msg string
@@ -52,14 +61,27 @@ function M.create(opts)
   ---@param provider codex.Provider
   ---@return boolean ok
   ---@return string|nil err
+  ---@return boolean|nil dropped_stale True if the destination changed before send; drop without retrying or reporting a send failure.
   local function send_item_now(item, session, provider)
     local deps = get_deps()
     local config = get_config()
+
+    if is_stale(item) then
+      return false, nil, true
+    end
 
     if item.pre_focus then
       vdebug("send_item_now pre_focus command_path=%s", item.command_path or "<text>")
       session_lifecycle.remember_previous_focus(deps, config, session, provider)
       provider.focus(session.handle)
+      if is_stale(item) then
+        return false, nil, true
+      end
+      config = get_config()
+      local current_session = deps.session_store.get_active(config.profile_name)
+      if current_session ~= session then
+        return false, nil, true
+      end
     end
 
     local target = item.command_path or "<text>"
@@ -71,9 +93,9 @@ function M.create(opts)
       return false, err
     end
 
-    if item.on_sent then
+    if item.on_sent and not is_stale(item) then
       vdebug("send_item_now running on_sent callback command_path=%s", target)
-      local callback_ok, callback_err = pcall(item.on_sent)
+      local callback_ok, callback_err = pcall(item.on_sent, session)
       if not callback_ok then
         vdebug(
           "send_item_now on_sent callback failed command_path=%s err=%s",
@@ -84,9 +106,9 @@ function M.create(opts)
       end
     end
 
-    if item.post_focus then
+    if item.post_focus and not is_stale(item) then
       vdebug("send_item_now post_focus command_path=%s", target)
-      session_lifecycle.apply_post_send_focus(deps, session, provider, config)
+      session_lifecycle.apply_post_send_focus(deps, session, provider, get_config())
     end
     vdebug("send_item_now sent command_path=%s", target)
     return true
@@ -97,6 +119,14 @@ function M.create(opts)
   ---@return codex.SendResult outcome
   ---@return string|nil err
   local function process_pending_send_item(item)
+    if is_stale(item) then
+      vdebug(
+        "process_pending_send_item drop stale item command_path=%s",
+        item.command_path or "<text>"
+      )
+      return result.DROP
+    end
+
     local deps = get_deps()
     local config = get_config()
     local first_attempt = not item.has_attempted
@@ -107,13 +137,17 @@ function M.create(opts)
       tostring(first_attempt)
     )
 
-    local session = deps.session_store.get_active()
+    local session = deps.session_store.get_active(config.profile_name)
     local provider = session_lifecycle.get_provider(deps, config)
 
     if not session or not session.alive then
       vdebug("process_pending_send_item opening session (missing or dead)")
-      open_session(config.launch.args, item.open_focus)
-      session = deps.session_store.get_active()
+      open_session(nil, item.open_focus)
+      if is_stale(item) then
+        return result.DROP
+      end
+      config = get_config()
+      session = deps.session_store.get_active(config.profile_name)
       provider = session_lifecycle.get_provider(deps, config)
       if first_attempt then
         item.opened_in_dispatch = true
@@ -128,10 +162,18 @@ function M.create(opts)
       and not item.reopen_attempted
     then
       vdebug("process_pending_send_item reopening stale active session")
-      open_session(config.launch.args, item.open_focus)
-      session = deps.session_store.get_active()
+      open_session(nil, item.open_focus)
+      if is_stale(item) then
+        return result.DROP
+      end
+      config = get_config()
+      session = deps.session_store.get_active(config.profile_name)
       provider = session_lifecycle.get_provider(deps, config)
       item.reopen_attempted = true
+    end
+
+    if is_stale(item) then
+      return result.DROP
     end
 
     if
@@ -156,7 +198,10 @@ function M.create(opts)
       return result.RETRY
     end
 
-    local ok, err = send_item_now(item, session, provider)
+    local ok, err, dropped_stale = send_item_now(item, session, provider)
+    if dropped_stale then
+      return result.DROP
+    end
     if not ok then
       vdebug(
         "process_pending_send_item drop after send failure command_path=%s err=%s",
@@ -164,7 +209,7 @@ function M.create(opts)
         err or "unknown"
       )
       log_send_failure(item, err)
-      return "drop", err
+      return result.DROP, err
     end
     vdebug("process_pending_send_item sent command_path=%s", item.command_path or "<text>")
     return result.SENT
@@ -185,6 +230,7 @@ function M.create(opts)
       post_focus = send_opts.post_focus == true,
       command_path = send_opts.command_path,
       on_sent = send_opts.on_sent,
+      activation = get_activation(),
       created_at = terminal_io.now_ms(deps),
       opened_in_dispatch = false,
       reopen_attempted = false,

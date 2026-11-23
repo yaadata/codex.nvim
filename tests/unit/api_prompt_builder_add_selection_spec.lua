@@ -49,7 +49,9 @@ describe("codex.init public api prompt_builder.add_selection", function()
   it("prompt_builder.send focuses the terminal after sending a selection", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps({
-      launch = { auto_start = false },
+      profiles = {
+        default = { auto_start = false },
+      },
     })
 
     -- ========= [A]ct     =========
@@ -92,8 +94,12 @@ describe("codex.init public api prompt_builder.add_selection", function()
   it("prompt_builder.add_selection waits for startup readiness before sending", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps({
-      terminal = {
-        startup = { timeout_ms = 200, retry_interval_ms = 50 },
+      profiles = {
+        default = {
+          terminal = {
+            startup = { timeout_ms = 200, retry_interval_ms = 50 },
+          },
+        },
       },
     })
     env.provider.is_alive_fn = function(handle)
@@ -119,9 +125,13 @@ describe("codex.init public api prompt_builder.add_selection", function()
   it("prompt_builder.send focuses the terminal when a queued selection flushes", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps({
-      launch = { auto_start = false },
-      terminal = {
-        startup = { timeout_ms = 200, retry_interval_ms = 50 },
+      profiles = {
+        default = {
+          auto_start = false,
+          terminal = {
+            startup = { timeout_ms = 200, retry_interval_ms = 50 },
+          },
+        },
       },
     })
     env.provider.is_alive_fn = function(handle)
@@ -146,8 +156,12 @@ describe("codex.init public api prompt_builder.add_selection", function()
   it("prompt_builder.add_selection drops queued payload after startup timeout", function()
     -- ========= [A]rrange =========
     local env = setup_with_deps({
-      terminal = {
-        startup = { timeout_ms = 120, retry_interval_ms = 50 },
+      profiles = {
+        default = {
+          terminal = {
+            startup = { timeout_ms = 120, retry_interval_ms = 50 },
+          },
+        },
       },
     })
     env.provider.is_alive_fn = function()

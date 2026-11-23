@@ -1,4 +1,17 @@
+local config_mod = require("codex.config")
 local M = {}
+
+---Build a job command without shell parsing or loss of argv boundaries.
+---@param cmd string
+---@param args string[]
+---@return string[]
+function M.command_argv(cmd, args)
+  local argv = { cmd }
+  for _, arg in ipairs(args) do
+    argv[#argv + 1] = arg
+  end
+  return argv
+end
 
 ---Maintain a terminal split's percentage of the editor dimensions.
 ---@param winid integer
@@ -70,14 +83,130 @@ end
 ---@param provider_name string
 ---@param full_cmd string
 ---@param cwd string
+---@param profile_name? string
 ---@return nil
-function M.set_codex_terminal_marker(bufnr, provider_name, full_cmd, cwd)
+function M.set_codex_terminal_marker(bufnr, provider_name, full_cmd, cwd, profile_name)
   local api = vim.api
   pcall(api.nvim_buf_set_var, bufnr, "codex_terminal", {
     provider = provider_name,
     cmd = full_cmd,
     cwd = cwd,
+    profile_name = profile_name or "default",
   })
+end
+
+local split_types = {
+  left = "vsplit",
+  right = "vsplit",
+  above = "hsplit",
+  below = "hsplit",
+  top = "hsplit",
+  bottom = "hsplit",
+  float = "float",
+}
+
+function M.window_split_type(winid)
+  if not winid then
+    return nil
+  end
+  local api = vim.api
+  local win = api.nvim_win_get_config(winid)
+  if (win.relative and win.relative ~= "") or win.external then
+    return "float"
+  end
+  local tabnr = api.nvim_tabpage_get_number(api.nvim_win_get_tabpage(winid))
+  if vim.fn.winlayout(tabnr)[1] == "leaf" then
+    return nil -- A lone normal window has no split even when `win.split` is set.
+  end
+  return split_types[win.split]
+end
+
+local function configured_split_type(config, provider_name)
+  local opts = config and config.terminal and config.terminal.provider_opts or {}
+  if provider_name == "native" then
+    return (opts.native or {}).window or "vsplit"
+  end
+  local win = (opts.snacks or {}).win or {}
+  return split_types[win.position]
+end
+
+function M.is_live_job(jobid)
+  return jobid ~= nil and vim.fn.jobwait({ jobid }, 0)[1] == -1
+end
+
+local function normalize_cwd(cwd)
+  local expanded = vim.fs.normalize(vim.fn.fnamemodify(cwd, ":p"))
+  return vim.uv.fs_realpath(expanded) or expanded
+end
+
+---@class codex.RestoreCandidate
+---@field cmd? string|string[]
+---@field cwd? string
+---@field split? 'vsplit'|'hsplit'|'float'
+
+---Return whether a terminal buffer belongs to the selected profile and provider.
+---@param marker any
+---@param provider_name string
+---@param config codex.ProfileConfig|table|nil
+---@param candidate codex.RestoreCandidate
+---@return boolean
+function M.matches_restorable_owner(marker, provider_name, config, candidate)
+  local selected = (config and config.profile_name) or "default"
+  if type(marker) == "table" then
+    if marker.provider ~= provider_name then
+      return false
+    end
+    if marker.profile_name ~= nil then
+      return marker.profile_name == selected
+    end
+  end
+  local launch = config and config.launch or {}
+  local executable, args = config_mod.split_command(launch.cmd)
+  if type(executable) ~= "string" or executable == "" then
+    return false
+  end
+  local wanted_split = configured_split_type(config, provider_name)
+  if wanted_split and candidate.split and wanted_split ~= candidate.split then
+    return false
+  end
+  if
+    launch.cwd
+    and candidate.cwd
+    and candidate.cwd ~= ""
+    and normalize_cwd(launch.cwd) ~= normalize_cwd(candidate.cwd)
+  then
+    return false
+  end
+
+  local cmd = candidate.cmd
+  local structured = type(cmd) == "table"
+  if structured then
+    local saved_args
+    cmd, saved_args = config_mod.split_command(cmd)
+    if #args > 0 and not vim.deep_equal(saved_args, args) then
+      return false
+    end
+  end
+  if type(cmd) ~= "string" or cmd == "" then
+    return false
+  end
+
+  local suffix = not structured and #args > 0 and (" " .. table.concat(args, " "))
+  local function matches(path)
+    if suffix then
+      return cmd == path or cmd == path .. suffix -- URI may record only argv[1].
+    end
+    if structured then
+      return cmd == path
+    end
+    return M.matches_launch_cmd(cmd, path)
+  end
+
+  if matches(executable) then
+    return true
+  end
+  local resolved = vim.fn.exepath(executable)
+  return resolved ~= "" and matches(resolved)
 end
 
 ---Extract the terminal command from a Neovim terminal buffer name.
