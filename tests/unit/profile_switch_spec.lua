@@ -22,6 +22,46 @@ describe("codex.init runtime launch profiles", function()
     end
   end
 
+  describe("profiles.get_profiles", function()
+    it("lists independent base configs keyed by identifier", function()
+      local env = setup_with_deps({
+        profiles = {
+          default = { launch = { cmd = "codex" } },
+          work = { launch = { cmd = "codex --work" } },
+        },
+      })
+      local profiles = env.codex.profiles
+      local configured = profiles.get_profiles()
+      assert.same({ "default", "work" }, vim.fn.sort(vim.tbl_keys(configured)))
+      assert.equal("default", configured.default.profile_identifier)
+      assert.equal("work", configured.work.profile_identifier)
+      assert.equal("codex --work", configured.work.launch.cmd)
+
+      assert.is_true(profiles.set_active("work", { cmd = "custom-agent" }))
+      assert.equal("custom-agent", profiles.get_active().launch.cmd)
+      assert.same(configured, profiles.get_profiles())
+
+      configured.work.launch.cmd = "changed"
+      configured.default = nil
+      assert.equal("custom-agent", profiles.get_active().launch.cmd)
+      assert.equal("codex --work", profiles.get_profiles().work.launch.cmd)
+      assert.is_not_nil(profiles.get_profiles().default)
+    end)
+
+    it("follows the registry across setup, deactivate, and re-setup", function()
+      local codex = require("codex")
+      local profiles = codex.profiles
+      assert.same({}, profiles.get_profiles())
+      codex.setup({ profiles = { default = { auto_start = false }, work = {} } })
+      assert.is_not_nil(profiles.get_profiles().work)
+      codex.deactivate()
+      assert.same({}, profiles.get_profiles())
+      codex.setup({ profiles = { default = { auto_start = false } } })
+      assert.same({ "default" }, vim.tbl_keys(profiles.get_profiles()))
+      codex.deactivate()
+    end)
+  end)
+
   describe("setup profile resolution", function()
     it("creates default profile from stock defaults when profiles is omitted", function()
       local env = setup_with_deps({
@@ -42,7 +82,7 @@ describe("codex.init runtime launch profiles", function()
         },
       })
 
-      local cfg = codex.get_profile()
+      local cfg = codex.profiles.get_active()
       assert.equal("default", cfg.profile_identifier)
       assert.equal("default", cfg.profile_name)
       assert.is_true(cfg.auto_start)
@@ -115,12 +155,12 @@ describe("codex.init runtime launch profiles", function()
         },
       })
 
-      assert.equal("default", env.codex.get_profile().profile_identifier)
+      assert.equal("default", env.codex.profiles.get_active().profile_identifier)
 
-      local ok1, err1 = env.codex.set_profile("team/alpha-1")
+      local ok1, err1 = env.codex.profiles.set_active("team/alpha-1")
       assert.is_true(ok1)
       assert.is_nil(err1)
-      local cfg1 = env.codex.get_profile()
+      local cfg1 = env.codex.profiles.get_active()
       assert.equal("team/alpha-1", cfg1.profile_identifier)
       assert.is_false(cfg1.auto_start)
       assert.same({ "codex", "--model", "base" }, cfg1.launch.cmd)
@@ -129,10 +169,10 @@ describe("codex.init runtime launch profiles", function()
       assert.equal("hsplit", cfg1.terminal.provider_opts.native.window)
       assert.is_not_nil(cfg1.terminal.keymaps["<C-q>"])
 
-      local ok2, err2 = env.codex.set_profile("plain:clean")
+      local ok2, err2 = env.codex.profiles.set_active("plain:clean")
       assert.is_true(ok2)
       assert.is_nil(err2)
-      local cfg2 = env.codex.get_profile()
+      local cfg2 = env.codex.profiles.get_active()
       assert.equal("claude", cfg2.launch.cmd)
       assert.is_nil(cfg2.launch.cwd)
       assert.same({}, cfg2.launch.env)
@@ -140,7 +180,7 @@ describe("codex.init runtime launch profiles", function()
     end)
   end)
 
-  describe("set_profile overrides and error isolation", function()
+  describe("profiles.set_active overrides and error isolation", function()
     it("resets launch overrides on reselection and rejects unknown/invalid switches", function()
       local env = setup_with_deps({
         profiles = {
@@ -154,35 +194,35 @@ describe("codex.init runtime launch profiles", function()
         },
       })
 
-      local ok, err = env.codex.set_profile("work", {
+      local ok, err = env.codex.profiles.set_active("work", {
         cmd = "opencode",
         cwd = false,
         env = {},
       })
       assert.is_true(ok)
       assert.is_nil(err)
-      local cfg = env.codex.get_profile()
+      local cfg = env.codex.profiles.get_active()
       assert.equal("opencode", cfg.launch.cmd)
       assert.is_nil(cfg.launch.cwd)
       assert.same({}, cfg.launch.env)
 
       -- Invalid/unknown profile leaves selected profile and config intact
-      local ok_bad, err_bad = env.codex.set_profile("missing")
+      local ok_bad, err_bad = env.codex.profiles.set_active("missing")
       assert.is_false(ok_bad)
       assert.matches("unknown profile", err_bad)
-      assert.equal("work", env.codex.get_profile().profile_identifier)
-      assert.equal("opencode", env.codex.get_profile().launch.cmd)
+      assert.equal("work", env.codex.profiles.get_active().profile_identifier)
+      assert.equal("opencode", env.codex.profiles.get_active().launch.cmd)
 
-      local ok_invalid, err_invalid = env.codex.set_profile("default", { cmd = "" })
+      local ok_invalid, err_invalid = env.codex.profiles.set_active("default", { cmd = "" })
       assert.is_false(ok_invalid)
       assert.is_string(err_invalid)
-      assert.equal("work", env.codex.get_profile().profile_identifier)
-      assert.equal("opencode", env.codex.get_profile().launch.cmd)
+      assert.equal("work", env.codex.profiles.get_active().profile_identifier)
+      assert.equal("opencode", env.codex.profiles.get_active().launch.cmd)
 
       -- Reselecting work without overrides restores its resolved base
-      local ok_reselect = env.codex.set_profile("work")
+      local ok_reselect = env.codex.profiles.set_active("work")
       assert.is_true(ok_reselect)
-      local reset_cfg = env.codex.get_profile()
+      local reset_cfg = env.codex.profiles.get_active()
       assert.same({ "codex", "--profile", "work" }, reset_cfg.launch.cmd)
       assert.equal("/work", reset_cfg.launch.cwd)
       assert.same({ A = "1", B = "2", CODEX_TEST = "1" }, reset_cfg.launch.env)
@@ -201,7 +241,7 @@ describe("codex.init runtime launch profiles", function()
 
         -- Switch before initial scheduled auto_start runs -> stale default start ignored
         assert.equal(1, #env.fake_vim._scheduled)
-        local ok = env.codex.set_profile("work")
+        local ok = env.codex.profiles.set_active("work")
         assert.is_true(ok)
         assert.equal(2, #env.fake_vim._scheduled)
 
@@ -214,11 +254,11 @@ describe("codex.init runtime launch profiles", function()
 
         -- Switching back to work while work is already running does not open again
         env.fake_vim._scheduled = {}
-        assert.is_true(env.codex.set_profile("work"))
+        assert.is_true(env.codex.profiles.set_active("work"))
         run_all_scheduled(env.fake_vim)
         assert.equal(1, #env.provider.open_calls)
         env.fake_vim._scheduled = {}
-        assert.is_true(env.codex.set_profile("manual"))
+        assert.is_true(env.codex.profiles.set_active("manual"))
         assert.equal(0, #env.fake_vim._scheduled)
       end
     )
@@ -228,7 +268,7 @@ describe("codex.init runtime launch profiles", function()
     it("teardown_all is safe before setup", function()
       local codex = require("codex")
       codex.session.teardown_all()
-      assert.is_nil(codex.get_profile())
+      assert.is_nil(codex.profiles.get_active())
     end)
 
     it(
@@ -238,7 +278,7 @@ describe("codex.init runtime launch profiles", function()
           profiles = { default = { auto_start = false }, work = { auto_start = true } },
         })
         env.codex.session.open(false)
-        assert.is_true(env.codex.set_profile("work"))
+        assert.is_true(env.codex.profiles.set_active("work"))
         assert.equal(1, #env.fake_vim._scheduled)
         env.codex.session.open(false)
 
@@ -249,7 +289,7 @@ describe("codex.init runtime launch profiles", function()
         assert.equal(2, #env.provider.open_calls)
         assert.is_nil(env.store.get_active("default"))
         assert.is_nil(env.store.get_active("work"))
-        assert.equal("work", env.codex.get_profile().profile_identifier)
+        assert.equal("work", env.codex.profiles.get_active().profile_identifier)
         env.codex.session.open(false)
         assert.is_not_nil(env.store.get_active("work"))
       end
@@ -267,7 +307,7 @@ describe("codex.init runtime launch profiles", function()
       local default_session = env.store.get_active("default")
       assert.is_not_nil(default_session)
 
-      assert.is_true(env.codex.set_profile("work"))
+      assert.is_true(env.codex.profiles.set_active("work"))
       assert.is_false(env.codex.session.is_running())
       env.codex.session.open(false)
       local work_session = env.store.get_active("work")
@@ -275,7 +315,7 @@ describe("codex.init runtime launch profiles", function()
       assert.is_not.equal(default_session.id, work_session.id)
       assert.is_not.equal(default_session.handle, work_session.handle)
 
-      assert.is_true(env.codex.set_profile("default"))
+      assert.is_true(env.codex.profiles.set_active("default"))
       assert.is_true(env.codex.session.is_running())
       env.codex.session.open(true)
       assert.equal(2, #env.provider.open_calls)
@@ -304,9 +344,9 @@ describe("codex.init runtime launch profiles", function()
         })
 
         env.codex.session.open(false)
-        assert.is_true(env.codex.set_profile("work"))
+        assert.is_true(env.codex.profiles.set_active("work"))
         env.codex.session.open(false)
-        assert.is_true(env.codex.set_profile("default"))
+        assert.is_true(env.codex.profiles.set_active("default"))
 
         -- Trigger work (inactive) process exit
         env.provider.on_exit_callbacks[2]()
@@ -320,7 +360,7 @@ describe("codex.init runtime launch profiles", function()
         assert.equal("Work Agent", close_events[1].config.profile_name)
         assert.is_nil(env.store.get_active("work"))
         assert.is_not_nil(env.store.get_active("default"))
-        assert.equal("default", env.codex.get_profile().profile_identifier)
+        assert.equal("default", env.codex.profiles.get_active().profile_identifier)
       end
     )
 
@@ -340,7 +380,7 @@ describe("codex.init runtime launch profiles", function()
 
       env.codex.session.open(false)
       local h1 = env.store.get_active("default").handle
-      assert.is_true(env.codex.set_profile("work"))
+      assert.is_true(env.codex.profiles.set_active("work"))
       env.codex.session.open(false)
       local h2 = env.store.get_active("work").handle
 
@@ -367,7 +407,7 @@ describe("codex.init runtime launch profiles", function()
       assert.is_true(closed_handles[h1])
       assert.is_true(closed_handles[h3])
       assert.same({}, env.store.list())
-      assert.is_nil(env.codex.get_profile())
+      assert.is_nil(env.codex.profiles.get_active())
     end)
 
     it("ignores inactive profile terminal buffers when recording non-Codex focus", function()
@@ -394,7 +434,7 @@ describe("codex.init runtime launch profiles", function()
       -- Open default (win 11, buf 101)
       env.codex.session.open(false)
       -- Switch to work and open work (win 12, buf 102)
-      assert.is_true(env.codex.set_profile("work"))
+      assert.is_true(env.codex.profiles.set_active("work"))
       env.codex.session.open(false)
 
       -- Enter default's terminal window (win 11, buf 101) while work is selected
@@ -435,11 +475,11 @@ describe("codex.init runtime launch profiles", function()
       -- Unsent draft added before switch must remain intact
       env.codex.prompt_builder.add("still in builder")
 
-      assert.is_true(env.codex.set_profile("work"))
+      assert.is_true(env.codex.profiles.set_active("work"))
       assert.same({ "still in builder" }, env.codex.prompt_builder.peak())
 
       -- Even after switching back A -> B -> A and marking alive, old scheduled retries are stale
-      assert.is_true(env.codex.set_profile("default"))
+      assert.is_true(env.codex.profiles.set_active("default"))
       env.provider.is_alive_fn = function()
         return true
       end
@@ -462,8 +502,8 @@ describe("codex.init runtime launch profiles", function()
       assert.equal(1, #env.provider.send_calls)
       assert.equal(1, #env.fake_vim._deferred)
 
-      assert.is_true(env.codex.set_profile("work"))
-      assert.is_true(env.codex.set_profile("default"))
+      assert.is_true(env.codex.profiles.set_active("work"))
+      assert.is_true(env.codex.profiles.set_active("default"))
       run_deferred(env.fake_vim, 2)
       assert.equal(0, #env.fake_vim._feedkeys_calls)
 
@@ -488,12 +528,12 @@ describe("codex.init runtime launch profiles", function()
     assert.equal(1, #env.provider.send_calls)
 
     env.provider.focus_fn = function()
-      assert.is_true(env.codex.set_profile("work"))
+      assert.is_true(env.codex.profiles.set_active("work"))
       env.codex.session.open(false)
       return true
     end
     run_deferred(env.fake_vim, 5)
-    assert.equal("work", env.codex.get_profile().profile_identifier)
+    assert.equal("work", env.codex.profiles.get_active().profile_identifier)
     assert.equal(0, #env.fake_vim._feedkeys_calls)
     assert.equal(1, #env.provider.send_calls)
   end)
@@ -536,7 +576,7 @@ describe("codex.init runtime launch profiles", function()
         return 77
       end
       env.fake_vim._set_buf_lines(77, { "> " })
-      assert.is_true(env.codex.set_profile("opencode"))
+      assert.is_true(env.codex.profiles.set_active("opencode"))
       local err_slash = builtin.resume({ last = false })
       run_deferred(env.fake_vim, 3)
       assert.is_nil(err_slash)
@@ -547,7 +587,7 @@ describe("codex.init runtime launch profiles", function()
       assert.equal("\27[200~/resume\27[201~", env.provider.send_calls[1].text)
 
       -- Unknown basename falls back to Codex resume args
-      assert.is_true(env.codex.set_profile("unknown"))
+      assert.is_true(env.codex.profiles.set_active("unknown"))
       local err3 = builtin.resume({ last = true })
       assert.is_nil(err3)
       assert.equal(4, #env.provider.open_calls)

@@ -71,8 +71,10 @@ local function get_deps()
   return state.deps or default_deps
 end
 
----@type fun(): codex.ProfileConfig|nil
-local get_profile
+---@type codex.Profiles
+local profiles
+---@type codex.Profiles
+local runtime_profiles
 
 ---Resolve a caller-supplied profile, defaulting to the active one.
 ---@param profile? codex.ProfileConfig
@@ -84,8 +86,7 @@ local function resolve_profile(profile)
   if type(profile) == "table" then
     return profile
   end
-  local active = get_profile()
-  return type(active) == "table" and active or nil
+  return profiles.get_active()
 end
 
 ---@type codex.SessionCommands
@@ -275,9 +276,7 @@ local function setup(opts)
 
   state.send_dispatch = send_dispatch_mod.create({
     get_deps = get_deps,
-    get_profile = function()
-      return state.config
-    end,
+    profiles = runtime_profiles,
     get_activation = function()
       return state.activation
     end,
@@ -312,9 +311,7 @@ local function setup(opts)
 
   state.mention = mention_mod.create({
     get_deps = get_deps,
-    get_profile = function()
-      return state.config
-    end,
+    profiles = runtime_profiles,
     get_activation = function()
       return state.activation
     end,
@@ -325,9 +322,7 @@ local function setup(opts)
 
   state.wrapper_command = wrapper_command_mod.create({
     get_deps = get_deps,
-    get_profile = function()
-      return state.config
-    end,
+    profiles = runtime_profiles,
     dispatch_send = function(text, send_opts)
       return state.send_dispatch.dispatch_send(text, send_opts)
     end,
@@ -381,7 +376,7 @@ end
 ---@param launch_overrides? codex.ProfileLaunch
 ---@return boolean ok
 ---@return string|nil err
-local function set_profile(name, launch_overrides)
+local function set_active(name, launch_overrides)
   state:ensure_ready()
 
   if type(name) ~= "string" or name == "" then
@@ -539,9 +534,12 @@ local prompt_builder = {
   submit = function()
     state:ensure_ready()
     local function press_enter(is_submit_still_valid)
-      return prompt_ops.submit_with_enter_key(get_deps, function()
-        return state.config
-      end, "submit_prompt", is_submit_still_valid)
+      return prompt_ops.submit_with_enter_key(
+        get_deps,
+        runtime_profiles,
+        "submit_prompt",
+        is_submit_still_valid
+      )
     end
     if state.prompt_buffer:is_empty() then
       return press_enter()
@@ -700,9 +698,7 @@ local input = {
   ---@return codex.Error err
   copy = function()
     state:ensure_ready()
-    return prompt_ops.copy_prompt_input(get_deps, function()
-      return state.config
-    end)
+    return prompt_ops.copy_prompt_input(get_deps, runtime_profiles)
   end,
 
   ---Get the current terminal input
@@ -710,9 +706,8 @@ local input = {
   ---@return string? input
   get = function()
     state:ensure_ready()
-    local captured_input, result, _ = prompt_ops.capture_active_prompt_input(get_deps, function()
-      return state.config
-    end)
+    local captured_input, result, _ =
+      prompt_ops.capture_active_prompt_input(get_deps, runtime_profiles)
     if result == capture_input_prompt.CAPTURED or result == capture_input_prompt.NO_INPUT then
       return outcome.SUCCESS, captured_input
     end
@@ -763,17 +758,33 @@ local logs = {
   end,
 }
 
----Returns a deep-copied resolved config for inspection.
----@return codex.ProfileConfig|nil
-function get_profile()
-  local deps = get_deps()
-  return state.config and deps.vim.deepcopy(state.config) or nil
-end
+profiles = {
+  get_active = function()
+    local deps = get_deps()
+    return state.config and deps.vim.deepcopy(state.config) or nil
+  end,
+  set_active = set_active,
+  get_profiles = function()
+    local result = {}
+    for identifier, profile in pairs(state.profiles or {}) do
+      result[identifier] = profile:resolve()
+    end
+    return result
+  end,
+}
+
+-- Deferred runtime operations compare active configs by identity.
+runtime_profiles = {
+  get_active = function()
+    return state.config
+  end,
+  set_active = profiles.set_active,
+  get_profiles = profiles.get_profiles,
+}
 
 ---@type codex.Api
 return {
-  get_profile = get_profile,
-  set_profile = set_profile,
+  profiles = profiles,
   setup = setup,
   deactivate = deactivate,
   prompt_builder = prompt_builder,

@@ -35,13 +35,13 @@ end
 
 ---Best-effort capture of current terminal prompt input.
 ---@param get_deps fun(): table
----@param get_profile fun(): table
+---@param profiles codex.Profiles
 ---@return string|nil input
 ---@return codex.CaptureInputPromptResult result
 ---@return integer clear_line_count
-function M.capture_prompt_input(get_deps, get_profile)
+function M.capture_prompt_input(get_deps, profiles)
   local deps = get_deps()
-  local config = get_profile()
+  local config = profiles.get_active()
   local function vdebug(msg, ...)
     if type(deps.logger.vdebug) == "function" then
       deps.logger.vdebug(msg, ...)
@@ -212,13 +212,13 @@ end
 
 ---Focuses the active session when available, then captures prompt input.
 ---@param get_deps fun(): table
----@param get_profile fun(): table
+---@param profiles codex.Profiles
 ---@return string|nil input
 ---@return codex.CaptureInputPromptResult result
 ---@return integer clear_line_count
-function M.capture_active_prompt_input(get_deps, get_profile)
+function M.capture_active_prompt_input(get_deps, profiles)
   local deps = get_deps()
-  local config = get_profile()
+  local config = profiles.get_active()
   local function vdebug(msg, ...)
     if type(deps.logger.vdebug) == "function" then
       deps.logger.vdebug(msg, ...)
@@ -233,22 +233,22 @@ function M.capture_active_prompt_input(get_deps, get_profile)
     provider.focus(session.handle)
   end
 
-  return M.capture_prompt_input(get_deps, get_profile)
+  return M.capture_prompt_input(get_deps, profiles)
 end
 
 ---Captures current prompt input and copies it to the unnamed register.
 ---@param get_deps fun(): table
----@param get_profile fun(): table
+---@param profiles codex.Profiles
 ---@return codex.Outcome ok
 ---@return codex.Error err
-function M.copy_prompt_input(get_deps, get_profile)
+function M.copy_prompt_input(get_deps, profiles)
   local deps = get_deps()
   local function vdebug(msg, ...)
     if type(deps.logger.vdebug) == "function" then
       deps.logger.vdebug(msg, ...)
     end
   end
-  local existing_input, capture_status = M.capture_active_prompt_input(get_deps, get_profile)
+  local existing_input, capture_status = M.capture_active_prompt_input(get_deps, profiles)
   if existing_input and existing_input ~= "" then
     local save_ok = pcall(deps.vim.fn.setreg, '"', existing_input)
     if not save_ok then
@@ -275,14 +275,14 @@ end
 
 ---Submits the current prompt using Enter, with provider-send fallback.
 ---@param get_deps fun(): table
----@param get_profile fun(): table
+---@param profiles codex.Profiles
 ---@param target string
 ---@param is_submit_still_valid? fun(): boolean Rechecked after focus, which can change the destination.
 ---@return codex.Outcome ok
 ---@return codex.Error err
-function M.submit_with_enter_key(get_deps, get_profile, target, is_submit_still_valid)
+function M.submit_with_enter_key(get_deps, profiles, target, is_submit_still_valid)
   local deps = get_deps()
-  local config = get_profile()
+  local config = profiles.get_active()
   local function vdebug(msg, ...)
     if type(deps.logger.vdebug) == "function" then
       deps.logger.vdebug(msg, ...)
@@ -298,7 +298,7 @@ function M.submit_with_enter_key(get_deps, get_profile, target, is_submit_still_
   session_lifecycle.remember_previous_focus(deps, config, session, provider)
   provider.focus(session.handle)
   if
-    config ~= get_profile()
+    config ~= profiles.get_active()
     or deps.session_store.get_active(config.profile_identifier) ~= session
     or not session.alive
     or (is_submit_still_valid and not is_submit_still_valid())

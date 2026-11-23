@@ -34,7 +34,7 @@ local function detect_harness(plugin, opts)
     return resume_args[opts.harness] and opts.harness or enum.CODEX
   end
 
-  local config = plugin.get_profile()
+  local config = plugin.profiles.get_active()
   local raw_cmd = config and config.launch and config.launch.cmd
   local cmd = config_mod.split_command(raw_cmd)
   if type(cmd) ~= "string" or cmd == "" then

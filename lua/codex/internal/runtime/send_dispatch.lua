@@ -10,7 +10,7 @@ local M = {}
 ---@return codex.SendDispatch
 function M.create(opts)
   local get_deps = opts.get_deps
-  local get_profile = opts.get_profile
+  local profiles = opts.profiles
   local get_activation = opts.get_activation or function()
     return 0
   end
@@ -64,7 +64,7 @@ function M.create(opts)
   ---@return boolean|nil dropped_stale True if the destination changed before send; drop without retrying or reporting a send failure.
   local function send_item_now(item, session, provider)
     local deps = get_deps()
-    local config = get_profile()
+    local config = profiles.get_active()
 
     if is_stale(item) then
       return false, nil, true
@@ -77,7 +77,7 @@ function M.create(opts)
       if is_stale(item) then
         return false, nil, true
       end
-      config = get_profile()
+      config = profiles.get_active()
       local current_session = deps.session_store.get_active(config.profile_identifier)
       if current_session ~= session then
         return false, nil, true
@@ -108,7 +108,7 @@ function M.create(opts)
 
     if item.post_focus and not is_stale(item) then
       vdebug("send_item_now post_focus command_path=%s", target)
-      session_lifecycle.apply_post_send_focus(deps, session, provider, get_profile())
+      session_lifecycle.apply_post_send_focus(deps, session, provider, profiles.get_active())
     end
     vdebug("send_item_now sent command_path=%s", target)
     return true
@@ -128,7 +128,7 @@ function M.create(opts)
     end
 
     local deps = get_deps()
-    local config = get_profile()
+    local config = profiles.get_active()
     local first_attempt = not item.has_attempted
     item.has_attempted = true
     vdebug(
@@ -146,7 +146,7 @@ function M.create(opts)
       if is_stale(item) then
         return result.DROP
       end
-      config = get_profile()
+      config = profiles.get_active()
       session = deps.session_store.get_active(config.profile_identifier)
       provider = session_lifecycle.get_provider(deps, config)
       if first_attempt then
@@ -166,7 +166,7 @@ function M.create(opts)
       if is_stale(item) then
         return result.DROP
       end
-      config = get_profile()
+      config = profiles.get_active()
       session = deps.session_store.get_active(config.profile_identifier)
       provider = session_lifecycle.get_provider(deps, config)
       item.reopen_attempted = true

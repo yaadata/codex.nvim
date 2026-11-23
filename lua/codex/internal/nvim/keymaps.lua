@@ -54,7 +54,7 @@ function M.apply_terminal(bufnr, keymaps, profile_identifier)
       and (action == actions.toggle or action == actions.clear_input or action == actions.teardown)
     then
       local function is_owner_selected()
-        local config = require("codex").get_profile()
+        local config = require("codex").profiles.get_active()
         return config ~= nil and config.profile_identifier == profile_identifier
       end
       local builtin = action

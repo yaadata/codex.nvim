@@ -164,7 +164,7 @@ Default options for `setup()`:
 <
 
 profiles                                                 *codex-nvim-profiles*
-    Named launch profiles selectable at runtime via |codex.set_profile|.
+    Named launch profiles selectable at runtime via |codex.profiles.set_active|.
 
     If you provide `profiles`, include `default`. It can be empty. Use any
     other name for additional profiles.
@@ -188,7 +188,7 @@ profiles                                                 *codex-nvim-profiles*
 
 launch                                                     *codex-nvim-launch*
     Process launch settings. Omitted fields inherit from `default` (or the
-    selected profile when passed as overrides to |codex.set_profile|).
+    selected profile when passed as overrides to |codex.profiles.set_active|).
 
     `cmd`
       Executable string or argv list (`{ "codex", "--model", "o3" }`). A
@@ -388,11 +388,11 @@ setup({opts})                                                    *codex.setup*
     Initialize plugin config, launch profiles, and runtime state.
     Returns: `nil`
 
-set_profile({name}, {launch_overrides})                    *codex.set_profile*
+profiles.set_active({name}, {launch_overrides})  *codex.profiles.set_active*
     Select a configured profile by `name` with optional per-activation
     `launch_overrides` (`cmd`, `cwd`, `env`).
     Example: >lua
-      require("codex").set_profile("home", { cwd = false })
+      require("codex").profiles.set_active("home", { cwd = false })
 <
     Switching keeps existing sessions alive. Launch overrides last until your
     next selection and apply only when starting a new process. Errors leave
@@ -406,11 +406,17 @@ deactivate()                                                *codex.deactivate*
     lazy.nvim calls this automatically on reload.
     Returns: `nil`
 
-get_profile()                                                *codex.get_profile*
+profiles.get_active()                            *codex.profiles.get_active*
     Return a copy of the selected profile's effective config, including launch
     overrides. Read `config.profile_identifier` for the selected profile key.
     Unlike `setup()` options, this table has no `profiles` wrapper.
     Returns: `table|nil`
+
+profiles.get_profiles()                        *codex.profiles.get_profiles*
+    Return a map from configured identifiers (including `default`) to copies
+    of resolved base configs. Per-activation launch overrides are not included.
+    Return an empty map before setup or after deactivation.
+    Returns: `table<string, codex.ProfileConfig>`
 
 Session                                               *codex-nvim-api-session*
                                                    *codex-nvim-api-lifecycle*
@@ -506,7 +512,7 @@ profile if it already has a live session. Otherwise it checks named profiles
 alphabetically, then `default`. It selects the first profile with a matching
 live terminal and applies its keymaps. Other terminals stay open.
 
-`set_profile()` checks only the requested profile, using any launch overrides.
+`profiles.set_active()` checks only the requested profile, using any launch overrides.
 Startup and profile switches try to reconnect before starting a new terminal.
 Loading a session later never starts an agent. If your session manager does
 not recreate a live terminal, there is nothing to reconnect to: restoring a

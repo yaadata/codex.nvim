@@ -167,7 +167,7 @@ describe("codex profile global keymaps (real Neovim)", function()
     assert.equal("Default B", find_global_map("n", "<leader>kb").desc)
     assert.is_nil(find_global_map("n", "<leader>kc"))
 
-    local ok, err = codex.set_profile("work")
+    local ok, err = codex.profiles.set_active("work")
     assert.is_true(ok)
     assert.is_nil(err)
 
@@ -221,11 +221,11 @@ describe("codex profile global keymaps (real Neovim)", function()
         _deps = { providers = stub_providers },
       })
 
-      assert.is_true(codex.set_profile("work"))
+      assert.is_true(codex.profiles.set_active("work"))
       assert.equal("Codex Work F8", find_global_map("n", "<F8>").desc)
       assert.equal("Shadowing buffer-local F8", find_buf_map(buf, "n", "<F8>").desc)
 
-      assert.is_true(codex.set_profile("default"))
+      assert.is_true(codex.profiles.set_active("default"))
       local restored = find_global_map("n", "<F8>")
       assert.is_not_nil(restored)
       assert.equal("Original F8", restored.desc)
@@ -264,12 +264,12 @@ describe("codex profile global keymaps (real Neovim)", function()
       _deps = { providers = stub_providers },
     })
 
-    assert.is_true(codex.set_profile("work"))
+    assert.is_true(codex.profiles.set_active("work"))
     assert.equal("Work X Ctrl-K", find_global_map("x", "<c-k>").desc)
     -- Select mode 's' retains the untouched half of the split visual map
     assert.equal("Original Visual Ctrl-K", find_global_map("s", "<c-k>").desc)
 
-    assert.is_true(codex.set_profile("default"))
+    assert.is_true(codex.profiles.set_active("default"))
     local restored_x = find_global_map("x", "<c-k>")
     assert.equal("Original Visual Ctrl-K", restored_x.desc)
     assert.equal("orig_v", restored_x.callback())
@@ -294,7 +294,7 @@ describe("codex profile global keymaps (real Neovim)", function()
     -- Another plugin overwrites <F7> while default is active
     vim.keymap.set("n", "<F7>", function() end, { desc = "External F7" })
 
-    assert.is_true(codex.set_profile("other"))
+    assert.is_true(codex.profiles.set_active("other"))
     assert.equal("External F7", find_global_map("n", "<F7>").desc)
     assert.is_nil(find_global_map("n", "<F8>"))
   end)
@@ -332,16 +332,16 @@ describe("codex profile global keymaps (real Neovim)", function()
     })
 
     -- 1. Pre-install overlap check rejects without touching default maps
-    local ok1, err1 = codex.set_profile("bad_overlap")
+    local ok1, err1 = codex.profiles.set_active("bad_overlap")
     assert.is_false(ok1)
     assert.matches("overlapping global keymap", err1)
-    assert.equal("default", codex.get_profile().profile_identifier)
+    assert.equal("default", codex.profiles.get_active().profile_identifier)
     assert.equal("Default F7", find_global_map("n", "<F7>").desc)
 
-    local mode_ok, mode_err = codex.set_profile("bad_mode")
+    local mode_ok, mode_err = codex.profiles.set_active("bad_mode")
     assert.is_false(mode_ok)
     assert.matches('invalid keymap mode "z"', mode_err)
-    assert.equal("default", codex.get_profile().profile_identifier)
+    assert.equal("default", codex.profiles.get_active().profile_identifier)
     assert.equal("Default F7", find_global_map("n", "<F7>").desc)
 
     -- Runtime failure rolls back installed slots without reclaiming an external replacement.
@@ -357,12 +357,12 @@ describe("codex profile global keymaps (real Neovim)", function()
       return real_set(...)
     end
 
-    local ok2, err2 = codex.set_profile("bad_install")
+    local ok2, err2 = codex.profiles.set_active("bad_install")
     vim.keymap.set = real_set
 
     assert.is_false(ok2)
     assert.matches("simulated keymap install failure", err2)
-    assert.equal("default", codex.get_profile().profile_identifier)
+    assert.equal("default", codex.profiles.get_active().profile_identifier)
     assert.equal(external, find_global_map("n", "<F8>").callback)
     assert.is_nil(find_global_map("n", "<F9>"))
     assert.equal("Default F7", find_global_map("n", "<F7>").desc)
@@ -382,7 +382,7 @@ describe("codex profile global keymaps (real Neovim)", function()
     codex.session.open(false)
     local teardown = find_buf_map(created_bufs[1], "t", "<C-q>").callback
     teardown()
-    assert.is_true(codex.set_profile("work"))
+    assert.is_true(codex.profiles.set_active("work"))
     codex.session.open(false)
     teardown()
     local drained = false
@@ -393,7 +393,7 @@ describe("codex profile global keymaps (real Neovim)", function()
       return drained
     end))
     assert.is_true(codex.session.is_running())
-    assert.is_true(codex.set_profile("default"))
+    assert.is_true(codex.profiles.set_active("default"))
     assert.is_true(codex.session.is_running())
   end)
 
@@ -432,12 +432,12 @@ describe("codex profile global keymaps (real Neovim)", function()
       assert.has_error(function()
         codex.setup({ profiles = { default = {}, work = { auto_start = "yes" } } })
       end, "codex: profiles.work.auto_start: expected boolean, got string")
-      assert.equal("default", codex.get_profile().profile_identifier)
+      assert.equal("default", codex.profiles.get_active().profile_identifier)
       assert.equal("Setup1 F7", find_global_map("n", "<F7>").desc)
       assert.equal("Setup1 F8", find_global_map("n", "<F8>").desc)
 
       -- Switching profiles leaves terminal-local map untouched
-      assert.is_true(codex.set_profile("work"))
+      assert.is_true(codex.profiles.set_active("work"))
       assert.is_not_nil(find_buf_map(buf, "t", "<C-q>"))
       assert.equal("Preexisting F7", find_global_map("n", "<F7>").desc)
       assert.is_nil(find_global_map("n", "<F8>"))

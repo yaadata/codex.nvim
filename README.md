@@ -68,7 +68,7 @@ codex.setup({
 })
 ```
 
-Later, call `require("codex").set_profile("home")` to switch profiles without
+Later, call `require("codex").profiles.set_active("home")` to switch profiles without
 stopping existing sessions.
 
 Named profiles inherit `launch` (`cmd`, `cwd`, `env`), `auto_start`, and `terminal`

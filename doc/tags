@@ -45,7 +45,6 @@ codex.builtin.mention_file	codex.nvim.txt	/*codex.builtin.mention_file*
 codex.builtin.one_off	codex.nvim.txt	/*codex.builtin.one_off*
 codex.builtin.resume	codex.nvim.txt	/*codex.builtin.resume*
 codex.deactivate	codex.nvim.txt	/*codex.deactivate*
-codex.get_profile	codex.nvim.txt	/*codex.get_profile*
 codex.input.clear	codex.nvim.txt	/*codex.input.clear*
 codex.input.copy	codex.nvim.txt	/*codex.input.copy*
 codex.input.feedkey	codex.nvim.txt	/*codex.input.feedkey*
@@ -54,6 +53,9 @@ codex.logs.clear	codex.nvim.txt	/*codex.logs.clear*
 codex.logs.get	codex.nvim.txt	/*codex.logs.get*
 codex.nvim	codex.nvim.txt	/*codex.nvim*
 codex.nvim.txt	codex.nvim.txt	/*codex.nvim.txt*
+codex.profiles.get_active	codex.nvim.txt	/*codex.profiles.get_active*
+codex.profiles.get_profiles	codex.nvim.txt	/*codex.profiles.get_profiles*
+codex.profiles.set_active	codex.nvim.txt	/*codex.profiles.set_active*
 codex.prompt_builder.add	codex.nvim.txt	/*codex.prompt_builder.add*
 codex.prompt_builder.add_file	codex.nvim.txt	/*codex.prompt_builder.add_file*
 codex.prompt_builder.add_selection	codex.nvim.txt	/*codex.prompt_builder.add_selection*
@@ -72,5 +74,4 @@ codex.session.teardown	codex.nvim.txt	/*codex.session.teardown*
 codex.session.teardown_all	codex.nvim.txt	/*codex.session.teardown_all*
 codex.session.toggle	codex.nvim.txt	/*codex.session.toggle*
 codex.session.unfocus	codex.nvim.txt	/*codex.session.unfocus*
-codex.set_profile	codex.nvim.txt	/*codex.set_profile*
 codex.setup	codex.nvim.txt	/*codex.setup*

@@ -59,7 +59,7 @@ it("returns the resolved config", function()
   local env = helpers.setup_with_deps()
 
   -- ========= [A]ct     =========
-  local config = env.codex.get_profile()
+  local config = env.codex.profiles.get_active()
 
   -- ========= [A]ssert  =========
   assert.equal("codex-test", config.launch.cmd)

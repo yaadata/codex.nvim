@@ -7,8 +7,9 @@ especially:
 - `|codex-nvim-profiles|`
 - `|codex-nvim-hooks|`
 - `|codex-nvim-api-runtime|`
-- `|codex.set_profile|`
-- `|codex.get_profile|`
+- `|codex.profiles.set_active|`
+- `|codex.profiles.get_active|`
+- `|codex.profiles.get_profiles|`
 - `|codex.session.teardown_all|`
 - `|codex-nvim-session-restore|`
 - `|codex-nvim-api-lifecycle|`
